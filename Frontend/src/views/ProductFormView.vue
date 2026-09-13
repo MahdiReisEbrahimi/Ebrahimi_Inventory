@@ -1,57 +1,57 @@
 <script setup lang="ts">
-import { onMounted, reactive, ref } from "vue";
-import { useRoute, useRouter } from "vue-router";
-import { ElMessage } from "element-plus";
-import { categoriesApi } from "@/services/categories";
-import { productsApi } from "@/services/products";
-import type { Category } from "@/types";
+import { onMounted, reactive, ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { ElMessage } from 'element-plus'
+import { categoriesApi } from '@/services/categories'
+import { productsApi } from '@/services/products'
+import type { Category } from '@/types'
 const route = useRoute(),
   router = useRouter(),
   id = Number(route.params.id),
   editing = Boolean(id),
   categories = ref<Category[]>([]),
-  saving = ref(false);
+  saving = ref(false)
 const form = reactive({
-  name: "",
-  sku: "",
+  name: '',
+  sku: '',
   categoryId: undefined as number | undefined,
-  unit: "عدد",
+  unit: 'عدد',
   buyPrice: 0,
   sellPrice: 0,
   minStock: 0,
-  description: "",
-});
+  description: '',
+})
 const rules = {
-  name: [{ required: true, message: "نام محصول الزامی است" }],
-  sku: [{ required: true, message: "کد کالا الزامی است" }],
-  categoryId: [{ required: true, message: "دسته‌بندی را انتخاب کنید" }],
-};
+  name: [{ required: true, message: 'نام محصول الزامی است' }],
+  sku: [{ required: true, message: 'کد کالا الزامی است' }],
+  categoryId: [{ required: true, message: 'دسته‌بندی را انتخاب کنید' }],
+}
 onMounted(async () => {
   try {
-    categories.value = await categoriesApi.list();
-    if (editing) Object.assign(form, await productsApi.get(id));
+    categories.value = await categoriesApi.list()
+    if (editing) Object.assign(form, await productsApi.get(id))
   } catch (e) {
-    ElMessage.error(e instanceof Error ? e.message : "خطا در دریافت اطلاعات");
+    ElMessage.error(e instanceof Error ? e.message : 'خطا در دریافت اطلاعات')
   }
-});
+})
 async function submit() {
-  if (!form.categoryId) return ElMessage.warning("دسته‌بندی را انتخاب کنید");
-  saving.value = true;
+  if (!form.categoryId) return ElMessage.warning('دسته‌بندی را انتخاب کنید')
+  saving.value = true
   try {
-    const p = editing ? await productsApi.update(id, form) : await productsApi.create(form);
-    ElMessage.success("اطلاعات محصول ذخیره شد");
-    router.push(`/products/${p.id}`);
+    const p = editing ? await productsApi.update(id, form) : await productsApi.create(form)
+    ElMessage.success('اطلاعات محصول ذخیره شد')
+    router.push(`/products/${p.id}`)
   } catch (e) {
-    ElMessage.error(e instanceof Error ? e.message : "خطا");
+    ElMessage.error(e instanceof Error ? e.message : 'خطا')
   } finally {
-    saving.value = false;
+    saving.value = false
   }
 }
 </script>
 <template>
   <el-card class="form-card" shadow="never"
     ><template #header
-      ><b>{{ editing ? "ویرایش اطلاعات محصول" : "ثبت محصول جدید" }}</b
+      ><b>{{ editing ? 'ویرایش اطلاعات محصول' : 'ثبت محصول جدید' }}</b
       ><span>موجودی اولیه از بخش انبار ثبت می‌شود.</span></template
     ><el-form :model="form" :rules="rules" label-position="top" @submit.prevent="submit"
       ><div class="form-grid">

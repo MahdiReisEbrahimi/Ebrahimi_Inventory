@@ -1,40 +1,40 @@
 <script setup lang="ts">
-import { reactive, ref } from "vue";
-import { ElMessage } from "element-plus";
-import { productsApi } from "@/services/products";
-import { categoriesApi } from "@/services/categories";
-import type { Category } from "@/types";
+import { reactive, ref } from 'vue'
+import { ElMessage } from 'element-plus'
+import { productsApi } from '@/services/products'
+import { categoriesApi } from '@/services/categories'
+import type { Category } from '@/types'
 const form = reactive({
     categoryId: undefined as number | undefined,
-    type: "PERCENTAGE",
+    type: 'PERCENTAGE',
     value: 0,
-    priceType: "SELL",
+    priceType: 'SELL',
   }),
   rows = ref<{ id: number; name: string; oldPrice: number; newPrice: number }[]>([]),
   categories = ref<Category[]>([]),
-  loading = ref(false);
+  loading = ref(false)
 categoriesApi
   .list()
   .then((r) => (categories.value = r))
-  .catch(() => {});
-const money = (v: number) => new Intl.NumberFormat("fa-IR").format(v) + " تومان";
+  .catch(() => {})
+const money = (v: number) => new Intl.NumberFormat('fa-IR').format(v) + ' تومان'
 async function preview() {
-  loading.value = true;
+  loading.value = true
   try {
-    rows.value = (await productsApi.previewBulk(form)).items;
+    rows.value = (await productsApi.previewBulk(form)).items
   } catch (e) {
-    ElMessage.error(e instanceof Error ? e.message : "خطا");
+    ElMessage.error(e instanceof Error ? e.message : 'خطا')
   } finally {
-    loading.value = false;
+    loading.value = false
   }
 }
 async function apply() {
   try {
-    const r = await productsApi.bulk(form);
-    ElMessage.success(`قیمت ${r.affectedProducts} محصول تغییر کرد`);
-    rows.value = [];
+    const r = await productsApi.bulk(form)
+    ElMessage.success(`قیمت ${r.affectedProducts} محصول تغییر کرد`)
+    rows.value = []
   } catch (e) {
-    ElMessage.error(e instanceof Error ? e.message : "خطا");
+    ElMessage.error(e instanceof Error ? e.message : 'خطا')
   }
 }
 </script>

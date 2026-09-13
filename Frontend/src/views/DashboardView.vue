@@ -1,18 +1,18 @@
 <script setup lang="ts">
-import { onMounted, ref } from "vue";
-import { productsApi } from "@/services/products";
-const total = ref("—"),
-  low = ref("—");
+import { onMounted, ref } from 'vue'
+import { productsApi } from '@/services/products'
+const total = ref('—'),
+  low = ref('—')
 onMounted(async () => {
   try {
-    const all = await productsApi.list({ page: 1, limit: 100 });
-    total.value = String(all.meta.total);
-    low.value = String(all.data.filter((p) => p.stock <= p.minStock).length);
+    const all = await productsApi.list({ page: 1, limit: 100 })
+    total.value = String(all.meta.total)
+    low.value = String(all.data.filter((p) => p.stock <= p.minStock).length)
   } catch {
-    total.value = "۰";
-    low.value = "۰";
+    total.value = '۰'
+    low.value = '۰'
   }
-});
+})
 </script>
 <template>
   <div class="stats">

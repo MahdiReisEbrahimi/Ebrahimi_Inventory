@@ -1,2 +1,10 @@
-import type { Category } from '@/types'; import { api } from './api'
-export const categoriesApi = { list: () => api<Category[]>('/categories'), create: (name: string) => api<Category>('/categories', { method: 'POST', body: JSON.stringify({ name }) }), update: (id: number, name: string) => api<Category>(`/categories/${id}`, { method: 'PATCH', body: JSON.stringify({ name }) }), remove: (id: number) => api<void>(`/categories/${id}`, { method: 'DELETE' }) }
+import type { Category } from '@/types'
+import { api } from './api'
+export const categoriesApi = {
+  list: () => api<Category[]>('/categories'),
+  create: (name: string) =>
+    api<Category>('/categories', { method: 'POST', body: JSON.stringify({ name }) }),
+  update: (id: number, name: string) =>
+    api<Category>(`/categories/${id}`, { method: 'PATCH', body: JSON.stringify({ name }) }),
+  remove: (id: number) => api<void>(`/categories/${id}`, { method: 'DELETE' }),
+}

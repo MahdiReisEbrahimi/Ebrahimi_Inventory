@@ -434,3 +434,25 @@ html.dark .category-card__icon {
   background: #243b65;
   color: #bfdbfe;
 }
+
+.category-delete {
+  margin-right: auto;
+}
+.selected-category {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+  color: #64748b;
+  font-size: 14px;
+}
+.selected-category .el-tag {
+  height: 42px;
+  padding: 0 20px;
+  font-size: 20px;
+  font-weight: 700;
+  border-radius: 10px;
+}
+html.dark .selected-category {
+  color: #a9b6ca;
+}

@@ -74,6 +74,10 @@ watch(
 )
 </script>
 <template>
+  <div v-if="categoryTitle" class="selected-category">
+    <span>دسته‌بندی انتخاب‌شده</span
+    ><el-tag type="primary" effect="dark" size="large">{{ categoryTitle }}</el-tag>
+  </div>
   <el-alert v-if="categoryTitle" class="category-filter-alert" type="info" :closable="false"
     ><template #title>کالاهای دسته‌بندی «{{ categoryTitle }}»</template
     ><template #default

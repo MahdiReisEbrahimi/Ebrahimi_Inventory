@@ -8,7 +8,6 @@ const title = computed(() => route.meta.title ?? 'انبارک')
 const nav = [
   { to: '/', text: 'داشبورد', icon: '⌂' },
   { to: '/products', text: 'محصولات', icon: '▦' },
-  { to: '/categories', text: 'دسته‌بندی‌ها', icon: '◈' },
   { to: '/inventory', text: 'موجودی و انبار', icon: '▣' },
   { to: '/transactions', text: 'تراکنش‌ها', icon: '↔' },
   { to: '/reports', text: 'گزارش‌ها', icon: '◫' },

@@ -5,9 +5,74 @@
 
 generator client {
   provider = "prisma-client"
-  output   = "../generated/prisma"
+  output   = "../Backend/src/generated/prisma"
 }
 
 datasource db {
   provider = "postgresql"
+}
+
+model Category {
+  id        Int       @id @default(autoincrement())
+  name      String    @unique
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  products  Product[]
+}
+
+// Products will belong to exactly one category. The API module can be added
+// later without changing this relationship or migrating existing categories.
+model Product {
+  id             Int            @id @default(autoincrement())
+  name           String
+  sku            String         @unique
+  categoryId     Int
+  category       Category       @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  unit           String
+  buyPrice       Int
+  sellPrice      Int
+  stock          Int            @default(0)
+  minStock       Int            @default(0)
+  description    String?
+  isActive       Boolean        @default(true)
+  priceHistories PriceHistory[]
+  auditLogs      AuditLog[]
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  @@index([categoryId])
+  @@index([isActive])
+}
+
+enum PriceChangeType {
+  SINGLE
+  BULK
+}
+
+model PriceHistory {
+  id            Int             @id @default(autoincrement())
+  productId     Int
+  product       Product         @relation(fields: [productId], references: [id], onDelete: Restrict)
+  oldBuyPrice   Int?
+  newBuyPrice   Int?
+  oldSellPrice  Int?
+  newSellPrice  Int?
+  changePercent Float?
+  type          PriceChangeType
+  changedById   Int?
+  changedByName String?
+  createdAt     DateTime        @default(now())
+
+  @@index([productId, createdAt])
+}
+
+model AuditLog {
+  id        Int      @id @default(autoincrement())
+  productId Int
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Restrict)
+  action    String
+  details   Json?
+  createdAt DateTime @default(now())
+
+  @@index([productId, createdAt])
 }

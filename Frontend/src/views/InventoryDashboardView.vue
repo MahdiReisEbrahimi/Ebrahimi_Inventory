@@ -83,18 +83,20 @@ onMounted(loadCategories)
         @click="showProducts(category)"
         @keydown.enter="showProducts(category)"
       >
-        <span class="category-card__icon">◈</span
-        ><span
-          ><b>{{ category.name }}</b
-          ><small>مشاهده کالاهای این دسته</small></span
-        ><el-button
+        <span class="category-card__icon">◈</span>
+        <span>
+          <b>{{ category.name }}</b>
+          <small>مشاهده کالاهای این دسته</small></span
+        >
+        <el-button
           class="category-delete"
           link
           type="danger"
           aria-label="حذف دسته‌بندی"
           @click="removeCategory(category, $event)"
           >حذف</el-button
-        ><i>‹</i>
+        >
+        <i>‹</i>
       </article>
     </div>
     <section v-else class="empty-panel">
@@ -103,21 +105,20 @@ onMounted(loadCategories)
       <p>برای شروع، اولین دسته‌بندی کالا را ایجاد کنید.</p>
       <el-button type="primary" @click="dialogVisible = true">ایجاد دسته‌بندی</el-button>
     </section>
-    <el-dialog v-model="dialogVisible" title="دسته‌بندی جدید" width="420"
-      ><el-input
+    <el-dialog v-model="dialogVisible" title="دسته‌بندی جدید" width="420">
+      <el-input
         v-model="newCategoryName"
         placeholder="مثلاً شیرآلات"
         @keyup.enter="createCategory"
-      /><template #footer
-        ><el-button @click="dialogVisible = false">انصراف</el-button
-        ><el-button
-          type="primary"
-          :loading="saving"
-          :disabled="!newCategoryName.trim()"
-          @click="createCategory"
-          >ایجاد دسته‌بندی</el-button
-        ></template
-      ></el-dialog
-    >
+      />
+      <el-button @click="dialogVisible = false">انصراف</el-button>
+      <el-button
+        type="primary"
+        :loading="saving"
+        :disabled="!newCategoryName.trim()"
+        @click="createCategory"
+        >ایجاد دسته‌بندی</el-button
+      >
+    </el-dialog>
   </section>
 </template>

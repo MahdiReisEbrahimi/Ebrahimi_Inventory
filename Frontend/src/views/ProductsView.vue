@@ -5,6 +5,8 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { productsApi } from '@/services/products'
 import { categoriesApi } from '@/services/categories'
 import type { Category, Product } from '@/types'
+import { Delete, Edit } from '@element-plus/icons-vue'
+
 const items = ref<Product[]>([]),
   categories = ref<Category[]>([]),
   loading = ref(false),
@@ -102,36 +104,43 @@ watch(
       ><el-button type="primary">+ محصول جدید</el-button></router-link
     >
   </div>
-  <el-card shadow="never"
-    ><el-table align="center" dir="rtl" :data="items" v-loading="loading" responsive
-      ><el-table-column align="center" label="محصول"
-        ><template #default="{ row }"
-          ><router-link class="product-name" :to="`/products/${row.id}`">{{ row.name }}</router-link
-          ><small>{{ row.sku }}</small></template
-        ></el-table-column
-      ><el-table-column align="center" label="دسته‌بندی" prop="category.name" /><el-table-column
-        label="قیمت فروش"
-        ><template #default="{ row }">{{ money(row.sellPrice) }}</template></el-table-column
-      ><el-table-column align="center" label="موجودی"
-        ><template #default="{ row }"
-          ><span :class="{ danger: row.stock <= row.minStock }"
-            >{{ row.stock }} {{ row.unit }}</span
-          ></template
-        ></el-table-column
-      ><el-table-column align="center" label="وضعیت"
-        ><template #default="{ row }"
-          ><el-switch :model-value="row.isActive" @change="toggle(row)"
-        /></template>
+  <el-card shadow="never">
+    <el-table align="center" dir="rtl" :data="items" v-loading="loading" responsive>
+      <el-table-column align="center" label="محصول">
+        <template #default="{ row }">
+          <router-link class="product-name" :to="`/products/${row.id}`">{{ row.name }}</router-link>
+          <small>{{ row.sku }}</small>
+        </template>
+      </el-table-column>
+      <el-table-column align="center" label="دسته‌بندی" prop="category.name" />
+      <el-table-column label="قیمت فروش">
+        <template #default="{ row }">{{ money(row.sellPrice) }} </template>
+      </el-table-column>
+      <el-table-column align="center" label="موجودی">
+        <template #default="{ row }">
+          <span :class="{ danger: row.stock <= row.minStock }">{{ row.stock }} {{ row.unit }}</span>
+        </template>
+      </el-table-column>
+      <el-table-column align="center" label="وضعیت">
+        <template #default="{ row }">
+          <el-switch :model-value="row.isActive" @change="toggle(row)" />
+        </template>
       </el-table-column>
       <el-table-column align="center" label="عملیات">
         <template #default="{ row }">
           <router-link :to="`/products/${row.id}/edit`">
-            <el-button link type="primary">ویرایش</el-button>
+            <el-button circle style="scale: 1.5" link type="primary">
+              <el-icon><Edit /></el-icon>
+            </el-button>
           </router-link>
-          <el-button link type="danger" @click="remove(row)">حذف</el-button>
+          <el-button circle style="scale: 1.5" link type="danger" @click="remove(row)">
+            <el-icon>
+              <Delete />
+            </el-icon>
+          </el-button>
         </template>
-      </el-table-column></el-table
-    >
+      </el-table-column>
+    </el-table>
     <div class="pagination">
       <el-pagination
         dir="ltr"

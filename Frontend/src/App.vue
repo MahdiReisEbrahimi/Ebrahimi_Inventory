@@ -109,6 +109,7 @@ async function loadLowStockAlerts() {
 
 onMounted(() => {
   isDark.value = localStorage.getItem('theme') === 'dark'
+  document.documentElement.classList.toggle('dark', isDark.value)
 
   void loadLowStockAlerts()
 
@@ -118,14 +119,11 @@ onMounted(() => {
   }
 })
 
-watch(
-  isDark,
-  (dark) => {
-    document.documentElement.classList.toggle('dark', dark)
-    localStorage.setItem('theme', dark ? 'dark' : 'light')
-  },
-  { immediate: true },
-)
+function changeThemeHandle(){
+  isDark.value = !isDark.value
+  localStorage.setItem('theme', isDark.value ? 'dark' : 'light')
+  document.documentElement.classList.toggle('dark', isDark.value)
+}
 </script>
 
 <template>
@@ -292,7 +290,7 @@ watch(
 
           <!-- Theme -->
           <el-tooltip :content="isDark ? 'حالت روشن' : 'حالت تاریک'" placement="bottom">
-            <el-button circle aria-label="تغییر حالت نمایش" @click="isDark = !isDark">
+            <el-button circle aria-label="تغییر حالت نمایش" @click="changeThemeHandle">
               <el-icon :size="18">
                 <Sunny v-if="isDark" />
                 <Moon v-else />

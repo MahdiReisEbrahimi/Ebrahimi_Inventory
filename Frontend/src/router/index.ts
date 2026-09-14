@@ -2,7 +2,6 @@ import { createRouter, createWebHistory } from 'vue-router'
 import DashboardView from '@/views/InventoryDashboardView.vue'
 import ProductsView from '@/views/ProductsView.vue'
 import ProductFormView from '@/views/ProductFormView.vue'
-import ProductDetailsView from '@/views/ProductDetailsView.vue'
 import BulkPriceView from '@/views/BulkPriceView.vue'
 import PlaceholderView from '@/views/PlaceholderView.vue'
 
@@ -12,7 +11,6 @@ const router = createRouter({
     { path: '/', component: DashboardView, meta: { title: 'داشبورد' } },
     { path: '/products', component: ProductsView, meta: { title: 'محصولات' } },
     { path: '/products/new', component: ProductFormView, meta: { title: 'محصول جدید' } },
-    { path: '/products/:id', component: ProductDetailsView, meta: { title: 'جزئیات محصول' } },
     { path: '/products/:id/edit', component: ProductFormView, meta: { title: 'ویرایش محصول' } },
     { path: '/bulk-price-update', component: BulkPriceView, meta: { title: 'تغییر گروهی قیمت' } },
     {

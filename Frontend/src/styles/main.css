@@ -11,7 +11,6 @@
   font-display: swap;
 }
 
-
 /* =========================================================
    LIGHT THEME
    ========================================================= */
@@ -98,7 +97,6 @@
   --el-border-color-lighter: var(--app-border-lighter);
   --el-border-color-extra-light: #f1f5f9;
 }
-
 
 /* =========================================================
    DARK THEME
@@ -187,7 +185,6 @@ html.dark {
   --el-border-color-extra-light: #1e293b;
 }
 
-
 /* =========================================================
    GLOBAL
    ========================================================= */
@@ -207,10 +204,51 @@ body,
   direction: rtl;
 }
 
+html {
+  font-family: 'B Nazanin', Tahoma, sans-serif;
+}
+
+.el-button {
+  font-family: 'B Nazanin', Tahoma, sans-serif;
+  font-weight: bold;
+}
+.el-dialog__header.show-close {
+  background-color: var(--app-bg);
+  padding: 10px 20px;
+  text-align: center;
+  font-weight: bold;
+}
+.el-dialog {
+  padding: 0px;
+}
+.el-dialog__body {
+  background-color: var(--app-surface);
+  padding: 10px 20px;
+  font-size: 16px;
+}
+.el-dialog__headerbtn {
+  z-index: 1000;
+  .el-dialog__close {
+  }
+}
+a {
+  text-decoration: none;
+}
+
+.el-input__inner{
+  font-family: 'B Nazanin', Tahoma, sans-serif;
+}
+.el-select__selected-item.el-select__placeholder.is-transparent {
+    direction: rtl;
+    text-align-last: right;
+}
+.el-select__wrapper{
+  text-align: right;
+}
+
 .app-shell {
   min-height: 100vh;
 }
-
 
 /* =========================================================
    SIDEBAR
@@ -292,7 +330,6 @@ body,
   font-weight: 700;
 }
 
-
 /* =========================================================
    TOPBAR
    ========================================================= */
@@ -324,7 +361,6 @@ body,
   align-items: center;
 }
 
-
 /* =========================================================
    MAIN
    ========================================================= */
@@ -347,7 +383,6 @@ body,
 .page-actions .el-select {
   width: 150px;
 }
-
 
 /* =========================================================
    TABLE / PRODUCT
@@ -374,7 +409,6 @@ body,
   color: var(--app-danger);
   font-weight: 700;
 }
-
 
 /* =========================================================
    STAT CARDS
@@ -422,7 +456,6 @@ body,
   background: var(--app-warning-light);
 }
 
-
 /* =========================================================
    EMPTY STATE
    ========================================================= */
@@ -448,15 +481,9 @@ body,
   margin: 15px auto 23px;
 }
 
-
 /* =========================================================
    FORM
    ========================================================= */
-
-.form-card {
-  max-width: 900px;
-}
-
 .el-card__header {
   display: flex;
   justify-content: space-between;
@@ -467,20 +494,6 @@ body,
   font-size: 12px;
   color: var(--app-text-muted);
 }
-
-.form-grid,
-.details-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 0 20px;
-}
-
-.form-actions {
-  display: flex;
-  justify-content: end;
-  gap: 10px;
-}
-
 
 /* =========================================================
    DETAILS
@@ -539,7 +552,6 @@ dd {
   margin-top: 18px;
 }
 
-
 /* =========================================================
    STOCK ALERTS
    ========================================================= */
@@ -591,7 +603,6 @@ dd {
   text-align: center;
   margin: 18px 0 5px;
 }
-
 
 /* =========================================================
    CATEGORY CARDS
@@ -651,7 +662,6 @@ dd {
   margin-right: auto;
 }
 
-
 /* =========================================================
    CATEGORY FILTER
    ========================================================= */
@@ -665,7 +675,6 @@ dd {
   font-weight: 600;
   text-decoration: none;
 }
-
 
 /* =========================================================
    SELECTED CATEGORY
@@ -687,7 +696,6 @@ dd {
   font-weight: 700;
   border-radius: 10px;
 }
-
 
 /* =========================================================
    RESPONSIVE

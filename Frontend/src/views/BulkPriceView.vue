@@ -39,42 +39,42 @@ async function apply() {
 }
 </script>
 <template>
-  <el-card class="form-card" shadow="never"
-    ><template #header
-      ><b>تغییر گروهی قیمت</b
-      ><span>ابتدا پیش‌نمایش را بررسی و سپس تغییرات را ثبت کنید.</span></template
-    >
+  <el-card class="form-card" shadow="never">
+    <template #header>
+      <b>تغییر گروهی قیمت</b> <span>ابتدا پیش‌نمایش را بررسی و سپس تغییرات را ثبت کنید.</span>
+    </template>
     <div class="form-grid">
-      <el-select v-model="form.categoryId" placeholder="همه دسته‌ها" clearable
-        ><el-option v-for="c in categories" :key="c.id" :label="c.name" :value="c.id" /></el-select
-      ><el-select v-model="form.priceType"
-        ><el-option label="قیمت فروش" value="SELL" /><el-option
-          label="قیمت خرید"
-          value="BUY" /></el-select
-      ><el-select v-model="form.type"
-        ><el-option label="درصدی" value="PERCENTAGE" /><el-option
-          label="مبلغ ثابت"
-          value="FIXED" /></el-select
-      ><el-input-number
+      <el-select v-model="form.categoryId" placeholder="همه دسته‌ها" clearable>
+        <el-option v-for="c in categories" :key="c.id" :label="c.name" :value="c.id" />
+      </el-select>
+      <el-select v-model="form.priceType">
+        <el-option label="قیمت فروش" value="SELL" /> <el-option label="قیمت خرید" value="BUY" />
+      </el-select>
+      <el-select v-model="form.type">
+        <el-option label="درصدی" value="PERCENTAGE" /> <el-option label="مبلغ ثابت" value="FIXED" />
+      </el-select>
+      <el-input-number
         v-model="form.value"
         :min="0"
         :placeholder="form.type === 'PERCENTAGE' ? 'درصد' : 'مبلغ'"
         style="width: 100%"
       />
     </div>
-    <el-button type="primary" :loading="loading" @click="preview"
-      >نمایش پیش‌نمایش</el-button
-    ></el-card
-  ><el-card v-if="rows.length" shadow="never" class="preview"
-    ><template #header
-      ><b>پیش‌نمایش تغییرات ({{ rows.length }} محصول)</b
-      ><el-button type="success" @click="apply">تأیید و اعمال تغییرات</el-button></template
-    ><el-table :data="rows"
-      ><el-table-column prop="name" label="محصول" /><el-table-column label="قیمت قبلی"
-        ><template #default="{ row }">{{ money(row.oldPrice) }}</template></el-table-column
-      ><el-table-column label="قیمت جدید"
-        ><template #default="{ row }">{{ money(row.newPrice) }}</template></el-table-column
-      ></el-table
-    ></el-card
-  >
+    <el-button type="primary" :loading="loading" @click="preview">نمایش پیش‌نمایش</el-button>
+  </el-card>
+  <el-card v-if="rows.length" shadow="never" class="preview">
+    <template #header>
+      <b>پیش‌نمایش تغییرات ({{ rows.length }} محصول)</b>
+      <el-button type="success" @click="apply">تأیید و اعمال تغییرات</el-button>
+    </template>
+    <el-table :data="rows">
+      <el-table-column prop="name" label="محصول" />
+      <el-table-column label="قیمت قبلی">
+        <template #default="{ row }">{{ money(row.oldPrice) }}</template>
+      </el-table-column>
+      <el-table-column label="قیمت جدید">
+        <template #default="{ row }">{{ money(row.newPrice) }}</template>
+      </el-table-column>
+    </el-table>
+  </el-card>
 </template>

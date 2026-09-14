@@ -1,11 +1,106 @@
+<template>
+  <div v-if="categoryTitle" class="selected-category">
+    <span>دسته‌بندی انتخاب‌شده</span>
+    <el-tag type="primary" effect="dark" size="large">{{ categoryTitle }}</el-tag>
+  </div>
+  <el-alert v-if="categoryTitle" class="category-filter-alert" type="info" :closable="false">
+    <template #title>کالاهای دسته‌بندی «{{ categoryTitle }}»</template>
+    <template #default> <router-link to="/products">نمایش همه کالاها</router-link> </template>
+  </el-alert>
+  <div class="page-actions">
+    <el-input
+      v-model="query.search"
+      placeholder="جست‌وجو در نام یا کد کالا"
+      clearable
+      @keyup.enter="load"
+    />
+    <el-select v-model="query.categoryId" placeholder="همه دسته‌ها" clearable>
+      <el-option v-for="c in categories" :key="c.id" :label="c.name" :value="c.id" />
+    </el-select>
+    <el-select v-model="query.isActive" placeholder="وضعیت" clearable>
+      <el-option label="فعال" :value="true" /> <el-option label="غیرفعال" :value="false" />
+    </el-select>
+    <el-button @click="load">اعمال فیلتر</el-button>
+    <router-link to="/bulk-price-update"> <el-button>تغییر گروهی قیمت</el-button> </router-link>
+    <el-button @click="showDialogs.newProduct = true" type="primary">+ محصول جدید</el-button>
+  </div>
+  <el-table border align="center" dir="rtl" :data="items" v-loading="loading">
+    <el-table-column type="index" width="50" align="center" label="ردیف" />
+    <el-table-column width="200" align="center" label="محصول">
+      <template #default="{ row }">
+        <router-link class="product-name" :to="`/products/${row.id}`">{{ row.name }}</router-link>
+        <small>{{ row.sku }}</small>
+      </template>
+    </el-table-column>
+    <el-table-column align="center" label="دسته‌بندی" prop="category.name" />
+    <el-table-column width="150" align="center" label="قیمت فروش (تومان)">
+      <template #default="{ row }">{{ money(row.sellPrice) }} </template>
+    </el-table-column>
+    <el-table-column align="center" label="موجودی">
+      <template #default="{ row }">
+        <span :class="{ danger: row.stock <= row.minStock }">{{ row.stock }} {{ row.unit }}</span>
+      </template>
+    </el-table-column>
+    <el-table-column align="center" label="وضعیت">
+      <template #default="{ row }">
+        <el-switch :model-value="row.isActive" @change="toggle(row)" />
+      </template>
+    </el-table-column>
+    <el-table-column min-width="200" align="center" label="عملیات">
+      <template #default="{ row }">
+        <el-tooltip
+          v-for="action in actions"
+          :key="action.tooltip"
+          :content="action.hint"
+          trigger="hover"
+        >
+          <el-button
+            @click="action.handler(row)"
+            style="margin: 0px 2px; width: 32px; height: 32px"
+            :type="action.type"
+            circle
+          >
+            <el-icon> <component :is="action.icon" /> </el-icon>
+          </el-button>
+        </el-tooltip>
+      </template>
+    </el-table-column>
+  </el-table>
+  <div class="pagination" style="direction: ltr; text-align: center">
+    <el-pagination
+      size="small"
+      v-model:current-page="query.page"
+      :page-size="query.limit"
+      layout="total, prev, pager, next"
+      :total="total"
+      @current-change="load"
+    />
+  </div>
+  <el-dialog
+    v-for="dialog in dialogs"
+    :key="dialog.title"
+    v-model="showDialogs[dialog.model]"
+    :title="dialog.title"
+    :width="dialog.width"
+    :max-width="300"
+    align-center
+    destroy-on-close
+  >
+    <component :is="dialog.component" v-bind="dialog.props" v-on="dialog.emits" />
+  </el-dialog>
+</template>
+
 <script setup lang="ts">
 import { onMounted, reactive, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessage } from 'element-plus'
 import { productsApi } from '@/services/products'
 import { categoriesApi } from '@/services/categories'
 import type { Category, Product } from '@/types'
-import { Delete, Edit } from '@element-plus/icons-vue'
+import { Delete, Edit, View } from '@element-plus/icons-vue'
+import DeleteProductDialog from '@/components/dialogs/DeleteProductDialog.vue'
+import ProductFormView from './ProductFormView.vue'
+import ProductDetailsView from './ProductDetailsView.vue'
 
 const items = ref<Product[]>([]),
   categories = ref<Category[]>([]),
@@ -19,9 +114,110 @@ const query = reactive({
   isActive: undefined as boolean | undefined,
   lowStock: undefined as boolean | undefined,
 })
+const showDialogs = reactive({
+  editProduct: false,
+  deleteProduct: false,
+  newProduct: false,
+  moreInfo: false,
+})
+const selectedRow = ref(null)
+
+const dialogs = reactive([
+  {
+    title: 'حذف محصول',
+    model: 'deleteProduct',
+    width: '400',
+    component: DeleteProductDialog,
+    emits: {
+      close: async (status: boolean) => {
+        if (status) await load()
+        showDialogs.deleteProduct = false
+      },
+    },
+    props: {
+      selectedRow,
+    },
+  },
+  {
+    title: 'محصول جدید',
+    model: 'newProduct',
+    width: '700',
+    maxWidth: '700',
+    component: ProductFormView,
+    emits: {
+      close: async (status: boolean) => {
+        if (status) await load()
+        showDialogs.newProduct = false
+      },
+    },
+  },
+  {
+    title: 'ویرایش محصول',
+    model: 'editProduct',
+    width: '700',
+    maxWidth: '700',
+    component: ProductFormView,
+    emits: {
+      close: async (status: boolean) => {
+        if (status) await load()
+        showDialogs.editProduct = false
+      },
+    },
+    props: {
+      editData: selectedRow,
+    },
+  },
+  {
+    title: 'اطلاعات محصول',
+    model: 'moreInfo',
+    width: '700',
+    maxWidth: '700',
+    component: ProductDetailsView,
+    props: {
+      selectedRow: selectedRow,
+    },
+    emits: {
+      close: async (status: boolean) => {
+        if (status) await load()
+        showDialogs.editProduct = false
+      },
+    },
+  },
+])
+
+const actions = reactive([
+  {
+    hint: 'ویرایش',
+    icon: Edit,
+    type: 'success',
+    handler: (row: any) => {
+      selectedRow.value = row
+      showDialogs.editProduct = true
+    },
+  },
+  {
+    hint: 'حذف',
+    icon: Delete,
+    type: 'danger',
+    handler: (row: any) => {
+      selectedRow.value = row
+      showDialogs.deleteProduct = true
+    },
+  },
+  {
+    hint: 'اطلاعات بیشتر',
+    icon: View,
+    type: 'info',
+    handler: (row: any) => {
+      selectedRow.value = row
+      console.log(selectedRow.value);
+      showDialogs.moreInfo = true
+    },
+  },
+])
 const route = useRoute()
 const categoryTitle = ref('')
-const money = (v: number) => new Intl.NumberFormat('fa-IR').format(v) + ' تومان'
+const money = (v: number) => new Intl.NumberFormat('fa-IR').format(v)
 async function load() {
   loading.value = true
   try {
@@ -43,14 +239,7 @@ async function toggle(p: any) {
     ElMessage.error(e instanceof Error ? e.message : 'خطا')
   }
 }
-async function remove(p: any) {
-  try {
-    await ElMessageBox.confirm(`حذف «${p.name}»؟`, 'تأیید حذف')
-    await productsApi.remove(p.id)
-    await load()
-    ElMessage.success('عملیات انجام شد')
-  } catch {}
-}
+
 onMounted(async () => {
   const categoryId = Number(route.query.categoryId)
   if (Number.isInteger(categoryId) && categoryId > 0) {
@@ -75,81 +264,3 @@ watch(
   },
 )
 </script>
-<template>
-  <div v-if="categoryTitle" class="selected-category">
-    <span>دسته‌بندی انتخاب‌شده</span
-    ><el-tag type="primary" effect="dark" size="large">{{ categoryTitle }}</el-tag>
-  </div>
-  <el-alert v-if="categoryTitle" class="category-filter-alert" type="info" :closable="false"
-    ><template #title>کالاهای دسته‌بندی «{{ categoryTitle }}»</template
-    ><template #default
-      ><router-link to="/products">نمایش همه کالاها</router-link></template
-    ></el-alert
-  >
-  <div class="page-actions">
-    <el-input
-      v-model="query.search"
-      placeholder="جست‌وجو در نام یا کد کالا"
-      clearable
-      @keyup.enter="load"
-    /><el-select v-model="query.categoryId" placeholder="همه دسته‌ها" clearable
-      ><el-option v-for="c in categories" :key="c.id" :label="c.name" :value="c.id" /></el-select
-    ><el-select v-model="query.isActive" placeholder="وضعیت" clearable
-      ><el-option label="فعال" :value="true" /><el-option
-        label="غیرفعال"
-        :value="false" /></el-select
-    ><el-button @click="load">اعمال فیلتر</el-button
-    ><router-link to="/bulk-price-update"><el-button>تغییر گروهی قیمت</el-button></router-link
-    ><router-link to="/products/new"
-      ><el-button type="primary">+ محصول جدید</el-button></router-link
-    >
-  </div>
-  <el-card shadow="never">
-    <el-table align="center" dir="rtl" :data="items" v-loading="loading" responsive>
-      <el-table-column align="center" label="محصول">
-        <template #default="{ row }">
-          <router-link class="product-name" :to="`/products/${row.id}`">{{ row.name }}</router-link>
-          <small>{{ row.sku }}</small>
-        </template>
-      </el-table-column>
-      <el-table-column align="center" label="دسته‌بندی" prop="category.name" />
-      <el-table-column label="قیمت فروش">
-        <template #default="{ row }">{{ money(row.sellPrice) }} </template>
-      </el-table-column>
-      <el-table-column align="center" label="موجودی">
-        <template #default="{ row }">
-          <span :class="{ danger: row.stock <= row.minStock }">{{ row.stock }} {{ row.unit }}</span>
-        </template>
-      </el-table-column>
-      <el-table-column align="center" label="وضعیت">
-        <template #default="{ row }">
-          <el-switch :model-value="row.isActive" @change="toggle(row)" />
-        </template>
-      </el-table-column>
-      <el-table-column align="center" label="عملیات">
-        <template #default="{ row }">
-          <router-link :to="`/products/${row.id}/edit`">
-            <el-button circle style="scale: 1.5" link type="primary">
-              <el-icon><Edit /></el-icon>
-            </el-button>
-          </router-link>
-          <el-button circle style="scale: 1.5" link type="danger" @click="remove(row)">
-            <el-icon>
-              <Delete />
-            </el-icon>
-          </el-button>
-        </template>
-      </el-table-column>
-    </el-table>
-    <div class="pagination">
-      <el-pagination
-        dir="ltr"
-        size="small"
-        v-model:current-page="query.page"
-        :page-size="query.limit"
-        layout="total, prev, pager, next"
-        :total="total"
-        @current-change="load"
-      /></div
-  ></el-card>
-</template>

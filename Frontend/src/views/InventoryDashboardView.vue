@@ -86,8 +86,8 @@ onMounted(loadCategories)
         <span class="category-card__icon">◈</span>
         <span>
           <b>{{ category.name }}</b>
-          <small>مشاهده کالاهای این دسته</small></span
-        >
+          <small>مشاهده کالاهای این دسته</small>
+        </span>
         <el-button
           class="category-delete"
           link

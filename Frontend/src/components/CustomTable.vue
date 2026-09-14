@@ -86,7 +86,7 @@
               style="margin: 0px 2px; width: 32px; height: 32px"
             >
               <el-icon :color="button.fillColor || '#fff'">
-                <span v-if="iconType(button.icon) === 'string'" v-html="button.icon"></span>
+                <span v-if="iconType(button.icon) === 'string'" v-html="button.icon"> </span>
                 <component v-else :is="button.icon" />
               </el-icon>
             </el-button>

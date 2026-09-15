@@ -15,10 +15,12 @@
     <el-select v-model="query.isActive" placeholder="وضعیت" clearable>
       <el-option label="فعال" :value="true" /> <el-option label="غیرفعال" :value="false" />
     </el-select>
-    <router-link to="/bulk-price-update"> <el-button>تغییر گروهی قیمت</el-button> </router-link>
+    <el-button @click="showDialogs.bulkPriceUpdate = true" type="primary"
+      >تغییر گروهی قیمت</el-button
+    >
     <el-button @click="showDialogs.newProduct = true" type="primary">+ محصول جدید</el-button>
   </div>
-  <el-table border align="center" dir="rtl" :data="paginatedItems" v-loading="loading">
+  <el-table stripe border align="center" dir="rtl" :data="paginatedItems" v-loading="loading">
     <el-table-column type="index" width="50" align="center" label="ردیف" />
     <el-table-column width="200" align="center" label="محصول">
       <template #default="{ row }">
@@ -95,6 +97,7 @@ import DeleteProductDialog from '@/components/dialogs/DeleteProductDialog.vue'
 import ProductFormView from './ProductFormView.vue'
 import ProductDetailsDialog from '@/components/dialogs/ProductDetailsDialog.vue'
 import { computed, onMounted, reactive, ref, watch } from 'vue'
+import BulkPriceView from './BulkPriceView.vue'
 
 const filteredItems = computed(() => {
   let result = [...items.value]
@@ -141,7 +144,6 @@ const selectedRow = ref(null)
 const query = reactive({
   page: 1,
   limit: 10,
-
   search: '',
   categoryId: undefined as number | undefined,
   isActive: undefined as boolean | undefined,
@@ -152,6 +154,7 @@ const showDialogs = reactive({
   deleteProduct: false,
   newProduct: false,
   moreInfo: false,
+  bulkPriceUpdate: false,
 })
 
 const dialogs = reactive([
@@ -212,6 +215,22 @@ const dialogs = reactive([
       close: async (status: boolean) => {
         if (status) await load()
         showDialogs.editProduct = false
+      },
+    },
+  },
+  {
+    title: 'تغییر قیمت گروهی',
+    model: 'bulkPriceUpdate',
+    width: '800',
+    maxWidth: '800',
+    component: BulkPriceView,
+    props: {
+      selectedRow: selectedRow,
+    },
+    emits: {
+      close: async (status: boolean) => {
+        if (status) await load()
+        showDialogs.bulkPriceUpdate = false
       },
     },
   },

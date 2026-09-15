@@ -498,7 +498,7 @@ a {
 /* =========================================================
    DETAILS
    ========================================================= */
-
+/*
 .details-heading,
 .section-header {
   display: flex;
@@ -517,7 +517,7 @@ a {
   color: var(--app-text-muted);
   font-size: 13px;
   margin: 0;
-}
+} */
 
 .details-grid {
   gap: 18px;

@@ -12,7 +12,6 @@ const router = createRouter({
     { path: '/products', component: ProductsView, meta: { title: 'محصولات' } },
     { path: '/products/new', component: ProductFormView, meta: { title: 'محصول جدید' } },
     { path: '/products/:id/edit', component: ProductFormView, meta: { title: 'ویرایش محصول' } },
-    { path: '/bulk-price-update', component: BulkPriceView, meta: { title: 'تغییر گروهی قیمت' } },
     {
       path: '/inventory',
       component: PlaceholderView,

@@ -8,19 +8,48 @@
     <template #default> <router-link to="/products">نمایش همه کالاها</router-link> </template>
   </el-alert>
   <div class="page-actions">
-    <el-input v-model="query.search" placeholder="جست‌وجو در نام یا کد کالا" clearable />
-    <el-select v-model="query.categoryId" placeholder="همه دسته‌ها" clearable>
-      <el-option v-for="c in categories" :key="c.id" :label="c.name" :value="c.id" />
-    </el-select>
-    <el-select v-model="query.isActive" placeholder="وضعیت" clearable>
-      <el-option label="فعال" :value="true" /> <el-option label="غیرفعال" :value="false" />
-    </el-select>
-    <el-button @click="showDialogs.bulkPriceUpdate = true" type="primary"
-      >تغییر گروهی قیمت</el-button
-    >
-    <el-button @click="showDialogs.newProduct = true" type="primary">+ محصول جدید</el-button>
+    <div class="filters">
+      <el-input
+        v-model="query.search"
+        class="filter-item"
+        placeholder="جست‌وجو در نام یا کد کالا"
+        clearable
+      >
+        <i slot="prefix" class="el-icon-search"></i>
+      </el-input>
+
+      <el-select v-model="query.categoryId" class="filter-item" placeholder="همه دسته‌ها" clearable>
+        <el-option v-for="c in categories" :key="c.id" :label="c.name" :value="c.id" />
+      </el-select>
+
+      <el-select v-model="query.isActive" class="filter-item" placeholder="همه وضعیت‌ها" clearable>
+        <el-option label="فعال" :value="true" />
+        <el-option label="غیرفعال" :value="false" />
+      </el-select>
+    </div>
+
+    <div class="actions">
+      <el-button class="bulk-price-btn" @click="showDialogs.bulkPriceUpdate = true">
+        <i class="el-icon-money"></i>
+        تغییر گروهی قیمت
+      </el-button>
+
+      <el-button type="primary" class="new-product-btn" @click="showDialogs.newProduct = true">
+        <i class="el-icon-plus"></i>
+        محصول جدید
+      </el-button>
+    </div>
   </div>
-  <el-table stripe border align="center" dir="rtl" :data="paginatedItems" v-loading="loading">
+  <el-table
+    stripe
+    border
+    :header-cell-style="{ background: '#f5f7fa', height: '60px' }"
+    align="center"
+    dir="rtl"
+    :data="paginatedItems"
+    v-loading="loading"
+    style="width: 100%"
+  >
     <el-table-column type="index" width="50" align="center" label="ردیف" />
     <el-table-column width="200" align="center" label="محصول">
       <template #default="{ row }">
@@ -330,3 +359,101 @@ watch(
   },
 )
 </script>
+<style scoped>
+.page-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 16px 18px;
+  margin-bottom: 20px;
+  background: var(--card-bg, #fff);
+  border: 1px solid var(--border-color, #ebeef5);
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+}
+
+.filters {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.filter-item {
+  min-width: 200px !important;
+  height: 40px !important;
+}
+::v-deep .el-select__wrapper{
+  height: 40px !important;
+}
+
+.page-actions .el-input,
+.page-actions .el-select {
+  height: 40px;
+}
+
+.page-actions .el-input /deep/ .el-input__inner,
+.page-actions .el-select /deep/ .el-input__inner {
+  border-radius: 8px;
+}
+
+.page-actions .el-button {
+  height: 40px;
+  border-radius: 8px;
+  font-weight: 500;
+}
+
+.bulk-price-btn {
+  color: #409eff;
+  border-color: #d9ecff;
+  background: #f0f8ff;
+}
+
+.new-product-btn {
+  min-width: 125px;
+}
+
+/* Responsive */
+@media (max-width: 1100px) {
+  .page-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .filters {
+    width: 100%;
+  }
+
+  .actions {
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 700px) {
+  .filters {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .search-input,
+  .filter-select {
+    width: 100%;
+  }
+
+  .actions {
+    width: 100%;
+  }
+
+  .actions .el-button {
+    flex: 1;
+  }
+}
+</style>

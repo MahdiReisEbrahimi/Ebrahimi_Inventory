@@ -169,6 +169,7 @@ import { categoriesApi } from '@/services/categories'
 import type { Category } from '@/types'
 import { PriceTag, View, CircleCheck, WarningFilled } from '@element-plus/icons-vue'
 
+const emits = defineEmits(['close'])
 const form = reactive({
   categoryId: undefined as number | undefined,
   type: 'PERCENTAGE',
@@ -233,7 +234,7 @@ async function apply() {
     const r = await productsApi.bulk(form)
 
     ElMessage.success(`قیمت ${r.affectedProducts} محصول با موفقیت تغییر کرد`)
-
+    emits('close', true)
     rows.value = []
   } catch (e) {
     if (e !== 'cancel' && e !== 'close') {

@@ -2,18 +2,13 @@
    FONT
    ========================================================= */
 
-/* B Nazanin is a licensed font. `local()` uses the user's
-   installed copy without redistributing it. */
 
 @font-face {
-  font-family: 'B Nazanin';
-  src: local('B Nazanin'), local('B-Nazanin');
-  font-display: swap;
+  font-family: 'Vazirmatn';
+  src: url('@/assets/fonts/Vazirmatn-VariableFont_wght.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
 }
-
-/* =========================================================
-   LIGHT THEME
-   ========================================================= */
 
 :root {
   /* ---------- Brand ---------- */
@@ -64,10 +59,6 @@
 
   /* ---------- Shadow ---------- */
   --app-shadow-primary: rgba(37, 99, 235, 0.11);
-
-  /* =======================================================
-     ELEMENT PLUS
-     ======================================================= */
 
   --el-color-primary: var(--app-primary);
   --el-color-primary-light-3: #60a5fa;
@@ -200,16 +191,16 @@ body,
   margin: 0;
   background: var(--app-bg);
   color: var(--app-text);
-  font-family: 'B Nazanin', Tahoma, sans-serif;
+  font-family: 'Vazirmatn', Tahoma, sans-serif;
   direction: rtl;
 }
 
 html {
-  font-family: 'B Nazanin', Tahoma, sans-serif;
+  font-family: 'Vazirmatn', Tahoma, sans-serif;
 }
 
 .el-button {
-  font-family: 'B Nazanin', Tahoma, sans-serif;
+  font-family: 'Vazirmatn', Tahoma, sans-serif;
   font-weight: bold;
 }
 .el-dialog__header.show-close {
@@ -235,14 +226,14 @@ a {
   text-decoration: none;
 }
 
-.el-input__inner{
-  font-family: 'B Nazanin', Tahoma, sans-serif;
+.el-input__inner {
+  font-family: 'Vazirmatn', Tahoma, sans-serif;
 }
 .el-select__selected-item.el-select__placeholder.is-transparent {
-    direction: rtl;
-    text-align-last: right;
+  direction: rtl;
+  text-align-last: right;
 }
-.el-select__wrapper{
+.el-select__wrapper {
   text-align: right;
 }
 
@@ -395,8 +386,8 @@ a {
   font-weight: 600;
 }
 
-.el-table small {
-  color: var(--app-text-muted);
+.el-table {
+  background-color: var(--app-bg);
 }
 
 .pagination {

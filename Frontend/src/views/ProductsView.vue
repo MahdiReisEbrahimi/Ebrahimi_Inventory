@@ -8,23 +8,17 @@
     <template #default> <router-link to="/products">نمایش همه کالاها</router-link> </template>
   </el-alert>
   <div class="page-actions">
-    <el-input
-      v-model="query.search"
-      placeholder="جست‌وجو در نام یا کد کالا"
-      clearable
-      @keyup.enter="load"
-    />
+    <el-input v-model="query.search" placeholder="جست‌وجو در نام یا کد کالا" clearable />
     <el-select v-model="query.categoryId" placeholder="همه دسته‌ها" clearable>
       <el-option v-for="c in categories" :key="c.id" :label="c.name" :value="c.id" />
     </el-select>
     <el-select v-model="query.isActive" placeholder="وضعیت" clearable>
       <el-option label="فعال" :value="true" /> <el-option label="غیرفعال" :value="false" />
     </el-select>
-    <el-button @click="load">اعمال فیلتر</el-button>
     <router-link to="/bulk-price-update"> <el-button>تغییر گروهی قیمت</el-button> </router-link>
     <el-button @click="showDialogs.newProduct = true" type="primary">+ محصول جدید</el-button>
   </div>
-  <el-table border align="center" dir="rtl" :data="items" v-loading="loading">
+  <el-table border align="center" dir="rtl" :data="paginatedItems" v-loading="loading">
     <el-table-column type="index" width="50" align="center" label="ردیف" />
     <el-table-column width="200" align="center" label="محصول">
       <template #default="{ row }">
@@ -68,12 +62,12 @@
   </el-table>
   <div class="pagination" style="direction: ltr; text-align: center">
     <el-pagination
-      size="small"
       v-model:current-page="query.page"
-      :page-size="query.limit"
-      layout="total, prev, pager, next"
+      v-model:page-size="query.limit"
       :total="total"
-      @current-change="load"
+      :page-sizes="[10, 20, 50, 100]"
+      layout="total, sizes, prev, pager, next"
+      @size-change="query.page = 1"
     />
   </div>
   <el-dialog
@@ -91,7 +85,6 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, reactive, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { productsApi } from '@/services/products'
@@ -101,14 +94,54 @@ import { Delete, Edit, View } from '@element-plus/icons-vue'
 import DeleteProductDialog from '@/components/dialogs/DeleteProductDialog.vue'
 import ProductFormView from './ProductFormView.vue'
 import ProductDetailsDialog from '@/components/dialogs/ProductDetailsDialog.vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 
-const items = ref<Product[]>([]),
-  categories = ref<Category[]>([]),
-  loading = ref(false),
-  total = ref(0)
+const filteredItems = computed(() => {
+  let result = [...items.value]
+
+  if (query.search.trim()) {
+    const search = query.search.trim().toLowerCase()
+
+    result = result.filter((item) => {
+      return item.name?.toLowerCase().includes(search) || item.sku?.toLowerCase().includes(search)
+    })
+  }
+
+  if (query.categoryId !== undefined) {
+    result = result.filter((item) => item.categoryId === query.categoryId)
+  }
+
+  if (query.isActive !== undefined) {
+    result = result.filter((item) => item.isActive === query.isActive)
+  }
+
+  if (query.lowStock !== undefined) {
+    result = result.filter((item) => {
+      const isLowStock = item.stock <= item.minStock
+
+      return query.lowStock ? isLowStock : !isLowStock
+    })
+  }
+
+  return result
+})
+
+const paginatedItems = computed(() => {
+  const start = (query.page - 1) * query.limit
+  const end = start + query.limit
+
+  return filteredItems.value.slice(start, end)
+})
+
+const total = computed(() => filteredItems.value.length)
+const items = ref<Product[]>([])
+const categories = ref<Category[]>([])
+const loading = ref(false)
+const selectedRow = ref(null)
 const query = reactive({
   page: 1,
-  limit: 20,
+  limit: 10,
+
   search: '',
   categoryId: undefined as number | undefined,
   isActive: undefined as boolean | undefined,
@@ -120,7 +153,6 @@ const showDialogs = reactive({
   newProduct: false,
   moreInfo: false,
 })
-const selectedRow = ref(null)
 
 const dialogs = reactive([
   {
@@ -218,18 +250,24 @@ const actions = reactive([
 const route = useRoute()
 const categoryTitle = ref('')
 const money = (v: number) => new Intl.NumberFormat('fa-IR').format(v)
+
 async function load() {
   loading.value = true
+
   try {
-    const r = await productsApi.list(query)
+    const r = await productsApi.list({
+      page: 1,
+      limit: 10000,
+    })
+
     items.value = r.data
-    total.value = r.meta.total
   } catch (e) {
-    ElMessage.error(e instanceof Error ? e.message : 'خطا')
+    ElMessage.error(e instanceof Error ? e.message : 'خطا در دریافت محصولات')
   } finally {
     loading.value = false
   }
 }
+
 async function toggle(p: any) {
   try {
     await productsApi.status(p.id, !p.isActive)
@@ -254,13 +292,22 @@ onMounted(async () => {
       .catch(() => {}),
   ])
 })
+
 watch(
   () => route.query.categoryId,
   (categoryId) => {
     query.categoryId = categoryId ? Number(categoryId) : undefined
+
     categoryTitle.value = String(route.query.categoryName ?? '')
+
     query.page = 1
-    void load()
+  },
+)
+
+watch(
+  () => [query.search, query.categoryId, query.isActive, query.lowStock],
+  () => {
+    query.page = 1
   },
 )
 </script>

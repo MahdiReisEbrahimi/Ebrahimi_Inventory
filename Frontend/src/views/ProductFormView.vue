@@ -118,7 +118,7 @@ async function submit() {
       ? await productsApi.update(id, submitData)
       : await productsApi.create(submitData)
     ElMessage.success(props.editData ? 'اطلاعات محصول ویرایش شد' : 'اطلاعات محصول ذخیره شد')
-    router.push(`/products/${p.id}`)
+    emits('close', true)
   } catch (e) {
     ElMessage.error(e instanceof Error ? e.message : 'خطا')
   } finally {

@@ -28,7 +28,7 @@
     <el-table-column type="index" width="50" align="center" label="ردیف" />
     <el-table-column width="200" align="center" label="محصول">
       <template #default="{ row }">
-        <router-link class="product-name" :to="`/products/${row.id}`">{{ row.name }}</router-link>
+        <div style="font-weight: bold">{{ row.name }}</div>
         <small>{{ row.sku }}</small>
       </template>
     </el-table-column>
@@ -100,7 +100,7 @@ import type { Category, Product } from '@/types'
 import { Delete, Edit, View } from '@element-plus/icons-vue'
 import DeleteProductDialog from '@/components/dialogs/DeleteProductDialog.vue'
 import ProductFormView from './ProductFormView.vue'
-import ProductDetailsView from './ProductDetailsView.vue'
+import ProductDetailsDialog from '@/components/dialogs/ProductDetailsDialog.vue'
 
 const items = ref<Product[]>([]),
   categories = ref<Category[]>([]),
@@ -172,7 +172,7 @@ const dialogs = reactive([
     model: 'moreInfo',
     width: '700',
     maxWidth: '700',
-    component: ProductDetailsView,
+    component: ProductDetailsDialog,
     props: {
       selectedRow: selectedRow,
     },
@@ -210,7 +210,7 @@ const actions = reactive([
     type: 'info',
     handler: (row: any) => {
       selectedRow.value = row
-      console.log(selectedRow.value);
+      console.log(selectedRow.value)
       showDialogs.moreInfo = true
     },
   },

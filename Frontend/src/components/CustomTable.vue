@@ -12,7 +12,7 @@
         v-if="props.searchable"
         class="search-input"
         v-model="searchValue"
-        :placeholder="'setting.search' + '...'"
+        :placeholder="'جستجو' + '...'"
         @input="(val) => emits('search', val)"
       />
       <div>
@@ -20,7 +20,7 @@
           v-if="refreshable"
           circle
           @click="emits('refresh')"
-          :loading="loading"
+          :loading="false"
           style="margin-left: 5px"
           class="table-actions"
         >
@@ -30,12 +30,17 @@
         </el-button>
       </div>
     </div>
-    <el-divider />
     <el-table
       :data="tableData"
       :max-height="height || `calc(100vh - 420)`"
       :height="height || `calc(100vh - 420)`"
+      :header-cell-style="{ background: '#f5f7fa', height: '60px' }"
+      stripe
+      border
+      align="center"
     >
+      <el-table-column type="index" width="55" align="center" label="ردیف" />
+
       <el-table-column
         v-for="(col, index) in tableColumns"
         :key="index"
@@ -48,13 +53,11 @@
           <span style="text-transform: capitalize">{{ col.label }}</span>
         </template>
         <template #default="{ row }">
-          <slot
-            :name="col.prop"
-            :item="row[col.prop]"
-            v-if="col.formatter == null && typeof row[col.prop] != 'number'"
-          >
-            <!-- fallback -->
-            <span :style="detectLanguage(row[col.prop])">
+          <slot :name="col.prop" :item="row[col.prop]">
+            <span v-if="col.type === 'price'">
+              {{ handlePriceInput(String(row[col.prop])) }}
+            </span>
+            <span v-else>
               {{ row[col.prop] }}
             </span>
           </slot>
@@ -67,8 +70,7 @@
       <el-table-column
         v-if="rowActions"
         :prop="'Actions'"
-        :label="'common.operation'"
-        fixed="right"
+        :label="'عملیات'"
         :min-width="Math.max(rowActions.length * 50, 170)"
         align="center"
       >
@@ -98,13 +100,14 @@
 </template>
 
 <script setup lang="ts">
+import { handlePriceInput } from '@/utils/general'
 import { computed, ref } from 'vue'
-import type { a } from 'vue-router/dist/index-D7ja2BKs.js'
 
 export type TableColumn = {
   label: string
   prop: string
-  width?: string | number
+  minWidth?: string | number
+  type?: 'price'
   formatter?: Function
 }
 
@@ -135,11 +138,6 @@ const props = defineProps({
 })
 const emits = defineEmits(['actionClick', 'search', 'refresh'])
 
-function detectLanguage(text: string) {
-  const persianRegex = /[\u0600-\u06FF]/
-  return persianRegex.test(text) ? 'font-family: IranSans ;' : 'font-family: Arial ;'
-}
-
 function handleActionButtons(actionName: string, row: object) {
   emits('actionClick', { actionName: actionName, row: row })
 }
@@ -147,11 +145,11 @@ function handleActionButtons(actionName: string, row: object) {
 function colorGetter(button: any) {
   switch (button.name) {
     case 'view':
-      return '#355e9ad6'
+      return '#64748b'
     case 'edit':
-      return '#368536'
+      return '#11813b'
     case 'delete':
-      return '#ff0000b0'
+      return '#dc2626'
   }
   if (button.color) return button.color
   return '#355e9ad6'

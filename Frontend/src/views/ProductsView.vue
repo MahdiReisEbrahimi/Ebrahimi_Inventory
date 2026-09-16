@@ -27,7 +27,6 @@
         <el-option label="غیرفعال" :value="false" />
       </el-select>
     </div>
-
     <div class="actions">
       <el-button class="bulk-price-btn" @click="showDialogs.bulkPriceUpdate = true">
         <i class="el-icon-money"></i>
@@ -40,57 +39,25 @@
       </el-button>
     </div>
   </div>
-  <el-table
-    stripe
-    border
-    :header-cell-style="{ background: '#f5f7fa', height: '60px' }"
-    align="center"
-    dir="rtl"
-    :data="paginatedItems"
-    v-loading="loading"
-    style="width: 100%"
-  >
-    <el-table-column type="index" width="50" align="center" label="ردیف" />
-    <el-table-column width="200" align="center" label="محصول">
-      <template #default="{ row }">
-        <div style="font-weight: bold">{{ row.name }}</div>
-        <small>{{ row.sku }}</small>
-      </template>
-    </el-table-column>
-    <el-table-column align="center" label="دسته‌بندی" prop="category.name" />
-    <el-table-column width="150" align="center" label="قیمت فروش (تومان)">
-      <template #default="{ row }">{{ money(row.sellPrice) }} </template>
-    </el-table-column>
-    <el-table-column align="center" label="موجودی">
-      <template #default="{ row }">
-        <span :class="{ danger: row.stock <= row.minStock }">{{ row.stock }} {{ row.unit }}</span>
-      </template>
-    </el-table-column>
-    <el-table-column align="center" label="وضعیت">
-      <template #default="{ row }">
-        <el-switch :model-value="row.isActive" @change="toggle(row)" />
-      </template>
-    </el-table-column>
-    <el-table-column min-width="200" align="center" label="عملیات">
-      <template #default="{ row }">
-        <el-tooltip
-          v-for="action in actions"
-          :key="action.tooltip"
-          :content="action.hint"
-          trigger="hover"
-        >
-          <el-button
-            @click="action.handler(row)"
-            style="margin: 0px 2px; width: 32px; height: 32px"
-            :type="action.type"
-            circle
-          >
-            <el-icon> <component :is="action.icon" /> </el-icon>
-          </el-button>
-        </el-tooltip>
-      </template>
-    </el-table-column>
-  </el-table>
+  <CustomTable
+    :rowActions="[
+      { name: 'view', icon: View },
+      { name: 'edit', icon: Edit },
+      { name: 'delete', icon: Delete },
+    ]"
+    :tableColumns="[
+      { prop: 'name', label: 'نام کالا' },
+      { prop: 'sku', label: 'کد کالا' },
+      { prop: 'category.name', label: 'دسته‌بندی' },
+      { prop: 'sellPrice', label: 'قیمت فروش (تومان)', type: 'price' },
+      { prop: 'stock', label: 'موجودی' },
+      { prop: 'isActive', label: 'وضعیت' },
+    ]"
+    :tableData="paginatedItems"
+    @actionClick="(action) => handleTableActions(action.actionName, action.row)"
+    :searchable="false"
+    refreshable
+  />
   <div class="pagination" style="direction: ltr; text-align: center">
     <el-pagination
       v-model:current-page="query.page"
@@ -127,6 +94,7 @@ import ProductFormView from './ProductFormView.vue'
 import ProductDetailsDialog from '@/components/dialogs/ProductDetailsDialog.vue'
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import BulkPriceView from './BulkPriceView.vue'
+import CustomTable from '@/components/CustomTable.vue'
 
 const filteredItems = computed(() => {
   let result = [...items.value]
@@ -169,7 +137,7 @@ const total = computed(() => filteredItems.value.length)
 const items = ref<Product[]>([])
 const categories = ref<Category[]>([])
 const loading = ref(false)
-const selectedRow = ref(null)
+const selectedRow = ref<null | Product>(null)
 const query = reactive({
   page: 1,
   limit: 10,
@@ -299,6 +267,22 @@ const route = useRoute()
 const categoryTitle = ref('')
 const money = (v: number) => new Intl.NumberFormat('fa-IR').format(v)
 
+function handleTableActions(actionName: string, row: Product) {
+  switch (actionName) {
+    case 'view':
+      selectedRow.value = row
+      showDialogs.moreInfo = true
+      break
+    case 'edit':
+      selectedRow.value = row
+      showDialogs.editProduct = true
+      break
+    case 'delete':
+      selectedRow.value = row
+      showDialogs.deleteProduct = true
+  }
+}
+
 async function load() {
   loading.value = true
 
@@ -391,7 +375,7 @@ watch(
   min-width: 200px !important;
   height: 40px !important;
 }
-::v-deep .el-select__wrapper{
+::v-deep .el-select__wrapper {
   height: 40px !important;
 }
 

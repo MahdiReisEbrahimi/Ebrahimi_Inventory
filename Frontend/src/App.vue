@@ -1,131 +1,3 @@
-<script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
-import { useRoute } from 'vue-router'
-import {
-  Fold,
-  Expand,
-  House,
-  Goods,
-  Box,
-  Switch,
-  DataAnalysis,
-  Search,
-  Bell,
-  Moon,
-  Sunny,
-} from '@element-plus/icons-vue'
-
-import { productsApi } from '@/services/products'
-import type { Product } from '@/types'
-
-const route = useRoute()
-
-const title = computed(() => route.meta.title ?? 'انبارک')
-
-/* -----------------------------
- * Sidebar
- * ----------------------------- */
-
-const isSidebarCollapsed = ref(false)
-const isMobileSidebarOpen = ref(false)
-
-const nav = [
-  {
-    to: '/',
-    text: 'داشبورد',
-    icon: House,
-  },
-  {
-    to: '/products',
-    text: 'محصولات',
-    icon: Goods,
-  },
-  {
-    to: '/inventory',
-    text: 'موجودی و انبار',
-    icon: Box,
-  },
-  {
-    to: '/transactions',
-    text: 'تراکنش‌ها',
-    icon: Switch,
-  },
-  {
-    to: '/reports',
-    text: 'گزارش‌ها',
-    icon: DataAnalysis,
-  },
-]
-
-function toggleSidebar() {
-  if (window.innerWidth <= 768) {
-    isMobileSidebarOpen.value = !isMobileSidebarOpen.value
-  } else {
-    isSidebarCollapsed.value = !isSidebarCollapsed.value
-  }
-}
-
-function closeMobileSidebar() {
-  if (window.innerWidth <= 768) {
-    isMobileSidebarOpen.value = false
-  }
-}
-
-/* -----------------------------
- * Theme
- * ----------------------------- */
-
-const isDark = ref(false)
-
-/* -----------------------------
- * Low stock
- * ----------------------------- */
-
-const lowStockProducts = ref<Product[]>([])
-const lowStockLoading = ref(false)
-
-async function loadLowStockAlerts() {
-  lowStockLoading.value = true
-
-  try {
-    const result = await productsApi.list({
-      page: 1,
-      limit: 100,
-      lowStock: true,
-      isActive: true,
-    })
-
-    lowStockProducts.value = result.data
-  } catch {
-    lowStockProducts.value = []
-  } finally {
-    lowStockLoading.value = false
-  }
-}
-
-/* -----------------------------
- * Lifecycle
- * ----------------------------- */
-
-onMounted(() => {
-  isDark.value = localStorage.getItem('theme') === 'dark'
-  document.documentElement.classList.toggle('dark', isDark.value)
-
-  void loadLowStockAlerts()
-
-  // در شروع روی موبایل سایدبار بسته باشد
-  if (window.innerWidth <= 768) {
-    isMobileSidebarOpen.value = false
-  }
-})
-
-function changeThemeHandle(){
-  isDark.value = !isDark.value
-  localStorage.setItem('theme', isDark.value ? 'dark' : 'light')
-  document.documentElement.classList.toggle('dark', isDark.value)
-}
-</script>
-
 <template>
   <el-container class="app-shell">
     <!-- Mobile overlay -->
@@ -310,7 +182,133 @@ function changeThemeHandle(){
     </el-container>
   </el-container>
 </template>
+<script setup lang="ts">
+import { computed, onMounted, ref } from 'vue'
+import { useRoute } from 'vue-router'
+import {
+  Fold,
+  Expand,
+  House,
+  Goods,
+  Box,
+  Switch,
+  DataAnalysis,
+  Search,
+  Bell,
+  Moon,
+  Sunny,
+} from '@element-plus/icons-vue'
 
+import { productsApi } from '@/services/products'
+import type { Product } from '@/types'
+
+const route = useRoute()
+
+const title = computed(() => route.meta.title ?? 'انبارک')
+
+/* -----------------------------
+ * Sidebar
+ * ----------------------------- */
+
+const isSidebarCollapsed = ref(false)
+const isMobileSidebarOpen = ref(false)
+
+const nav = [
+  {
+    to: '/',
+    text: 'داشبورد',
+    icon: House,
+  },
+  {
+    to: '/products',
+    text: 'محصولات',
+    icon: Goods,
+  },
+  {
+    to: '/inventory',
+    text: 'موجودی و انبار',
+    icon: Box,
+  },
+  {
+    to: '/transactions',
+    text: 'تراکنش‌ها',
+    icon: Switch,
+  },
+  {
+    to: '/reports',
+    text: 'گزارش‌ها',
+    icon: DataAnalysis,
+  },
+]
+
+function toggleSidebar() {
+  if (window.innerWidth <= 768) {
+    isMobileSidebarOpen.value = !isMobileSidebarOpen.value
+  } else {
+    isSidebarCollapsed.value = !isSidebarCollapsed.value
+  }
+}
+
+function closeMobileSidebar() {
+  if (window.innerWidth <= 768) {
+    isMobileSidebarOpen.value = false
+  }
+}
+
+/* -----------------------------
+ * Theme
+ * ----------------------------- */
+
+const isDark = ref(false)
+
+/* -----------------------------
+ * Low stock
+ * ----------------------------- */
+
+const lowStockProducts = ref<Product[]>([])
+const lowStockLoading = ref(false)
+
+async function loadLowStockAlerts() {
+  lowStockLoading.value = true
+
+  try {
+    const result = await productsApi.list({
+      page: 1,
+      limit: 100,
+      lowStock: true,
+      isActive: true,
+    })
+
+    lowStockProducts.value = result.data
+  } catch {
+    lowStockProducts.value = []
+  } finally {
+    lowStockLoading.value = false
+  }
+}
+
+/* -----------------------------
+ * Lifecycle
+ * ----------------------------- */
+
+onMounted(() => {
+  isDark.value = localStorage.getItem('theme') === 'dark'
+  document.documentElement.classList.toggle('dark', isDark.value)
+
+  void loadLowStockAlerts()
+
+  // در شروع روی موبایل سایدبار بسته باشد
+  if (window.innerWidth <= 768) {
+    isMobileSidebarOpen.value = false
+  }
+})
+
+function changeThemeHandle(){
+  isDark.value = !isDark.value
+  localStorage.setItem('theme', isDark.value ? 'dark' : 'light')
+  document.documentElement.classList.toggle('dark', isDark.value)
+}
+</script>
 <style scoped>
 /* --------------------------------
    Layout
@@ -318,6 +316,7 @@ function changeThemeHandle(){
 
 .app-shell {
   min-height: 100vh;
+  overflow: hidden;
   background: var(--el-bg-color-page);
   direction: rtl;
 }
@@ -617,6 +616,7 @@ function changeThemeHandle(){
 
 .page-content {
   padding: 24px 28px;
+  max-height: calc(100vh - 100px);
 }
 
 /* --------------------------------

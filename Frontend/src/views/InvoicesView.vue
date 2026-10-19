@@ -75,13 +75,48 @@
         <el-card shadow="never">
           <template #header><b>فاکتورهای ثبت‌شده و گذشته</b></template>
           <div class="archive-filters">
-            <el-select v-model="archiveFilters.customerId" clearable filterable placeholder="فیلتر خریدار" @change="loadInvoices">
-              <el-option v-for="customer in buyers" :key="customer.id" :label="`${customer.firstName} ${customer.lastName}`" :value="customer.id" />
+            <el-select
+              v-model="archiveFilters.customerId"
+              clearable
+              filterable
+              placeholder="فیلتر خریدار"
+              @change="loadInvoices"
+            >
+              <el-option
+                v-for="customer in buyers"
+                :key="customer.id"
+                :label="`${customer.firstName} ${customer.lastName}`"
+                :value="customer.id"
+              />
             </el-select>
-            <el-input v-model="archiveFilters.buyer" clearable placeholder="جست‌وجوی نام یا کد ملی" @keyup.enter="loadInvoices" @clear="loadInvoices" />
-            <el-date-picker v-model="archiveFilters.from" type="date" value-format="YYYY-MM-DD" placeholder="از تاریخ" @change="loadInvoices" />
-            <el-date-picker v-model="archiveFilters.to" type="date" value-format="YYYY-MM-DD" placeholder="تا تاریخ" @change="loadInvoices" />
-            <el-input v-model="archiveFilters.product" clearable placeholder="نام یا کد کالای فاکتور" @keyup.enter="loadInvoices" @clear="loadInvoices" />
+            <el-input
+              v-model="archiveFilters.buyer"
+              clearable
+              placeholder="جست‌وجوی نام یا کد ملی"
+              @keyup.enter="loadInvoices"
+              @clear="loadInvoices"
+            />
+            <el-date-picker
+              v-model="archiveFilters.from"
+              type="date"
+              value-format="YYYY-MM-DD"
+              placeholder="از تاریخ"
+              @change="loadInvoices"
+            />
+            <el-date-picker
+              v-model="archiveFilters.to"
+              type="date"
+              value-format="YYYY-MM-DD"
+              placeholder="تا تاریخ"
+              @change="loadInvoices"
+            />
+            <el-input
+              v-model="archiveFilters.product"
+              clearable
+              placeholder="نام یا کد کالای فاکتور"
+              @keyup.enter="loadInvoices"
+              @clear="loadInvoices"
+            />
             <el-button type="primary" @click="loadInvoices">اعمال فیلتر</el-button>
             <el-button @click="clearArchiveFilters">پاک‌کردن</el-button>
           </div>
@@ -165,59 +200,135 @@
     <article class="paper" v-if="activeInvoice || draft.length">
       <header class="invoice-header">
         <div class="invoice-reference">
-          <span>شماره فاکتور: <b>{{ activeInvoice?.number || 'پس از ثبت' }}</b></span>
-          <span>تاریخ: {{ new Date(activeInvoice?.createdAt || Date.now()).toLocaleDateString('fa-IR') }}</span>
+          <img v-if="settings?.logoUrl" style="width: 150px" :src="settings.logoUrl" alt="لوگو" />
+          <div v-else class="invoice-logo">لوگو</div>
         </div>
         <div class="invoice-title">
-          <img v-if="settings?.logoUrl" :src="settings.logoUrl" alt="لوگو" />
-          <div v-else class="invoice-logo">لوگو</div>
           <div>
             <h1>صورتحساب فروش کالا و خدمات</h1>
             <strong>{{ settings?.name || 'فروشگاه' }}</strong>
           </div>
         </div>
         <div class="invoice-store-details">
-          <span>{{ settings?.address || 'نشانی فروشگاه' }}</span>
-          <span>تلفن: {{ settings?.phone || '—' }}</span>
+          <span
+            >شماره فاکتور: <b>{{ activeInvoice?.number || 'پس از ثبت' }}</b></span
+          >
+          <span
+            >تاریخ:
+            {{ new Date(activeInvoice?.createdAt || Date.now()).toLocaleDateString('fa-IR') }}</span
+          >
         </div>
       </header>
 
       <section class="party-details">
         <div class="party-heading">مشخصات فروشنده</div>
         <div><b>نام:</b> {{ settings?.name || 'فروشگاه' }}</div>
+        <div>
+          <b>کد ملی:</b> {{ activeInvoice?.buyerNationalId || selectedBuyer?.nationalId || '—' }}
+        </div>
         <div><b>نشانی:</b> {{ settings?.address || '—' }}</div>
         <div><b>شماره تماس:</b> {{ settings?.phone || '—' }}</div>
       </section>
       <section class="party-details">
         <div class="party-heading">مشخصات خریدار</div>
-        <div><b>نام و نام خانوادگی:</b> {{ activeInvoice ? `${activeInvoice.buyerFirstName || ''} ${activeInvoice.buyerLastName || ''}` : `${selectedBuyer?.firstName || ''} ${selectedBuyer?.lastName || ''}` }}</div>
-        <div><b>کد ملی:</b> {{ activeInvoice?.buyerNationalId || selectedBuyer?.nationalId || '—' }}</div>
+        <div>
+          <b>نام و نام خانوادگی:</b>
+          {{
+            activeInvoice
+              ? `${activeInvoice.buyerFirstName || ''} ${activeInvoice.buyerLastName || ''}`
+              : `${selectedBuyer?.firstName || ''} ${selectedBuyer?.lastName || ''}`
+          }}
+        </div>
+        <div>
+          <b>کد ملی:</b> {{ activeInvoice?.buyerNationalId || selectedBuyer?.nationalId || '—' }}
+        </div>
         <div><b>نشانی:</b> {{ activeInvoice?.buyerAddress || selectedBuyer?.address || '—' }}</div>
         <div><b>شماره تماس:</b> {{ selectedBuyer?.phone || '—' }}</div>
       </section>
 
       <table class="invoice-lines">
         <colgroup>
-          <col class="line-number" /><col class="line-product" /><col class="line-unit" /><col class="line-quantity" /><col class="line-price" /><col class="line-total" /><col v-if="!activeInvoice" class="line-action" />
+          <col class="line-number" />
+          <col class="line-product" />
+          <col class="line-unit" />
+          <col class="line-quantity" />
+          <col class="line-price" />
+          <col class="line-total" />
+          <col v-if="!activeInvoice" class="line-action" />
         </colgroup>
         <thead>
-          <tr><th>ردیف</th><th>شرح کالا یا خدمات</th><th>واحد</th><th>تعداد</th><th>مبلغ واحد (تومان)</th><th>مبلغ کل (تومان)</th><th v-if="!activeInvoice" class="no-print">عملیات</th></tr>
+          <tr>
+            <th>ردیف</th>
+            <th>شرح کالا یا خدمات</th>
+            <th>واحد</th>
+            <th>تعداد</th>
+            <th>مبلغ واحد (تومان)</th>
+            <th>مبلغ کل (تومان)</th>
+            <!-- <th v-if="!activeInvoice" class="no-print">عملیات</th> -->
+          </tr>
         </thead>
         <tbody>
-          <tr v-for="(line, index) in activeInvoice?.items || draft" :key="line.id || line.productId">
-            <td>{{ index + 1 }}</td><td>{{ line.name }}</td><td>{{ line.unit }}</td>
-            <td><el-input-number v-if="!activeInvoice" v-model="line.quantity" :min="1" :max="products.find((p) => p.id === line.productId)?.stock || 999999" size="small" controls-position="right" /><span v-else>{{ line.quantity }}</span><span v-if="!activeInvoice" class="print-value">{{ line.quantity }}</span></td>
-            <td><el-input v-if="!activeInvoice" :model-value="priceFormat(line.unitPrice)" inputmode="numeric" @input="(value: string) => setPrice(line, value)" /><span v-else>{{ money(line.unitPrice) }}</span><span v-if="!activeInvoice" class="print-value">{{ money(line.unitPrice) }}</span></td>
+          <tr
+            v-for="(line, index) in activeInvoice?.items || draft"
+            :key="line.id || line.productId"
+          >
+            <td @mouseenter="showDeleteAction = true" @mouseleave="showDeleteAction = false">
+              <el-button
+                v-if="showDeleteAction"
+                type="danger"
+                style="width: 25px; height: 70%"
+                size="small"
+                circle
+                :icon="Delete"
+                @click="draft.splice(index, 1)"
+              />
+              <span v-else>{{ index + 1 }}</span>
+            </td>
+            <td>{{ line.name }}</td>
+            <td>{{ line.unit }}</td>
+            <td>
+              <el-input-number
+                v-if="!activeInvoice"
+                v-model="line.quantity"
+                :min="1"
+                :max="products.find((p) => p.id === line.productId)?.stock || 999999"
+                size="small"
+                controls-position="right"
+              /><span v-else>{{ line.quantity }}</span
+              ><span v-if="!activeInvoice" class="print-value">{{ line.quantity }}</span>
+            </td>
+            <td>
+              <el-input
+                v-if="!activeInvoice"
+                :model-value="priceFormat(line.unitPrice)"
+                inputmode="numeric"
+                @input="(value: string) => setPrice(line, value)"
+              /><span v-else>{{ money(line.unitPrice) }}</span
+              ><span v-if="!activeInvoice" class="print-value">{{ money(line.unitPrice) }}</span>
+            </td>
             <td>{{ money(line.quantity * line.unitPrice) }}</td>
-            <td v-if="!activeInvoice" class="no-print"><el-button type="danger" text @click="draft.splice(index, 1)">حذف</el-button></td>
           </tr>
-          <tr v-if="!(activeInvoice?.items || draft).length" class="empty-line"><td :colspan="activeInvoice ? 6 : 7">کالایی به فاکتور افزوده نشده است.</td></tr>
+          <tr v-if="!(activeInvoice?.items || draft).length" class="empty-line">
+            <td :colspan="activeInvoice ? 6 : 7">کالایی به فاکتور افزوده نشده است.</td>
+          </tr>
         </tbody>
-        <tfoot><tr><td :colspan="activeInvoice ? 5 : 6"><b>جمع کل مبلغ قابل پرداخت</b></td><td><strong>{{ money(total) }}</strong></td></tr></tfoot>
+        <tfoot>
+          <tr>
+            <td :colspan="activeInvoice ? 2 : 5"><b>جمع کل مبلغ قابل پرداخت</b></td>
+            <td>
+              <strong>{{ money(total) }}</strong>
+            </td>
+          </tr>
+        </tfoot>
       </table>
 
-      <div class="invoice-notes"><b>توضیحات:</b> {{ activeInvoice?.notes || selectedBuyer?.notes || '—' }}</div>
-      <footer class="invoice-signatures"><div>مهر و امضای فروشنده</div><div>امضا و تأیید خریدار</div></footer>
+      <div class="invoice-notes">
+        <b>توضیحات:</b> {{ activeInvoice?.notes || selectedBuyer?.notes || '—' }}
+      </div>
+      <footer class="invoice-signatures">
+        <div>مهر و امضای فروشنده</div>
+        <div>امضا و تأیید خریدار</div>
+      </footer>
       <div class="no-print print-actions">
         <el-button @click="windowPrint">چاپ فاکتور A5</el-button>
         <el-button v-if="activeInvoice" @click="newDraft">فاکتور جدید</el-button>
@@ -231,10 +342,12 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { productsApi } from '@/services/products'
 import { inventoryApi } from '@/services/inventory'
 import type { Buyer, Invoice, InvoiceItem, Product, StoreSettings } from '@/types'
+import { Delete } from '@element-plus/icons-vue'
 
 type DraftLine = InvoiceItem
 type BuyerRecord = Buyer
 
+const showDeleteAction = ref<boolean>(false)
 const products = ref<Product[]>([])
 const invoices = ref<Invoice[]>([])
 const activeInvoice = ref<Invoice | null>(null)
@@ -251,7 +364,13 @@ const activeTab = ref<'new' | 'archive'>('new')
 const settingsDialogVisible = ref(false)
 const buyerDialogVisible = ref(false)
 const editingBuyerId = ref<number | null>(null)
-const archiveFilters = reactive<{ customerId?: number; buyer: string; from?: string; to?: string; product: string }>({ buyer: '', product: '' })
+const archiveFilters = reactive<{
+  customerId?: number
+  buyer: string
+  from?: string
+  to?: string
+  product: string
+}>({ buyer: '', product: '' })
 
 const buyerForm = reactive({
   firstName: '',
@@ -408,19 +527,31 @@ function openBuyerDialog() {
 
 function editBuyer(buyer: BuyerRecord) {
   editingBuyerId.value = buyer.id
-  Object.assign(buyerForm, { firstName: buyer.firstName, lastName: buyer.lastName, nationalId: buyer.nationalId || '', phone: buyer.phone || '', address: buyer.address || '', notes: buyer.notes || '' })
+  Object.assign(buyerForm, {
+    firstName: buyer.firstName,
+    lastName: buyer.lastName,
+    nationalId: buyer.nationalId || '',
+    phone: buyer.phone || '',
+    address: buyer.address || '',
+    notes: buyer.notes || '',
+  })
   buyerDialogVisible.value = true
 }
 
 async function deleteBuyer(buyer: BuyerRecord) {
   try {
-    await ElMessageBox.confirm(`خریدار «${buyer.firstName} ${buyer.lastName}» حذف شود؟`, 'حذف خریدار', { type: 'warning', confirmButtonText: 'حذف', cancelButtonText: 'انصراف' })
+    await ElMessageBox.confirm(
+      `خریدار «${buyer.firstName} ${buyer.lastName}» حذف شود؟`,
+      'حذف خریدار',
+      { type: 'warning', confirmButtonText: 'حذف', cancelButtonText: 'انصراف' },
+    )
     await inventoryApi.deleteBuyer(buyer.id)
     buyers.value = buyers.value.filter((item) => item.id !== buyer.id)
     if (selectedBuyerId.value === buyer.id) selectedBuyerId.value = undefined
     ElMessage.success('خریدار حذف شد.')
   } catch (error) {
-    if (error !== 'cancel' && error !== 'close') ElMessage.error(error instanceof Error ? error.message : 'حذف خریدار ناموفق بود.')
+    if (error !== 'cancel' && error !== 'close')
+      ElMessage.error(error instanceof Error ? error.message : 'حذف خریدار ناموفق بود.')
   }
 }
 
@@ -475,7 +606,13 @@ async function loadInvoices() {
 }
 
 function clearArchiveFilters() {
-  Object.assign(archiveFilters, { customerId: undefined, buyer: '', from: undefined, to: undefined, product: '' })
+  Object.assign(archiveFilters, {
+    customerId: undefined,
+    buyer: '',
+    from: undefined,
+    to: undefined,
+    product: '',
+  })
   void loadInvoices()
 }
 
@@ -1212,25 +1349,57 @@ onMounted(load)
   color: var(--el-text-color-primary);
   font-size: 12px;
 }
-.paper::before { display: none; }
+.paper::before {
+  display: none;
+}
 .invoice-header {
   display: grid;
   grid-template-columns: 1fr 1.4fr 1fr;
   align-items: start;
   gap: 12px;
   padding-bottom: 10px;
-  border-bottom: 1px solid currentColor;
 }
 .invoice-reference,
-.invoice-store-details { display: grid; gap: 5px; font-size: 11px; line-height: 1.7; }
-.invoice-reference { text-align: right; }
-.invoice-store-details { text-align: left; }
-.invoice-title { display: flex; align-items: center; justify-content: center; gap: 10px; text-align: center; }
-.invoice-title h1 { margin: 0 0 5px; font-size: 17px; font-weight: 800; }
-.invoice-title strong { font-size: 12px; }
+.invoice-store-details {
+  display: grid;
+  gap: 5px;
+  font-size: 11px;
+  line-height: 1.7;
+}
+.invoice-reference {
+  text-align: right;
+
+}
+.invoice-store-details {
+  text-align: left;
+}
+.invoice-title {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  text-align: center;
+}
+.invoice-title h1 {
+  margin: 0 0 5px;
+  font-size: 17px;
+  font-weight: 800;
+}
+.invoice-title strong {
+  font-size: 12px;
+}
 .invoice-title img,
-.invoice-logo { width: 42px; height: 42px; object-fit: contain; }
-.invoice-logo { display: grid; place-items: center; border: 1px dashed currentColor; font-size: 9px; }
+.invoice-logo {
+  width: 42px;
+  height: 42px;
+  object-fit: contain;
+}
+.invoice-logo {
+  display: grid;
+  place-items: center;
+  border: 1px dashed currentColor;
+  font-size: 9px;
+}
 .party-details {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -1239,71 +1408,246 @@ onMounted(load)
   border: 1px solid currentColor;
   border-bottom: 0;
 }
-.party-details > * { min-width: 0; padding: 5px 8px; border-bottom: 1px solid currentColor; overflow-wrap: anywhere; }
-.party-details > :nth-child(even) { border-left: 1px solid currentColor; }
-.party-heading { grid-column: 1 / -1; font-weight: 800; text-align: center; }
-.invoice-lines { width: 100%; border-collapse: collapse; table-layout: fixed; text-align: center; }
+.party-details > * {
+  min-width: 0;
+  padding: 5px 8px;
+  border-bottom: 1px solid currentColor;
+  overflow-wrap: anywhere;
+}
+.party-details > :nth-child(even) {
+  border-left: 1px solid currentColor;
+}
+.party-heading {
+  grid-column: 1 / -1;
+  font-weight: 800;
+  text-align: center;
+}
+.invoice-lines {
+  width: 100%;
+  margin-top: 5px;
+  border-collapse: collapse;
+  table-layout: fixed;
+  text-align: center;
+}
 .invoice-lines th,
-.invoice-lines td { padding: 6px 5px; border: 1px solid currentColor; vertical-align: middle; overflow-wrap: anywhere; }
-.invoice-lines th { background: var(--el-fill-color-light); font-weight: 800; }
-.invoice-lines tbody tr { break-inside: avoid; page-break-inside: avoid; }
-.invoice-lines .line-number { width: 6%; }
-.invoice-lines .line-product { width: 31%; }
-.invoice-lines .line-unit { width: 10%; }
-.invoice-lines .line-quantity { width: 11%; }
+.invoice-lines td {
+  padding: 6px 5px;
+  border: 1px solid currentColor;
+  vertical-align: middle;
+  overflow-wrap: anywhere;
+}
+.invoice-lines th {
+  background: var(--el-fill-color-light);
+  font-weight: 800;
+}
+.invoice-lines tbody tr {
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+.invoice-lines .line-number {
+  width: 6%;
+}
+.invoice-lines .line-product {
+  width: 31%;
+}
+.invoice-lines .line-unit {
+  width: 10%;
+}
+.invoice-lines .line-quantity {
+  width: 11%;
+}
 .invoice-lines .line-price,
-.invoice-lines .line-total { width: 19%; }
-.invoice-lines .line-action { width: 7%; }
+.invoice-lines .line-total {
+  width: 26%;
+}
 .invoice-lines :deep(.el-input-number),
-.invoice-lines :deep(.el-input) { width: 100%; }
-.invoice-lines :deep(.el-input__wrapper) { min-height: 30px; padding-inline: 5px; border-radius: 3px; }
-.invoice-lines :deep(.el-input-number .el-input__wrapper) { padding-inline: 4px; }
-.print-value { display: none; }
-.invoice-lines tfoot td { font-size: 13px; font-weight: 700; text-align: left; }
-.invoice-lines tfoot strong { white-space: nowrap; }
-.empty-line td { height: 45px; color: var(--el-text-color-secondary); }
-.invoice-notes { min-height: 42px; padding: 8px; border: 1px solid currentColor; border-top: 0; line-height: 1.8; overflow-wrap: anywhere; }
-.invoice-signatures { display: grid; grid-template-columns: 1fr 1fr; min-height: 72px; border: 1px solid currentColor; border-top: 0; }
-.invoice-signatures div { padding: 10px; text-align: center; font-weight: 700; }
-.invoice-signatures div + div { border-right: 1px solid currentColor; }
+.invoice-lines :deep(.el-input) {
+  width: 100%;
+}
+.invoice-lines :deep(.el-input__wrapper) {
+  min-height: 30px;
+  padding-inline: 5px;
+  border-radius: 3px;
+}
+.invoice-lines :deep(.el-input-number .el-input__wrapper) {
+  padding-inline: 4px;
+}
+.print-value {
+  display: none;
+}
+.invoice-lines tfoot td {
+  font-size: 13px;
+  font-weight: 700;
+}
+.invoice-lines tfoot strong {
+  white-space: nowrap;
+}
+.empty-line td {
+  height: 45px;
+  color: var(--el-text-color-secondary);
+}
+.invoice-notes {
+  min-height: 42px;
+  padding: 8px;
+  border: 1px solid currentColor;
+  border-top: 0;
+  line-height: 1.8;
+  overflow-wrap: anywhere;
+}
+.invoice-signatures {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  min-height: 72px;
+  border: 1px solid currentColor;
+  border-top: 0;
+}
+.invoice-signatures div {
+  padding: 10px;
+  text-align: center;
+  font-weight: 700;
+}
+.invoice-signatures div + div {
+  border-right: 1px solid currentColor;
+}
 
 @media (max-width: 640px) {
-  .paper { padding: 14px; overflow-x: auto; }
-  .invoice-header { grid-template-columns: 1fr; text-align: center; }
+  .paper {
+    padding: 14px;
+    overflow-x: auto;
+  }
+  .invoice-header {
+    grid-template-columns: 1fr;
+    text-align: center;
+  }
   .invoice-reference,
-  .invoice-store-details { text-align: center; }
-  .invoice-lines { min-width: 650px; }
+  .invoice-store-details {
+    text-align: center;
+  }
+  .invoice-lines {
+    min-width: 650px;
+  }
 }
 
 @media print {
-  @page { size: A5 landscape; margin: 6mm; }
+  @page {
+    size: A5 landscape;
+    margin: 6mm;
+  }
   :global(html),
-  :global(body) { width: 210mm !important; height: auto !important; background: #fff !important; }
-  .invoice-page { display: block !important; width: 198mm !important; margin: 0 !important; padding: 0 !important; color: #000 !important; font-family: Vazirmatn, Tahoma, sans-serif !important; }
-  .paper { display: block !important; width: 198mm !important; max-width: 198mm !important; min-height: 0 !important; margin: 0 !important; padding: 0 !important; border: 1px solid #111 !important; border-radius: 0 !important; background: #fff !important; color: #000 !important; font-size: 8.5pt !important; box-shadow: none !important; }
-  .invoice-header { grid-template-columns: 1fr 1.4fr 1fr !important; gap: 6px !important; padding: 6px 8px !important; border-color: #111 !important; }
+  :global(body) {
+    width: 210mm !important;
+    height: auto !important;
+    background: #fff !important;
+  }
+  .invoice-page {
+    display: block !important;
+    width: 198mm !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    color: #000 !important;
+    font-family: Vazirmatn, Tahoma, sans-serif !important;
+  }
+  .paper {
+    display: block !important;
+    width: 198mm !important;
+    max-width: 198mm !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 1px solid #111 !important;
+    border-radius: 0 !important;
+    background: #fff !important;
+    color: #000 !important;
+    font-size: 8.5pt !important;
+    box-shadow: none !important;
+  }
+  .invoice-header {
+    grid-template-columns: 1fr 1.4fr 1fr !important;
+    gap: 6px !important;
+    padding: 6px 8px !important;
+    border-color: #111 !important;
+  }
   .invoice-reference,
-  .invoice-store-details { gap: 2px !important; font-size: 7.5pt !important; }
-  .invoice-title h1 { margin-bottom: 2px !important; font-size: 12pt !important; }
-  .invoice-title strong { font-size: 8pt !important; }
+  .invoice-store-details {
+    gap: 2px !important;
+    font-size: 7.5pt !important;
+  }
+  .invoice-title h1 {
+    margin-bottom: 2px !important;
+    font-size: 12pt !important;
+  }
+  .invoice-title strong {
+    font-size: 8pt !important;
+  }
   .invoice-title img,
-  .invoice-logo { width: 30px !important; height: 30px !important; }
-  .party-details { margin-top: 4px !important; border-color: #111 !important; }
-  .party-details > * { padding: 3px 6px !important; border-color: #111 !important; font-size: 7.5pt !important; line-height: 1.45 !important; }
-  .invoice-lines { width: 100% !important; font-size: 7.5pt !important; }
-  .invoice-lines thead { display: table-header-group; }
-  .invoice-lines tr { break-inside: avoid !important; page-break-inside: avoid !important; }
+  .invoice-logo {
+    width: 30px !important;
+    height: 30px !important;
+  }
+  .party-details {
+    margin-top: 4px !important;
+    border-color: #111 !important;
+  }
+  .party-details > * {
+    padding: 3px 6px !important;
+    border-color: #111 !important;
+    font-size: 7.5pt !important;
+    line-height: 1.45 !important;
+  }
+  .invoice-lines {
+    width: 100% !important;
+    font-size: 7.5pt !important;
+  }
+  .invoice-lines thead {
+    display: table-header-group;
+  }
+  .invoice-lines tr {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
   .invoice-lines th,
-  .invoice-lines td { padding: 3px 4px !important; border-color: #111 !important; background: #fff !important; color: #000 !important; line-height: 1.4 !important; }
-  .invoice-lines th { font-weight: 800 !important; }
+  .invoice-lines td {
+    padding: 3px 4px !important;
+    border-color: #111 !important;
+    background: #fff !important;
+    color: #000 !important;
+    line-height: 1.4 !important;
+  }
+  .invoice-lines th {
+    font-weight: 800 !important;
+  }
   .invoice-lines :deep(.el-input),
-  .invoice-lines :deep(.el-input-number) { display: none !important; }
-  .print-value { display: inline !important; }
-  .invoice-lines tfoot { display: table-row-group; }
-  .invoice-lines tfoot td { padding: 5px 6px !important; font-size: 8pt !important; }
-  .invoice-notes { min-height: 24px !important; padding: 5px 7px !important; border-color: #111 !important; font-size: 7.5pt !important; }
-  .invoice-signatures { min-height: 48px !important; border-color: #111 !important; break-inside: avoid; page-break-inside: avoid; }
-  .invoice-signatures div { padding: 6px !important; font-size: 8pt !important; }
-  .invoice-signatures div + div { border-color: #111 !important; }
+  .invoice-lines :deep(.el-input-number) {
+    display: none !important;
+  }
+  .print-value {
+    display: inline !important;
+  }
+  .invoice-lines tfoot {
+    display: table-row-group;
+  }
+  .invoice-lines tfoot td {
+    padding: 5px 6px !important;
+    font-size: 8pt !important;
+  }
+  .invoice-notes {
+    min-height: 24px !important;
+    padding: 5px 7px !important;
+    border-color: #111 !important;
+    font-size: 7.5pt !important;
+  }
+  .invoice-signatures {
+    min-height: 48px !important;
+    border-color: #111 !important;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  .invoice-signatures div {
+    padding: 6px !important;
+    font-size: 8pt !important;
+  }
+  .invoice-signatures div + div {
+    border-color: #111 !important;
+  }
 }
 </style>

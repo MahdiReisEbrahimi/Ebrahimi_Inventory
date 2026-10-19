@@ -1,79 +1,36 @@
 <template>
   <section dir="rtl" class="invoice-page">
-    <div class="toolbar no-print">
-      <div>
-        <h2>فاکتور فروش</h2>
-        <p>صدور فاکتور، مدیریت خریداران و مشاهده فاکتورهای بایگانی‌شده</p>
-      </div>
-      <div class="toolbar-actions">
-        <el-button @click="settingsDialogVisible = true">اطلاعات فروشگاه</el-button>
-        <el-button @click="openBuyerDialog()">ثبت خریدار جدید</el-button>
-        <el-button
-          type="primary"
-          :loading="saving"
-          :disabled="!draft.length || !!activeInvoice"
-          @click="save"
-        >
-          ثبت و صدور فاکتور
-        </el-button>
-      </div>
-    </div>
-
     <el-tabs v-model="activeTab" class="invoice-tabs no-print" @tab-change="onTabChange">
       <el-tab-pane label="فاکتور جدید" name="new">
-        <el-card shadow="never">
-          <template #header><b>اطلاعات فاکتور</b></template>
-          <div class="invoice-form-toolbar">
-            <el-form inline>
-              <el-form-item label="انتخاب خریدار">
-                <el-select
-                  v-model="selectedBuyerId"
-                  filterable
-                  clearable
-                  placeholder="خریدار را انتخاب کنید"
-                  style="width: 320px"
-                  @change="applyBuyer"
-                >
-                  <el-option
-                    v-for="customer in buyers"
-                    :key="customer.id"
-                    :label="`${customer.firstName} ${customer.lastName}`"
-                    :value="customer.id"
-                  />
-                </el-select>
-              </el-form-item>
-            </el-form>
-            <el-button @click="openBuyerDialog()">+ ثبت خریدار جدید</el-button>
-          </div>
-          <div v-if="selectedBuyer" class="selected-buyer">
-            <span><b>خریدار:</b> {{ selectedBuyer.firstName }} {{ selectedBuyer.lastName }}</span>
-            <span><b>کد ملی:</b> {{ selectedBuyer.nationalId || '—' }}</span>
-            <span><b>آدرس:</b> {{ selectedBuyer.address || '—' }}</span>
-            <span><b>تلفن:</b> {{ selectedBuyer.phone || '—' }}</span>
-            <el-button link type="primary" @click="editBuyer(selectedBuyer)">ویرایش</el-button>
-            <el-button link type="danger" @click="deleteBuyer(selectedBuyer)">حذف</el-button>
-          </div>
+        <section class="product-adder">
+          <h3>افزودن کالا به فاکتور</h3>
           <div class="add-row">
+            <el-select v-model="selectedCategoryId" class="category-picker" clearable placeholder="انتخاب دسته‌بندی" @change="selectedProduct = undefined">
+              <el-option v-for="category in productCategories" :key="category.id" :label="category.name" :value="category.id" />
+            </el-select>
             <el-select
               v-model="selectedProduct"
+              class="product-picker"
               filterable
-              placeholder="افزودن محصول"
-              style="width: 280px"
+              :disabled="!selectedCategoryId"
+              placeholder="انتخاب کالا"
+              style="width: 100%"
             >
-              <el-option
-                v-for="p in products"
-                :key="p.id"
-                :label="`${p.name} | موجودی ${p.stock} ${p.unit}`"
-                :value="p.id"
-              />
+              <el-option v-for="p in selectedCategoryProducts" :key="p.id" :label="`${p.name} | موجودی ${p.stock} ${p.unit}`" :value="p.id" />
             </el-select>
             <el-button @click="addProduct">افزودن به فاکتور</el-button>
           </div>
-        </el-card>
+        </section>
       </el-tab-pane>
       <el-tab-pane label="فاکتورهای بایگانی‌شده" name="archive">
-        <el-card shadow="never">
-          <template #header><b>فاکتورهای ثبت‌شده و گذشته</b></template>
+        <section class="archive-panel">
+          <div class="archive-panel-heading">
+            <div>
+              <h3>فاکتورهای ثبت‌شده</h3>
+              <p>فاکتور مورد نظر را از میان نتایج انتخاب یا چاپ کنید.</p>
+            </div>
+            <el-button plain @click="clearArchiveFilters">پاک‌کردن فیلترها</el-button>
+          </div>
           <div class="archive-filters">
             <el-select
               v-model="archiveFilters.customerId"
@@ -118,30 +75,29 @@
               @clear="loadInvoices"
             />
             <el-button type="primary" @click="loadInvoices">اعمال فیلتر</el-button>
-            <el-button @click="clearArchiveFilters">پاک‌کردن</el-button>
           </div>
-          <el-table :data="invoices" v-loading="loading" @row-click="openInvoice">
-            <el-table-column prop="number" label="شماره فاکتور" min-width="120" />
-            <el-table-column label="خریدار" min-width="160">
-              <template #default="s">{{ s.row.buyerFirstName }} {{ s.row.buyerLastName }}</template>
-            </el-table-column>
-            <el-table-column label="مبلغ" min-width="150">
-              <template #default="s">{{ money(s.row.total) }}</template>
-            </el-table-column>
-            <el-table-column label="تاریخ" min-width="120">
-              <template #default="s">{{
-                new Date(s.row.createdAt).toLocaleDateString('fa-IR')
-              }}</template>
-            </el-table-column>
-            <el-table-column label="عملیات" width="145">
-              <template #default="s">
-                <el-button link type="primary" @click.stop="openInvoice(s.row)"
-                  >مشاهده / چاپ</el-button
-                >
-              </template>
-            </el-table-column>
-          </el-table>
-        </el-card>
+          <div v-loading="loading" class="invoice-archive-grid">
+            <article v-for="invoice in invoices" :key="invoice.id" class="archive-invoice-card">
+              <div class="archive-card-topline">
+                <span>فاکتور {{ invoice.number }}</span>
+                <time>{{ new Date(invoice.createdAt).toLocaleDateString('fa-IR') }}</time>
+              </div>
+              <div class="archive-card-buyer">
+                <span>خریدار</span>
+                <strong>{{ invoice.buyerFirstName }} {{ invoice.buyerLastName }}</strong>
+              </div>
+              <div class="archive-card-total">
+                <span>جمع فاکتور</span>
+                <strong>{{ money(invoice.total) }}</strong>
+              </div>
+              <div class="archive-card-actions">
+                <el-button @click="openInvoice(invoice)">پیش‌نمایش</el-button>
+                <el-button type="primary" @click="openInvoice(invoice, true)">چاپ</el-button>
+              </div>
+            </article>
+            <el-empty v-if="!loading && !invoices.length" description="فاکتوری با این شرایط پیدا نشد." />
+          </div>
+        </section>
       </el-tab-pane>
     </el-tabs>
 
@@ -197,7 +153,7 @@
       </template>
     </el-dialog>
 
-    <article class="paper" v-if="activeInvoice || draft.length">
+    <article class="paper">
       <header class="invoice-header">
         <div class="invoice-reference">
           <img v-if="settings?.logoUrl" style="width: 150px" :src="settings.logoUrl" alt="لوگو" />
@@ -221,17 +177,29 @@
       </header>
 
       <section class="party-details">
-        <div class="party-heading">مشخصات فروشنده</div>
-        <div><b>نام:</b> {{ settings?.name || 'فروشگاه' }}</div>
-        <div>
-          <b>کد ملی:</b> {{ activeInvoice?.buyerNationalId || selectedBuyer?.nationalId || '—' }}
+        <div class="party-heading">
+          <span>مشخصات فروشنده</span>
+          <el-button class="party-edit-button no-print" text circle aria-label="ویرایش اطلاعات فروشگاه" @click="settingsDialogVisible = true"><el-icon><Edit /></el-icon></el-button>
         </div>
-        <div><b>نشانی:</b> {{ settings?.address || '—' }}</div>
-        <div><b>شماره تماس:</b> {{ settings?.phone || '—' }}</div>
+        <div class="party-field"><b>نام:</b> {{ settings?.name || 'فروشگاه' }}</div>
+        <div class="party-field"><b>شماره تماس:</b> {{ settings?.phone || '—' }}</div>
+        <div class="party-field party-field--wide"><b>نشانی:</b> {{ settings?.address || '—' }}</div>
       </section>
       <section class="party-details">
-        <div class="party-heading">مشخصات خریدار</div>
-        <div>
+        <div class="party-heading">
+          <span>مشخصات خریدار</span>
+          <template v-if="selectedBuyer && !activeInvoice">
+            <el-button class="party-edit-button no-print" text circle aria-label="ویرایش خریدار" @click="editBuyer(selectedBuyer)"><el-icon><Edit /></el-icon></el-button>
+            <el-button class="party-edit-button no-print" text circle type="danger" aria-label="حذف خریدار" @click="deleteBuyer(selectedBuyer)"><el-icon><Delete /></el-icon></el-button>
+          </template>
+        </div>
+        <div v-if="!activeInvoice" class="party-picker no-print">
+          <el-select v-model="selectedBuyerId" filterable clearable placeholder="انتخاب خریدار" @change="applyBuyer">
+            <template #header><el-button class="new-buyer-option" text @click="openBuyerDialog()"><el-icon><Plus /></el-icon> ثبت خریدار جدید</el-button></template>
+            <el-option v-for="customer in buyers" :key="customer.id" :label="`${customer.firstName} ${customer.lastName}`" :value="customer.id" />
+          </el-select>
+        </div>
+        <div class="party-field">
           <b>نام و نام خانوادگی:</b>
           {{
             activeInvoice
@@ -239,11 +207,11 @@
               : `${selectedBuyer?.firstName || ''} ${selectedBuyer?.lastName || ''}`
           }}
         </div>
-        <div>
+        <div class="party-field">
           <b>کد ملی:</b> {{ activeInvoice?.buyerNationalId || selectedBuyer?.nationalId || '—' }}
         </div>
-        <div><b>نشانی:</b> {{ activeInvoice?.buyerAddress || selectedBuyer?.address || '—' }}</div>
-        <div><b>شماره تماس:</b> {{ selectedBuyer?.phone || '—' }}</div>
+        <div class="party-field"><b>نشانی:</b> {{ activeInvoice?.buyerAddress || selectedBuyer?.address || '—' }}</div>
+        <div class="party-field"><b>شماره تماس:</b> {{ selectedBuyer?.phone || '—' }}</div>
       </section>
 
       <table class="invoice-lines">
@@ -254,7 +222,6 @@
           <col class="line-quantity" />
           <col class="line-price" />
           <col class="line-total" />
-          <col v-if="!activeInvoice" class="line-action" />
         </colgroup>
         <thead>
           <tr>
@@ -272,17 +239,17 @@
             v-for="(line, index) in activeInvoice?.items || draft"
             :key="line.id || line.productId"
           >
-            <td @mouseenter="showDeleteAction = true" @mouseleave="showDeleteAction = false">
+            <td class="line-number-cell">
+              <span>{{ index + 1 }}</span>
               <el-button
-                v-if="showDeleteAction"
+                v-if="!activeInvoice"
+                class="line-delete no-print"
                 type="danger"
-                style="width: 25px; height: 70%"
                 size="small"
                 circle
                 :icon="Delete"
                 @click="draft.splice(index, 1)"
               />
-              <span v-else>{{ index + 1 }}</span>
             </td>
             <td>{{ line.name }}</td>
             <td>{{ line.unit }}</td>
@@ -309,12 +276,12 @@
             <td>{{ money(line.quantity * line.unitPrice) }}</td>
           </tr>
           <tr v-if="!(activeInvoice?.items || draft).length" class="empty-line">
-            <td :colspan="activeInvoice ? 6 : 7">کالایی به فاکتور افزوده نشده است.</td>
+            <td colspan="6">کالایی به فاکتور افزوده نشده است.</td>
           </tr>
         </tbody>
         <tfoot>
           <tr>
-            <td :colspan="activeInvoice ? 2 : 5"><b>جمع کل مبلغ قابل پرداخت</b></td>
+            <td colspan="5"><b>جمع کل مبلغ قابل پرداخت</b></td>
             <td>
               <strong>{{ money(total) }}</strong>
             </td>
@@ -330,24 +297,32 @@
         <div>امضا و تأیید خریدار</div>
       </footer>
       <div class="no-print print-actions">
-        <el-button @click="windowPrint">چاپ فاکتور A5</el-button>
+        <el-button
+          v-if="!activeInvoice"
+          type="primary"
+          :loading="saving"
+          :disabled="!draft.length"
+          @click="save"
+        >
+          ثبت و صدور فاکتور
+        </el-button>
+        <el-button @click="windowPrint">پیش‌نمایش</el-button>
         <el-button v-if="activeInvoice" @click="newDraft">فاکتور جدید</el-button>
       </div>
     </article>
   </section>
 </template>
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, nextTick, onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { Delete, Edit, Plus } from '@element-plus/icons-vue'
 import { productsApi } from '@/services/products'
 import { inventoryApi } from '@/services/inventory'
 import type { Buyer, Invoice, InvoiceItem, Product, StoreSettings } from '@/types'
-import { Delete } from '@element-plus/icons-vue'
 
 type DraftLine = InvoiceItem
 type BuyerRecord = Buyer
 
-const showDeleteAction = ref<boolean>(false)
 const products = ref<Product[]>([])
 const invoices = ref<Invoice[]>([])
 const activeInvoice = ref<Invoice | null>(null)
@@ -358,6 +333,7 @@ const saving = ref(false)
 const settingsSaving = ref(false)
 const buyerSaving = ref(false)
 const selectedProduct = ref<number>()
+const selectedCategoryId = ref<number>()
 const selectedBuyerId = ref<number>()
 const draft = ref<DraftLine[]>([])
 const activeTab = ref<'new' | 'archive'>('new')
@@ -383,6 +359,25 @@ const buyerForm = reactive({
 const settingsForm = reactive({ name: '', address: '', phone: '', logoUrl: '' })
 const selectedBuyer = computed(
   () => buyers.value.find((b) => b.id === selectedBuyerId.value) || null,
+)
+const productCategories = computed(() => {
+  const groups = new Map<number, { id: number; name: string; products: Product[] }>()
+
+  for (const product of products.value) {
+    const group = groups.get(product.categoryId) ?? {
+      id: product.categoryId,
+      name: product.category?.name || 'بدون دسته‌بندی',
+      products: [],
+    }
+
+    group.products.push(product)
+    groups.set(product.categoryId, group)
+  }
+
+  return [...groups.values()].sort((a, b) => a.name.localeCompare(b.name, 'fa'))
+})
+const selectedCategoryProducts = computed(
+  () => productCategories.value.find((category) => category.id === selectedCategoryId.value)?.products ?? [],
 )
 const total = computed(
   () =>
@@ -485,6 +480,8 @@ async function save() {
     draft.value = []
     activeTab.value = 'new'
     await load()
+    await nextTick()
+    windowPrint()
   } catch (error) {
     ElMessage.error(error instanceof Error ? error.message : 'ثبت فاکتور ناموفق بود.')
   } finally {
@@ -492,10 +489,14 @@ async function save() {
   }
 }
 
-async function openInvoice(row: any) {
+async function openInvoice(row: Invoice, shouldPrint = false) {
   try {
     activeInvoice.value = await inventoryApi.invoice(Number(row.id))
     activeTab.value = 'archive'
+    if (shouldPrint) {
+      await nextTick()
+      windowPrint()
+    }
   } catch (error) {
     ElMessage.error(error instanceof Error ? error.message : 'دریافت فاکتور ناموفق بود.')
   }
@@ -790,6 +791,15 @@ onMounted(load)
 }
 
 /* Product picker */
+.product-adder {
+  padding: 4px;
+}
+.product-adder h3,
+.archive-panel-heading h3 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 800;
+}
 .add-row {
   display: flex;
   align-items: center;
@@ -1075,6 +1085,82 @@ onMounted(load)
   grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
   gap: 10px;
   margin-bottom: 18px;
+}
+.archive-panel {
+  padding: 6px 4px;
+}
+.archive-panel-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+.archive-panel-heading p {
+  margin: 5px 0 0;
+  color: var(--el-text-color-secondary);
+  font-size: 12px;
+}
+.invoice-archive-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(225px, 1fr));
+  gap: 14px;
+  min-height: 140px;
+}
+.archive-invoice-card {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: 14px;
+  background: var(--el-bg-color);
+  box-shadow: 0 5px 16px rgb(0 0 0 / 4%);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.archive-invoice-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 9px 20px rgb(0 0 0 / 8%);
+}
+.archive-card-topline,
+.archive-card-buyer,
+.archive-card-total,
+.archive-card-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.archive-card-topline {
+  padding-bottom: 11px;
+  border-bottom: 1px solid var(--el-border-color-lighter);
+  color: var(--el-text-color-secondary);
+  font-size: 12px;
+}
+.archive-card-topline span {
+  color: var(--invoice-accent);
+  font-weight: 800;
+}
+.archive-card-buyer,
+.archive-card-total {
+  font-size: 12px;
+}
+.archive-card-buyer span,
+.archive-card-total span {
+  color: var(--el-text-color-secondary);
+}
+.archive-card-buyer strong {
+  overflow: hidden;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.archive-card-total strong {
+  color: var(--invoice-accent);
+  font-size: 13px;
+}
+.archive-card-actions {
+  justify-content: flex-end;
+  padding-top: 2px;
 }
 .dialog-form :deep(.el-form-item) {
   margin-bottom: 16px;
@@ -1460,6 +1546,16 @@ onMounted(load)
 .invoice-lines .line-total {
   width: 26%;
 }
+.line-number-cell {
+  white-space: nowrap;
+}
+.line-delete {
+  width: 25px;
+  height: 25px;
+  margin-inline-start: 3px;
+  padding: 0;
+  vertical-align: middle;
+}
 .invoice-lines :deep(.el-input-number),
 .invoice-lines :deep(.el-input) {
   width: 100%;
@@ -1525,6 +1621,71 @@ onMounted(load)
   }
   .invoice-lines {
     min-width: 650px;
+  }
+}
+
+/* Invoice editor workspace */
+.party-heading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+.party-edit-button { margin: -6px 0 -6px -4px; }
+.party-picker {
+  grid-column: 1 / -1;
+  padding: 7px 8px;
+  border-bottom: 1px solid currentColor;
+}
+.party-picker :deep(.el-select) { width: 100%; }
+.new-buyer-option { width: 100%; justify-content: flex-start; }
+.new-buyer-option :deep(.el-icon) { margin-left: 5px; }
+.party-field { min-height: 34px; }
+.party-field--wide { grid-column: 1 / -1; border-left: 0 !important; }
+.party-details > .party-field:nth-of-type(odd) { border-left: 1px solid currentColor; }
+
+.invoice-tabs :deep(.el-tabs__header) {
+  padding: 5px;
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: 14px;
+  background: var(--el-fill-color-light);
+}
+.invoice-tabs :deep(.el-tabs__nav-wrap::after) { display: none; }
+.invoice-tabs :deep(.el-tabs__nav) { width: 100%; gap: 4px; }
+.invoice-tabs :deep(.el-tabs__active-bar) { display: none; }
+.invoice-tabs :deep(.el-tabs__item) {
+  flex: 1;
+  height: 42px;
+  border-radius: 10px;
+  color: var(--el-text-color-secondary);
+  text-align: center;
+  transition: 0.2s ease;
+}
+.invoice-tabs :deep(.el-tabs__item.is-active) {
+  background: var(--el-bg-color);
+  color: var(--el-color-primary);
+  box-shadow: 0 3px 10px rgb(0 0 0 / 8%);
+}
+.invoice-tabs :deep(.el-tabs__content) { padding: 2px; }
+.add-row { align-items: stretch; }
+.add-row :deep(.el-select) { min-width: 0; }
+.add-row .category-picker { width: min(100%, 190px) !important; }
+.add-row .product-picker { flex: 1; }
+
+@media (min-width: 1250px) {
+  .invoice-page {
+    grid-template-columns: minmax(360px, 0.82fr) minmax(600px, 1.35fr);
+    align-items: start;
+  }
+  .invoice-tabs { grid-column: 1; grid-row: 1; }
+  .paper {
+    grid-column: 2;
+    grid-row: 1;
+    position: sticky;
+    top: 12px;
+    width: 100%;
+    max-width: none;
+    margin: 0;
   }
 }
 

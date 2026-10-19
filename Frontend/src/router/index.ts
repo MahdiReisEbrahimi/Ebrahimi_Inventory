@@ -4,6 +4,8 @@ import ProductsView from '@/views/ProductsView.vue'
 import ProductFormView from '@/views/ProductFormView.vue'
 import BulkPriceView from '@/views/BulkPriceView.vue'
 import PlaceholderView from '@/views/PlaceholderView.vue'
+import InventoryView from '@/views/InventoryView.vue'
+import InvoicesView from '@/views/InvoicesView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -14,7 +16,7 @@ const router = createRouter({
     { path: '/products/:id/edit', component: ProductFormView, meta: { title: 'ویرایش محصول' } },
     {
       path: '/inventory',
-      component: PlaceholderView,
+      component: InventoryView,
       meta: {
         title: 'موجودی و انبار',
         icon: '▣',
@@ -23,9 +25,10 @@ const router = createRouter({
     },
     {
       path: '/transactions',
-      component: PlaceholderView,
+      component: InventoryView,
       meta: { title: 'تراکنش‌ها', icon: '↔', description: 'مدیریت خرید، فروش و اسناد مالی.' },
     },
+    { path: '/invoices', component: InvoicesView, meta: { title: 'فاکتور فروش' } },
     {
       path: '/reports',
       component: PlaceholderView,

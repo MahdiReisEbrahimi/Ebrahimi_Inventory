@@ -61,3 +61,23 @@ export type PriceHistory = Prisma.PriceHistoryModel
  * 
  */
 export type AuditLog = Prisma.AuditLogModel
+/**
+ * Model InventoryTransaction
+ * 
+ */
+export type InventoryTransaction = Prisma.InventoryTransactionModel
+/**
+ * Model Invoice
+ * 
+ */
+export type Invoice = Prisma.InvoiceModel
+/**
+ * Model InvoiceItem
+ * 
+ */
+export type InvoiceItem = Prisma.InvoiceItemModel
+/**
+ * Model StoreSettings
+ * 
+ */
+export type StoreSettings = Prisma.StoreSettingsModel

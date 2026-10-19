@@ -272,6 +272,23 @@ export type JsonNullableWithAggregatesFilterBase<$PrismaModel = never> = {
   _max?: Prisma.NestedJsonNullableFilter<$PrismaModel>
 }
 
+export type EnumInventoryTransactionTypeFilter<$PrismaModel = never> = {
+  equals?: $Enums.InventoryTransactionType | Prisma.EnumInventoryTransactionTypeFieldRefInput<$PrismaModel>
+  in?: $Enums.InventoryTransactionType[] | Prisma.ListEnumInventoryTransactionTypeFieldRefInput<$PrismaModel>
+  notIn?: $Enums.InventoryTransactionType[] | Prisma.ListEnumInventoryTransactionTypeFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumInventoryTransactionTypeFilter<$PrismaModel> | $Enums.InventoryTransactionType
+}
+
+export type EnumInventoryTransactionTypeWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.InventoryTransactionType | Prisma.EnumInventoryTransactionTypeFieldRefInput<$PrismaModel>
+  in?: $Enums.InventoryTransactionType[] | Prisma.ListEnumInventoryTransactionTypeFieldRefInput<$PrismaModel>
+  notIn?: $Enums.InventoryTransactionType[] | Prisma.ListEnumInventoryTransactionTypeFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumInventoryTransactionTypeWithAggregatesFilter<$PrismaModel> | $Enums.InventoryTransactionType
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumInventoryTransactionTypeFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumInventoryTransactionTypeFilter<$PrismaModel>
+}
+
 export type NestedIntFilter<$PrismaModel = never> = {
   equals?: number | Prisma.IntFieldRefInput<$PrismaModel>
   in?: number[] | Prisma.ListIntFieldRefInput<$PrismaModel>
@@ -503,6 +520,23 @@ export type NestedJsonNullableFilterBase<$PrismaModel = never> = {
   gt?: runtime.InputJsonValue | Prisma.JsonFieldRefInput<$PrismaModel>
   gte?: runtime.InputJsonValue | Prisma.JsonFieldRefInput<$PrismaModel>
   not?: runtime.InputJsonValue | Prisma.JsonFieldRefInput<$PrismaModel> | Prisma.JsonNullValueFilter
+}
+
+export type NestedEnumInventoryTransactionTypeFilter<$PrismaModel = never> = {
+  equals?: $Enums.InventoryTransactionType | Prisma.EnumInventoryTransactionTypeFieldRefInput<$PrismaModel>
+  in?: $Enums.InventoryTransactionType[] | Prisma.ListEnumInventoryTransactionTypeFieldRefInput<$PrismaModel>
+  notIn?: $Enums.InventoryTransactionType[] | Prisma.ListEnumInventoryTransactionTypeFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumInventoryTransactionTypeFilter<$PrismaModel> | $Enums.InventoryTransactionType
+}
+
+export type NestedEnumInventoryTransactionTypeWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.InventoryTransactionType | Prisma.EnumInventoryTransactionTypeFieldRefInput<$PrismaModel>
+  in?: $Enums.InventoryTransactionType[] | Prisma.ListEnumInventoryTransactionTypeFieldRefInput<$PrismaModel>
+  notIn?: $Enums.InventoryTransactionType[] | Prisma.ListEnumInventoryTransactionTypeFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumInventoryTransactionTypeWithAggregatesFilter<$PrismaModel> | $Enums.InventoryTransactionType
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumInventoryTransactionTypeFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumInventoryTransactionTypeFilter<$PrismaModel>
 }
 
 

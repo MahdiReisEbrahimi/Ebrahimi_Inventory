@@ -13,7 +13,7 @@
     >
       <!-- Sidebar header -->
       <div class="sidebar-header">
-        <router-link  v-if="!isSidebarCollapsed" class="brand" to="/" @click="closeMobileSidebar">
+        <router-link v-if="!isSidebarCollapsed" class="brand" to="/" @click="closeMobileSidebar">
           <div class="brand-logo">Z</div>
           <div class="brand-content">
             <b>انبارک</b>
@@ -193,6 +193,7 @@ import {
   Box,
   Switch,
   DataAnalysis,
+  Tickets,
   Search,
   Bell,
   Moon,
@@ -234,6 +235,7 @@ const nav = [
     text: 'تراکنش‌ها',
     icon: Switch,
   },
+  { to: '/invoices', text: 'فاکتور فروش', icon: Tickets },
   {
     to: '/reports',
     text: 'گزارش‌ها',
@@ -303,7 +305,7 @@ onMounted(() => {
   }
 })
 
-function changeThemeHandle(){
+function changeThemeHandle() {
   isDark.value = !isDark.value
   localStorage.setItem('theme', isDark.value ? 'dark' : 'light')
   document.documentElement.classList.toggle('dark', isDark.value)
@@ -428,7 +430,7 @@ function changeThemeHandle(){
   color: var(--el-text-color-secondary);
   margin-top: -20px;
   margin-right: 4px;
-  scale: 1.5
+  scale: 1.5;
 }
 
 .sidebar-toggle:hover {

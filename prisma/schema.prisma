@@ -37,6 +37,8 @@ model Product {
   isActive       Boolean        @default(true)
   priceHistories PriceHistory[]
   auditLogs      AuditLog[]
+  inventoryTransactions InventoryTransaction[]
+  invoiceItems   InvoiceItem[]
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
 
@@ -75,4 +77,63 @@ model AuditLog {
   createdAt DateTime @default(now())
 
   @@index([productId, createdAt])
+}
+
+enum InventoryTransactionType {
+  PURCHASE
+  SALE
+  RETURN
+  ADJUSTMENT
+}
+
+model InventoryTransaction {
+  id          Int                      @id @default(autoincrement())
+  productId   Int
+  product     Product                  @relation(fields: [productId], references: [id], onDelete: Restrict)
+  type        InventoryTransactionType
+  quantity    Int
+  unitPrice   Int?
+  description String?
+  invoiceId   Int?
+  invoice     Invoice?                 @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
+  createdAt   DateTime                 @default(now())
+
+  @@index([productId, createdAt])
+  @@index([type, createdAt])
+}
+
+model Invoice {
+  id             Int                      @id @default(autoincrement())
+  number         String                   @unique
+  buyerFirstName String?
+  buyerLastName  String?
+  buyerNationalId String?
+  buyerAddress   String?
+  notes          String?
+  total          Int
+  items          InvoiceItem[]
+  transactions   InventoryTransaction[]
+  createdAt      DateTime                 @default(now())
+}
+
+model InvoiceItem {
+  id        Int      @id @default(autoincrement())
+  invoiceId Int
+  invoice   Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  productId Int
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Restrict)
+  name      String
+  unit      String
+  quantity  Int
+  unitPrice Int
+  total     Int
+}
+
+model StoreSettings {
+  id        Int      @id @default(1)
+  name      String   @default("فروشگاه")
+  address   String   @default("")
+  phone     String   @default("")
+  logoUrl   String?
+  updatedAt DateTime @updatedAt
 }

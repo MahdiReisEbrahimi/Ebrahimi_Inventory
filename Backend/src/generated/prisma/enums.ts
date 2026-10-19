@@ -15,3 +15,13 @@ export const PriceChangeType = {
 } as const
 
 export type PriceChangeType = (typeof PriceChangeType)[keyof typeof PriceChangeType]
+
+
+export const InventoryTransactionType = {
+  PURCHASE: 'PURCHASE',
+  SALE: 'SALE',
+  RETURN: 'RETURN',
+  ADJUSTMENT: 'ADJUSTMENT'
+} as const
+
+export type InventoryTransactionType = (typeof InventoryTransactionType)[keyof typeof InventoryTransactionType]

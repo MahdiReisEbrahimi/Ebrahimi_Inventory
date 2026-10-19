@@ -7,6 +7,8 @@ import { CategoriesService } from './categories/categories.service.js';
 import { PrismaModule } from './prisma/prisma.module.js';
 import { ProductsController } from './products/products.controller.js';
 import { ProductsService } from './products/products.service.js';
+import { InventoryController } from './inventory/inventory.controller.js';
+import { InventoryService } from './inventory/inventory.service.js';
 
 @Module({
   imports: [
@@ -16,7 +18,7 @@ import { ProductsService } from './products/products.service.js';
     }),
     PrismaModule,
   ],
-  controllers: [AppController, CategoriesController, ProductsController],
-  providers: [AppService, CategoriesService, ProductsService],
+  controllers: [AppController, CategoriesController, ProductsController, InventoryController],
+  providers: [AppService, CategoriesService, ProductsService, InventoryService],
 })
 export class AppModule {}

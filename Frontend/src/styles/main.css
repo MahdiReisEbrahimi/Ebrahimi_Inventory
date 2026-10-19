@@ -744,3 +744,9 @@ dd {
     flex-direction: column;
   }
 }
+
+@media print {
+  html, body, #app { width: 100%; min-height: 0; margin: 0; background: #fff !important; }
+  .sidebar, .topbar, .sidebar-overlay { display: none !important; }
+  .app-shell, .main-container, .page-content { display: block !important; width: 100% !important; min-height: 0 !important; height: auto !important; overflow: visible !important; margin: 0 !important; padding: 0 !important; background: #fff !important; }
+}

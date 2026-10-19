@@ -46,6 +46,21 @@ model Product {
   @@index([isActive])
 }
 
+model Buyer {
+  id         Int       @id @default(autoincrement())
+  firstName  String
+  lastName   String
+  nationalId String?   @unique
+  phone      String?
+  address    String?
+  notes      String?
+  invoices   Invoice[]
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  @@index([lastName, firstName])
+}
+
 enum PriceChangeType {
   SINGLE
   BULK
@@ -109,11 +124,15 @@ model Invoice {
   buyerLastName  String?
   buyerNationalId String?
   buyerAddress   String?
+  customerId     Int?
+  customer       Buyer?                   @relation(fields: [customerId], references: [id], onDelete: SetNull)
   notes          String?
   total          Int
   items          InvoiceItem[]
   transactions   InventoryTransaction[]
   createdAt      DateTime                 @default(now())
+
+  @@index([customerId, createdAt])
 }
 
 model InvoiceItem {

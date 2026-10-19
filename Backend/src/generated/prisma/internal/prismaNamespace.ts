@@ -399,6 +399,7 @@ type FieldRefInputType<Model, FieldType> = Model extends never ? never : FieldRe
 export const ModelName = {
   Category: 'Category',
   Product: 'Product',
+  Buyer: 'Buyer',
   PriceHistory: 'PriceHistory',
   AuditLog: 'AuditLog',
   InventoryTransaction: 'InventoryTransaction',
@@ -420,7 +421,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "category" | "product" | "priceHistory" | "auditLog" | "inventoryTransaction" | "invoice" | "invoiceItem" | "storeSettings"
+    modelProps: "category" | "product" | "buyer" | "priceHistory" | "auditLog" | "inventoryTransaction" | "invoice" | "invoiceItem" | "storeSettings"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -569,6 +570,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         count: {
           args: Prisma.ProductCountArgs<ExtArgs>
           result: runtime.Types.Utils.Optional<Prisma.ProductCountAggregateOutputType> | number
+        }
+      }
+    }
+    Buyer: {
+      payload: Prisma.$BuyerPayload<ExtArgs>
+      fields: Prisma.BuyerFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.BuyerFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$BuyerPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.BuyerFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$BuyerPayload>
+        }
+        findFirst: {
+          args: Prisma.BuyerFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$BuyerPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.BuyerFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$BuyerPayload>
+        }
+        findMany: {
+          args: Prisma.BuyerFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$BuyerPayload>[]
+        }
+        create: {
+          args: Prisma.BuyerCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$BuyerPayload>
+        }
+        createMany: {
+          args: Prisma.BuyerCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.BuyerCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$BuyerPayload>[]
+        }
+        delete: {
+          args: Prisma.BuyerDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$BuyerPayload>
+        }
+        update: {
+          args: Prisma.BuyerUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$BuyerPayload>
+        }
+        deleteMany: {
+          args: Prisma.BuyerDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.BuyerUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.BuyerUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$BuyerPayload>[]
+        }
+        upsert: {
+          args: Prisma.BuyerUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$BuyerPayload>
+        }
+        aggregate: {
+          args: Prisma.BuyerAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateBuyer>
+        }
+        groupBy: {
+          args: Prisma.BuyerGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.BuyerGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.BuyerCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.BuyerCountAggregateOutputType> | number
         }
       }
     }
@@ -1084,6 +1159,21 @@ export const ProductScalarFieldEnum = {
 export type ProductScalarFieldEnum = (typeof ProductScalarFieldEnum)[keyof typeof ProductScalarFieldEnum]
 
 
+export const BuyerScalarFieldEnum = {
+  id: 'id',
+  firstName: 'firstName',
+  lastName: 'lastName',
+  nationalId: 'nationalId',
+  phone: 'phone',
+  address: 'address',
+  notes: 'notes',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type BuyerScalarFieldEnum = (typeof BuyerScalarFieldEnum)[keyof typeof BuyerScalarFieldEnum]
+
+
 export const PriceHistoryScalarFieldEnum = {
   id: 'id',
   productId: 'productId',
@@ -1133,6 +1223,7 @@ export const InvoiceScalarFieldEnum = {
   buyerLastName: 'buyerLastName',
   buyerNationalId: 'buyerNationalId',
   buyerAddress: 'buyerAddress',
+  customerId: 'customerId',
   notes: 'notes',
   total: 'total',
   createdAt: 'createdAt'
@@ -1471,6 +1562,7 @@ export type PrismaClientOptions = PrismaClientOptionsWithAccelerateUrl | PrismaC
 export type GlobalOmitConfig = {
   category?: Prisma.CategoryOmit
   product?: Prisma.ProductOmit
+  buyer?: Prisma.BuyerOmit
   priceHistory?: Prisma.PriceHistoryOmit
   auditLog?: Prisma.AuditLogOmit
   inventoryTransaction?: Prisma.InventoryTransactionOmit

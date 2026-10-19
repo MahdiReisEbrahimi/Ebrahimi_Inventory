@@ -52,6 +52,11 @@ export type Category = Prisma.CategoryModel
  */
 export type Product = Prisma.ProductModel
 /**
+ * Model Buyer
+ * 
+ */
+export type Buyer = Prisma.BuyerModel
+/**
  * Model PriceHistory
  * 
  */

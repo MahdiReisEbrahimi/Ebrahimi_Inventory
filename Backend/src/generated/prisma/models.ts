@@ -10,6 +10,7 @@
  */
 export type * from './models/Category.js'
 export type * from './models/Product.js'
+export type * from './models/Buyer.js'
 export type * from './models/PriceHistory.js'
 export type * from './models/AuditLog.js'
 export type * from './models/InventoryTransaction.js'

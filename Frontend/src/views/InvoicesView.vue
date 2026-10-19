@@ -3,244 +3,359 @@
     <div class="toolbar no-print">
       <div>
         <h2>فاکتور فروش</h2>
-        <p>فاکتور نهایی، موجودی را کم می‌کند و در گردش انبار ثبت می‌شود.</p>
+        <p>صدور فاکتور، مدیریت خریداران و مشاهده فاکتورهای بایگانی‌شده</p>
       </div>
-      <el-button type="primary" :loading="saving" :disabled="!draft.length" @click="save"
-        >ثبت و صدور فاکتور</el-button
-      >
-    </div>
-    <el-card class="no-print" shadow="never">
-      <template #header> <b>اطلاعات خریدار</b> </template>
-      <el-form inline>
-        <el-form-item label="نام"> <el-input v-model="buyer.firstName" /> </el-form-item>
-        <el-form-item label="نام خانوادگی"> <el-input v-model="buyer.lastName" /> </el-form-item>
-        <el-form-item label="کد ملی"> <el-input v-model="buyer.nationalId" /> </el-form-item>
-        <el-form-item label="آدرس"> <el-input v-model="buyer.address" /> </el-form-item>
-        <el-form-item label="توضیحات"> <el-input v-model="buyer.notes" /> </el-form-item>
-      </el-form>
-      <div class="add-row">
-        <el-select
-          v-model="selectedProduct"
-          filterable
-          placeholder="افزودن محصول"
-          style="width: 280px"
+      <div class="toolbar-actions">
+        <el-button @click="settingsDialogVisible = true">اطلاعات فروشگاه</el-button>
+        <el-button @click="openBuyerDialog()">ثبت خریدار جدید</el-button>
+        <el-button
+          type="primary"
+          :loading="saving"
+          :disabled="!draft.length || !!activeInvoice"
+          @click="save"
         >
-          <el-option
-            v-for="p in products"
-            :key="p.id"
-            :label="`${p.name} | موجودی ${p.stock} ${p.unit}`"
-            :value="p.id"
-          />
-        </el-select>
-        <el-button @click="addProduct">افزودن به فاکتور</el-button>
+          ثبت و صدور فاکتور
+        </el-button>
       </div>
-    </el-card>
+    </div>
+
+    <el-tabs v-model="activeTab" class="invoice-tabs no-print" @tab-change="onTabChange">
+      <el-tab-pane label="فاکتور جدید" name="new">
+        <el-card shadow="never">
+          <template #header><b>اطلاعات فاکتور</b></template>
+          <div class="invoice-form-toolbar">
+            <el-form inline>
+              <el-form-item label="انتخاب خریدار">
+                <el-select
+                  v-model="selectedBuyerId"
+                  filterable
+                  clearable
+                  placeholder="خریدار را انتخاب کنید"
+                  style="width: 320px"
+                  @change="applyBuyer"
+                >
+                  <el-option
+                    v-for="customer in buyers"
+                    :key="customer.id"
+                    :label="`${customer.firstName} ${customer.lastName}`"
+                    :value="customer.id"
+                  />
+                </el-select>
+              </el-form-item>
+            </el-form>
+            <el-button @click="openBuyerDialog()">+ ثبت خریدار جدید</el-button>
+          </div>
+          <div v-if="selectedBuyer" class="selected-buyer">
+            <span><b>خریدار:</b> {{ selectedBuyer.firstName }} {{ selectedBuyer.lastName }}</span>
+            <span><b>کد ملی:</b> {{ selectedBuyer.nationalId || '—' }}</span>
+            <span><b>آدرس:</b> {{ selectedBuyer.address || '—' }}</span>
+            <span><b>تلفن:</b> {{ selectedBuyer.phone || '—' }}</span>
+            <el-button link type="primary" @click="editBuyer(selectedBuyer)">ویرایش</el-button>
+            <el-button link type="danger" @click="deleteBuyer(selectedBuyer)">حذف</el-button>
+          </div>
+          <div class="add-row">
+            <el-select
+              v-model="selectedProduct"
+              filterable
+              placeholder="افزودن محصول"
+              style="width: 280px"
+            >
+              <el-option
+                v-for="p in products"
+                :key="p.id"
+                :label="`${p.name} | موجودی ${p.stock} ${p.unit}`"
+                :value="p.id"
+              />
+            </el-select>
+            <el-button @click="addProduct">افزودن به فاکتور</el-button>
+          </div>
+        </el-card>
+      </el-tab-pane>
+      <el-tab-pane label="فاکتورهای بایگانی‌شده" name="archive">
+        <el-card shadow="never">
+          <template #header><b>فاکتورهای ثبت‌شده و گذشته</b></template>
+          <div class="archive-filters">
+            <el-select v-model="archiveFilters.customerId" clearable filterable placeholder="فیلتر خریدار" @change="loadInvoices">
+              <el-option v-for="customer in buyers" :key="customer.id" :label="`${customer.firstName} ${customer.lastName}`" :value="customer.id" />
+            </el-select>
+            <el-input v-model="archiveFilters.buyer" clearable placeholder="جست‌وجوی نام یا کد ملی" @keyup.enter="loadInvoices" @clear="loadInvoices" />
+            <el-date-picker v-model="archiveFilters.from" type="date" value-format="YYYY-MM-DD" placeholder="از تاریخ" @change="loadInvoices" />
+            <el-date-picker v-model="archiveFilters.to" type="date" value-format="YYYY-MM-DD" placeholder="تا تاریخ" @change="loadInvoices" />
+            <el-input v-model="archiveFilters.product" clearable placeholder="نام یا کد کالای فاکتور" @keyup.enter="loadInvoices" @clear="loadInvoices" />
+            <el-button type="primary" @click="loadInvoices">اعمال فیلتر</el-button>
+            <el-button @click="clearArchiveFilters">پاک‌کردن</el-button>
+          </div>
+          <el-table :data="invoices" v-loading="loading" @row-click="openInvoice">
+            <el-table-column prop="number" label="شماره فاکتور" min-width="120" />
+            <el-table-column label="خریدار" min-width="160">
+              <template #default="s">{{ s.row.buyerFirstName }} {{ s.row.buyerLastName }}</template>
+            </el-table-column>
+            <el-table-column label="مبلغ" min-width="150">
+              <template #default="s">{{ money(s.row.total) }}</template>
+            </el-table-column>
+            <el-table-column label="تاریخ" min-width="120">
+              <template #default="s">{{
+                new Date(s.row.createdAt).toLocaleDateString('fa-IR')
+              }}</template>
+            </el-table-column>
+            <el-table-column label="عملیات" width="145">
+              <template #default="s">
+                <el-button link type="primary" @click.stop="openInvoice(s.row)"
+                  >مشاهده / چاپ</el-button
+                >
+              </template>
+            </el-table-column>
+          </el-table>
+        </el-card>
+      </el-tab-pane>
+    </el-tabs>
+
+    <el-dialog
+      v-model="settingsDialogVisible"
+      title="ویرایش اطلاعات فروشگاه"
+      width="560px"
+      destroy-on-close
+    >
+      <el-form label-position="top" class="dialog-form">
+        <el-form-item label="نام فروشگاه"><el-input v-model="settingsForm.name" /></el-form-item>
+        <el-form-item label="نشانی فروشگاه"
+          ><el-input v-model="settingsForm.address" type="textarea" :rows="2"
+        /></el-form-item>
+        <el-form-item label="شماره تماس"><el-input v-model="settingsForm.phone" /></el-form-item>
+        <el-form-item label="نشانی لوگو"
+          ><el-input v-model="settingsForm.logoUrl" placeholder="آدرس تصویر لوگو"
+        /></el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="settingsDialogVisible = false">انصراف</el-button>
+        <el-button type="primary" :loading="settingsSaving" @click="saveSettings"
+          >ذخیره اطلاعات فروشگاه</el-button
+        >
+      </template>
+    </el-dialog>
+
+    <el-dialog
+      v-model="buyerDialogVisible"
+      :title="editingBuyerId ? 'ویرایش خریدار' : 'ثبت خریدار جدید'"
+      width="600px"
+      destroy-on-close
+    >
+      <el-form label-position="top" class="dialog-form">
+        <div class="dialog-grid">
+          <el-form-item label="نام"><el-input v-model="buyerForm.firstName" /></el-form-item>
+          <el-form-item label="نام خانوادگی"
+            ><el-input v-model="buyerForm.lastName"
+          /></el-form-item>
+          <el-form-item label="کد ملی"><el-input v-model="buyerForm.nationalId" /></el-form-item>
+          <el-form-item label="شماره تماس"><el-input v-model="buyerForm.phone" /></el-form-item>
+        </div>
+        <el-form-item label="آدرس"
+          ><el-input v-model="buyerForm.address" type="textarea" :rows="2"
+        /></el-form-item>
+        <el-form-item label="توضیحات"
+          ><el-input v-model="buyerForm.notes" type="textarea" :rows="2"
+        /></el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="buyerDialogVisible = false">انصراف</el-button>
+        <el-button type="primary" :loading="buyerSaving" @click="saveBuyer">ثبت خریدار</el-button>
+      </template>
+    </el-dialog>
+
     <article class="paper" v-if="activeInvoice || draft.length">
-      <header class="paper-head">
-        <div class="brand">
+      <header class="invoice-header">
+        <div class="invoice-reference">
+          <span>شماره فاکتور: <b>{{ activeInvoice?.number || 'پس از ثبت' }}</b></span>
+          <span>تاریخ: {{ new Date(activeInvoice?.createdAt || Date.now()).toLocaleDateString('fa-IR') }}</span>
+        </div>
+        <div class="invoice-title">
           <img v-if="settings?.logoUrl" :src="settings.logoUrl" alt="لوگو" />
-          <div v-else class="logo-placeholder">لوگو</div>
+          <div v-else class="invoice-logo">لوگو</div>
           <div>
-            <h1>{{ settings?.name || 'فروشگاه' }}</h1>
-            <div>{{ settings?.address }}</div>
-            <div>{{ settings?.phone }}</div>
+            <h1>صورتحساب فروش کالا و خدمات</h1>
+            <strong>{{ settings?.name || 'فروشگاه' }}</strong>
           </div>
         </div>
-        <div class="invoice-meta">
-          <b>فاکتور فروش</b> <span>شماره: {{ activeInvoice?.number || 'پس از ثبت' }}</span>
-          <span
-            >تاریخ:
-            {{ new Date(activeInvoice?.createdAt || Date.now()).toLocaleDateString('fa-IR') }}</span
-          >
+        <div class="invoice-store-details">
+          <span>{{ settings?.address || 'نشانی فروشگاه' }}</span>
+          <span>تلفن: {{ settings?.phone || '—' }}</span>
         </div>
       </header>
-      <section class="buyer">
-        <b>مشخصات خریدار</b>
-        <span
-          >نام:
-          {{
-            activeInvoice
-              ? `${activeInvoice.buyerFirstName || ''} ${activeInvoice.buyerLastName || ''}`
-              : `${buyer.firstName} ${buyer.lastName}`
-          }}</span
-        >
-        <span>کد ملی: {{ activeInvoice?.buyerNationalId || buyer.nationalId || '—' }}</span>
-        <span>آدرس: {{ activeInvoice?.buyerAddress || buyer.address || '—' }}</span>
+
+      <section class="party-details">
+        <div class="party-heading">مشخصات فروشنده</div>
+        <div><b>نام:</b> {{ settings?.name || 'فروشگاه' }}</div>
+        <div><b>نشانی:</b> {{ settings?.address || '—' }}</div>
+        <div><b>شماره تماس:</b> {{ settings?.phone || '—' }}</div>
       </section>
-      <el-table :data="activeInvoice?.items || draft" border class="line-items">
-        <el-table-column type="index" label="ردیف" width="60" />
-        <el-table-column prop="name" label="نام محصول" min-width="140" />
-        <el-table-column prop="unit" label="واحد" width="75" />
-        <el-table-column label="تعداد" width="130">
-          <template #default="s">
-            <el-input-number
-              v-if="!activeInvoice"
-              v-model="s.row.quantity"
-              :min="1"
-              :max="products.find((p) => p.id === s.row.productId)?.stock || 999999"
-              size="small"
-              controls-position="right"
-            />
-            <span v-else>{{ s.row.quantity }}</span>
-          </template>
-        </el-table-column>
-        <el-table-column label="قیمت فی (تومان)" min-width="140">
-          <template #default="s">
-            <el-input
-              v-if="!activeInvoice"
-              :model-value="priceFormat(s.row.unitPrice)"
-              inputmode="numeric"
-              @input="(v: string) => setPrice(s.row, v)"
-            />
-            <span v-else>{{ money(s.row.unitPrice) }}</span>
-          </template>
-        </el-table-column>
-        <el-table-column label="قیمت کل" min-width="140">
-          <template #default="s">{{ money(s.row.quantity * s.row.unitPrice) }}</template>
-        </el-table-column>
-        <el-table-column v-if="!activeInvoice" label="" width="62" class-name="no-print">
-          <template #default="s">
-            <el-button type="danger" text @click="draft.splice(s.$index, 1)">حذف</el-button>
-          </template>
-        </el-table-column>
-      </el-table>
-      <div class="total">
-        <b>مبلغ نهایی</b> <strong>{{ money(total) }}</strong>
-      </div>
-      <div class="notes"><b>توضیحات:</b> {{ activeInvoice?.notes || buyer.notes || '—' }}</div>
-      <footer class="signatures">
-        <div>مهر و امضای فروشنده</div>
-        <div>امضای خریدار</div>
-      </footer>
+      <section class="party-details">
+        <div class="party-heading">مشخصات خریدار</div>
+        <div><b>نام و نام خانوادگی:</b> {{ activeInvoice ? `${activeInvoice.buyerFirstName || ''} ${activeInvoice.buyerLastName || ''}` : `${selectedBuyer?.firstName || ''} ${selectedBuyer?.lastName || ''}` }}</div>
+        <div><b>کد ملی:</b> {{ activeInvoice?.buyerNationalId || selectedBuyer?.nationalId || '—' }}</div>
+        <div><b>نشانی:</b> {{ activeInvoice?.buyerAddress || selectedBuyer?.address || '—' }}</div>
+        <div><b>شماره تماس:</b> {{ selectedBuyer?.phone || '—' }}</div>
+      </section>
+
+      <table class="invoice-lines">
+        <colgroup>
+          <col class="line-number" /><col class="line-product" /><col class="line-unit" /><col class="line-quantity" /><col class="line-price" /><col class="line-total" /><col v-if="!activeInvoice" class="line-action" />
+        </colgroup>
+        <thead>
+          <tr><th>ردیف</th><th>شرح کالا یا خدمات</th><th>واحد</th><th>تعداد</th><th>مبلغ واحد (تومان)</th><th>مبلغ کل (تومان)</th><th v-if="!activeInvoice" class="no-print">عملیات</th></tr>
+        </thead>
+        <tbody>
+          <tr v-for="(line, index) in activeInvoice?.items || draft" :key="line.id || line.productId">
+            <td>{{ index + 1 }}</td><td>{{ line.name }}</td><td>{{ line.unit }}</td>
+            <td><el-input-number v-if="!activeInvoice" v-model="line.quantity" :min="1" :max="products.find((p) => p.id === line.productId)?.stock || 999999" size="small" controls-position="right" /><span v-else>{{ line.quantity }}</span><span v-if="!activeInvoice" class="print-value">{{ line.quantity }}</span></td>
+            <td><el-input v-if="!activeInvoice" :model-value="priceFormat(line.unitPrice)" inputmode="numeric" @input="(value: string) => setPrice(line, value)" /><span v-else>{{ money(line.unitPrice) }}</span><span v-if="!activeInvoice" class="print-value">{{ money(line.unitPrice) }}</span></td>
+            <td>{{ money(line.quantity * line.unitPrice) }}</td>
+            <td v-if="!activeInvoice" class="no-print"><el-button type="danger" text @click="draft.splice(index, 1)">حذف</el-button></td>
+          </tr>
+          <tr v-if="!(activeInvoice?.items || draft).length" class="empty-line"><td :colspan="activeInvoice ? 6 : 7">کالایی به فاکتور افزوده نشده است.</td></tr>
+        </tbody>
+        <tfoot><tr><td :colspan="activeInvoice ? 5 : 6"><b>جمع کل مبلغ قابل پرداخت</b></td><td><strong>{{ money(total) }}</strong></td></tr></tfoot>
+      </table>
+
+      <div class="invoice-notes"><b>توضیحات:</b> {{ activeInvoice?.notes || selectedBuyer?.notes || '—' }}</div>
+      <footer class="invoice-signatures"><div>مهر و امضای فروشنده</div><div>امضا و تأیید خریدار</div></footer>
       <div class="no-print print-actions">
         <el-button @click="windowPrint">چاپ فاکتور A5</el-button>
         <el-button v-if="activeInvoice" @click="newDraft">فاکتور جدید</el-button>
       </div>
     </article>
-    <el-card class="no-print" shadow="never">
-      <template #header> <b>فاکتورهای ثبت‌شده</b> </template>
-      <el-table :data="invoices" v-loading="loading" @row-click="openInvoice">
-        <el-table-column prop="number" label="شماره فاکتور" />
-        <el-table-column label="خریدار">
-          <template #default="s">{{ s.row.buyerFirstName }} {{ s.row.buyerLastName }}</template>
-        </el-table-column>
-        <el-table-column label="مبلغ">
-          <template #default="s">{{ money(s.row.total) }}</template>
-        </el-table-column>
-        <el-table-column label="تاریخ">
-          <template #default="s">{{
-            new Date(s.row.createdAt).toLocaleDateString('fa-IR')
-          }}</template>
-        </el-table-column>
-        <el-table-column label="عملیات">
-          <template #default="s">
-            <el-button link type="primary" @click.stop="openInvoice(s.row)">مشاهده / چاپ</el-button>
-          </template>
-        </el-table-column>
-      </el-table>
-    </el-card>
-    <el-card class="no-print" shadow="never">
-      <template #header> <b>اطلاعات فروشگاه در سربرگ</b> </template>
-      <el-form inline>
-        <el-form-item label="نام فروشگاه"> <el-input v-model="settingsForm.name" /> </el-form-item>
-        <el-form-item label="نشانی"> <el-input v-model="settingsForm.address" /> </el-form-item>
-        <el-form-item label="تلفن"> <el-input v-model="settingsForm.phone" /> </el-form-item>
-        <el-form-item label="نشانی لوگو">
-          <el-input v-model="settingsForm.logoUrl" />
-        </el-form-item>
-        <el-button @click="saveSettings">ذخیره اطلاعات</el-button>
-      </el-form>
-    </el-card>
   </section>
 </template>
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { productsApi } from '@/services/products'
 import { inventoryApi } from '@/services/inventory'
-import type { Invoice, InvoiceItem, Product, StoreSettings } from '@/types'
+import type { Buyer, Invoice, InvoiceItem, Product, StoreSettings } from '@/types'
+
 type DraftLine = InvoiceItem
-const products = ref<Product[]>([]),
-  invoices = ref<Invoice[]>([]),
-  activeInvoice = ref<Invoice | null>(null),
-  settings = ref<StoreSettings | null>(null),
-  loading = ref(false),
-  saving = ref(false),
-  selectedProduct = ref<number>(),
-  draft = ref<DraftLine[]>([])
-const buyer = reactive({ firstName: '', lastName: '', nationalId: '', address: '', notes: '' })
+type BuyerRecord = Buyer
+
+const products = ref<Product[]>([])
+const invoices = ref<Invoice[]>([])
+const activeInvoice = ref<Invoice | null>(null)
+const settings = ref<StoreSettings | null>(null)
+const buyers = ref<BuyerRecord[]>([])
+const loading = ref(false)
+const saving = ref(false)
+const settingsSaving = ref(false)
+const buyerSaving = ref(false)
+const selectedProduct = ref<number>()
+const selectedBuyerId = ref<number>()
+const draft = ref<DraftLine[]>([])
+const activeTab = ref<'new' | 'archive'>('new')
+const settingsDialogVisible = ref(false)
+const buyerDialogVisible = ref(false)
+const editingBuyerId = ref<number | null>(null)
+const archiveFilters = reactive<{ customerId?: number; buyer: string; from?: string; to?: string; product: string }>({ buyer: '', product: '' })
+
+const buyerForm = reactive({
+  firstName: '',
+  lastName: '',
+  nationalId: '',
+  phone: '',
+  address: '',
+  notes: '',
+})
 const settingsForm = reactive({ name: '', address: '', phone: '', logoUrl: '' })
-const total = computed(
-  () => activeInvoice.value?.total ?? draft.value.reduce((s, i) => s + i.quantity * i.unitPrice, 0),
+const selectedBuyer = computed(
+  () => buyers.value.find((b) => b.id === selectedBuyerId.value) || null,
 )
-const money = (v: number) => `${new Intl.NumberFormat('fa-IR').format(v)} تومان`,
-  priceFormat = (v: number) => new Intl.NumberFormat('fa-IR').format(v)
-function setPrice(row: any, v: string) {
+const total = computed(
+  () =>
+    activeInvoice.value?.total ??
+    draft.value.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0),
+)
+const money = (v: number) => `${new Intl.NumberFormat('fa-IR').format(v)} تومان`
+const priceFormat = (v: number) => new Intl.NumberFormat('fa-IR').format(v)
+
+function setPrice(row: InvoiceItem, value: string) {
   row.unitPrice =
     Number(
-      v
+      value
         .replace(/[۰-۹]/g, (d) => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d)))
         .replace(/[٠-٩]/g, (d) => String('٠١٢٣٤٥٦٧٨٩'.indexOf(d)))
         .replace(/\D/g, ''),
     ) || 0
 }
+
+function applyBuyer() {
+  // Buyer details are read from the selected saved record and displayed on the invoice.
+}
+
 function addProduct() {
-  const p = products.value.find((x) => x.id === selectedProduct.value)
-  if (!p) return
-  const line = draft.value.find((x) => x.productId === p.id)
+  const product = products.value.find((item) => item.id === selectedProduct.value)
+  if (!product) return
+  const line = draft.value.find((item) => item.productId === product.id)
   if (line) {
-    if (line.quantity < p.stock) line.quantity++
-  } else
+    if (line.quantity < product.stock) line.quantity++
+    else ElMessage.warning('تعداد انتخاب‌شده از موجودی بیشتر است.')
+  } else {
     draft.value.push({
       id: 0,
-      productId: p.id,
-      name: p.name,
-      unit: p.unit,
+      productId: product.id,
+      name: product.name,
+      unit: product.unit,
       quantity: 1,
-      unitPrice: p.sellPrice,
-      total: p.sellPrice,
+      unitPrice: product.sellPrice,
+      total: product.sellPrice,
     })
+  }
   selectedProduct.value = undefined
 }
+
 async function load() {
   loading.value = true
   try {
-    const [p, i, s] = await Promise.all([
+    const [productResult, storeResult, buyerResult] = await Promise.all([
       productsApi.list({ page: 1, limit: 10000, isActive: true }),
-      inventoryApi.invoices(),
       inventoryApi.settings(),
+      inventoryApi.buyers(),
     ])
-    products.value = p.data
-    invoices.value = i
-    settings.value = s
+    products.value = productResult.data
+    settings.value = storeResult
+    buyers.value = buyerResult
+    await loadInvoices()
     Object.assign(settingsForm, {
-      name: s.name,
-      address: s.address || '',
-      phone: s.phone || '',
-      logoUrl: s.logoUrl || '',
+      name: storeResult.name,
+      address: storeResult.address || '',
+      phone: storeResult.phone || '',
+      logoUrl: storeResult.logoUrl || '',
     })
-  } catch (e) {
-    ElMessage.error(e instanceof Error ? e.message : 'دریافت اطلاعات ناموفق بود.')
+  } catch (error) {
+    ElMessage.error(error instanceof Error ? error.message : 'دریافت اطلاعات ناموفق بود.')
   } finally {
     loading.value = false
   }
 }
+
 async function save() {
   if (
     !draft.value.length ||
-    draft.value.some((i) => i.quantity < 1 || !Number.isInteger(i.unitPrice) || i.unitPrice < 0)
+    draft.value.some(
+      (item) => item.quantity < 1 || !Number.isInteger(item.unitPrice) || item.unitPrice < 0,
+    )
   ) {
     ElMessage.warning('اقلام و قیمت‌های فاکتور را بررسی کنید.')
+    return
+  }
+  if (!selectedBuyer.value) {
+    ElMessage.warning('ابتدا خریدار را انتخاب کنید یا خریدار جدید ثبت کنید.')
     return
   }
   saving.value = true
   try {
     activeInvoice.value = await inventoryApi.createInvoice({
-      buyerFirstName: buyer.firstName,
-      buyerLastName: buyer.lastName,
-      buyerNationalId: buyer.nationalId,
-      buyerAddress: buyer.address,
-      notes: buyer.notes,
+      buyerFirstName: selectedBuyer.value.firstName,
+      customerId: selectedBuyer.value.id,
+      buyerLastName: selectedBuyer.value.lastName,
+      buyerNationalId: selectedBuyer.value.nationalId || '',
+      buyerAddress: selectedBuyer.value.address || '',
+      notes: selectedBuyer.value.notes || '',
       items: draft.value.map(({ productId, quantity, unitPrice }) => ({
         productId,
         quantity,
@@ -249,36 +364,121 @@ async function save() {
     })
     ElMessage.success('فاکتور ثبت شد و موجودی به‌روز شد.')
     draft.value = []
+    activeTab.value = 'new'
     await load()
-  } catch (e) {
-    ElMessage.error(e instanceof Error ? e.message : 'ثبت فاکتور ناموفق بود.')
+  } catch (error) {
+    ElMessage.error(error instanceof Error ? error.message : 'ثبت فاکتور ناموفق بود.')
   } finally {
     saving.value = false
   }
 }
+
 async function openInvoice(row: any) {
   try {
     activeInvoice.value = await inventoryApi.invoice(Number(row.id))
-  } catch (e) {
-    ElMessage.error(e instanceof Error ? e.message : 'دریافت فاکتور ناموفق بود.')
+    activeTab.value = 'archive'
+  } catch (error) {
+    ElMessage.error(error instanceof Error ? error.message : 'دریافت فاکتور ناموفق بود.')
   }
 }
+
 function newDraft() {
   activeInvoice.value = null
   draft.value = []
-  Object.assign(buyer, { firstName: '', lastName: '', nationalId: '', address: '', notes: '' })
+  selectedBuyerId.value = undefined
+  activeTab.value = 'new'
 }
-async function saveSettings() {
+
+function onTabChange(tab: string | number) {
+  if (tab === 'new' && activeInvoice.value) newDraft()
+}
+
+function openBuyerDialog() {
+  editingBuyerId.value = null
+  Object.assign(buyerForm, {
+    firstName: '',
+    lastName: '',
+    nationalId: '',
+    phone: '',
+    address: '',
+    notes: '',
+  })
+  buyerDialogVisible.value = true
+}
+
+function editBuyer(buyer: BuyerRecord) {
+  editingBuyerId.value = buyer.id
+  Object.assign(buyerForm, { firstName: buyer.firstName, lastName: buyer.lastName, nationalId: buyer.nationalId || '', phone: buyer.phone || '', address: buyer.address || '', notes: buyer.notes || '' })
+  buyerDialogVisible.value = true
+}
+
+async function deleteBuyer(buyer: BuyerRecord) {
   try {
-    settings.value = await inventoryApi.saveSettings(settingsForm)
-    ElMessage.success('اطلاعات فروشگاه ذخیره شد.')
-  } catch (e) {
-    ElMessage.error(e instanceof Error ? e.message : 'ذخیره ناموفق بود.')
+    await ElMessageBox.confirm(`خریدار «${buyer.firstName} ${buyer.lastName}» حذف شود؟`, 'حذف خریدار', { type: 'warning', confirmButtonText: 'حذف', cancelButtonText: 'انصراف' })
+    await inventoryApi.deleteBuyer(buyer.id)
+    buyers.value = buyers.value.filter((item) => item.id !== buyer.id)
+    if (selectedBuyerId.value === buyer.id) selectedBuyerId.value = undefined
+    ElMessage.success('خریدار حذف شد.')
+  } catch (error) {
+    if (error !== 'cancel' && error !== 'close') ElMessage.error(error instanceof Error ? error.message : 'حذف خریدار ناموفق بود.')
   }
 }
+
+async function saveBuyer() {
+  if (!buyerForm.firstName.trim() || !buyerForm.lastName.trim()) {
+    ElMessage.warning('نام و نام خانوادگی خریدار الزامی است.')
+    return
+  }
+  buyerSaving.value = true
+  const editing = editingBuyerId.value !== null
+  try {
+    const saved = editingBuyerId.value
+      ? await inventoryApi.updateBuyer(editingBuyerId.value, { ...buyerForm })
+      : await inventoryApi.createBuyer({ ...buyerForm })
+    const existingIndex = buyers.value.findIndex((buyer) => buyer.id === saved.id)
+    if (existingIndex === -1) buyers.value.push(saved)
+    else buyers.value[existingIndex] = saved
+    selectedBuyerId.value = saved.id
+    buyerDialogVisible.value = false
+    editingBuyerId.value = null
+    ElMessage.success(editing ? 'اطلاعات خریدار ویرایش شد.' : 'خریدار ثبت و انتخاب شد.')
+  } catch (error) {
+    ElMessage.error(error instanceof Error ? error.message : 'ثبت خریدار ناموفق بود.')
+  } finally {
+    buyerSaving.value = false
+  }
+}
+
+async function saveSettings() {
+  settingsSaving.value = true
+  try {
+    settings.value = await inventoryApi.saveSettings(settingsForm)
+    settingsDialogVisible.value = false
+    ElMessage.success('اطلاعات فروشگاه ذخیره شد.')
+  } catch (error) {
+    ElMessage.error(error instanceof Error ? error.message : 'ذخیره اطلاعات فروشگاه ناموفق بود.')
+  } finally {
+    settingsSaving.value = false
+  }
+}
+
 function windowPrint() {
   window.print()
 }
+
+async function loadInvoices() {
+  try {
+    invoices.value = await inventoryApi.invoices(archiveFilters)
+  } catch (error) {
+    ElMessage.error(error instanceof Error ? error.message : 'دریافت بایگانی فاکتورها ناموفق بود.')
+  }
+}
+
+function clearArchiveFilters() {
+  Object.assign(archiveFilters, { customerId: undefined, buyer: '', from: undefined, to: undefined, product: '' })
+  void loadInvoices()
+}
+
 onMounted(load)
 </script>
 <style scoped>
@@ -690,6 +890,64 @@ onMounted(load)
   background: var(--el-fill-color-light);
 }
 
+/* Invoice tabs, buyer selection and dialogs */
+.invoice-tabs {
+  min-width: 0;
+}
+.invoice-tabs :deep(.el-tabs__header) {
+  margin-bottom: 18px;
+}
+.invoice-tabs :deep(.el-tabs__nav-wrap::after) {
+  height: 1px;
+  background: var(--el-border-color-lighter);
+}
+.invoice-tabs :deep(.el-tabs__item) {
+  height: 48px;
+  font-weight: 800;
+}
+.toolbar-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.invoice-form-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+.invoice-form-toolbar .el-form-item {
+  margin-bottom: 0;
+}
+.selected-buyer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 22px;
+  padding: 13px 15px;
+  margin-top: 10px;
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: 12px;
+  background: var(--el-fill-color-lighter);
+  font-size: 12px;
+  line-height: 1.9;
+}
+.archive-filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 10px;
+  margin-bottom: 18px;
+}
+.dialog-form :deep(.el-form-item) {
+  margin-bottom: 16px;
+}
+.dialog-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 16px;
+}
+
 @media (max-width: 900px) {
   .invoice-page :deep(.el-form--inline) {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -714,8 +972,24 @@ onMounted(load)
     padding: 20px;
     border-radius: 16px;
   }
-  .toolbar :deep(.el-button) {
+  .toolbar-actions {
     width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .toolbar-actions :deep(.el-button) {
+    width: 100%;
+    margin-left: 0;
+  }
+  .invoice-form-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .invoice-form-toolbar :deep(.el-select) {
+    width: 100% !important;
+  }
+  .dialog-grid {
+    grid-template-columns: minmax(0, 1fr);
   }
   .invoice-page :deep(.el-card__body) {
     padding: 15px;
@@ -922,5 +1196,114 @@ onMounted(load)
   .invoice-page :deep(.el-table__body-wrapper) {
     overflow: visible !important;
   }
+}
+
+/* Official invoice layout */
+.paper {
+  width: min(100%, 980px);
+  margin: 0 auto;
+  padding: 24px;
+  gap: 0;
+  overflow: visible;
+  border: 1px solid var(--el-text-color-primary);
+  border-radius: 4px;
+  background: var(--el-bg-color);
+  box-shadow: none;
+  color: var(--el-text-color-primary);
+  font-size: 12px;
+}
+.paper::before { display: none; }
+.invoice-header {
+  display: grid;
+  grid-template-columns: 1fr 1.4fr 1fr;
+  align-items: start;
+  gap: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid currentColor;
+}
+.invoice-reference,
+.invoice-store-details { display: grid; gap: 5px; font-size: 11px; line-height: 1.7; }
+.invoice-reference { text-align: right; }
+.invoice-store-details { text-align: left; }
+.invoice-title { display: flex; align-items: center; justify-content: center; gap: 10px; text-align: center; }
+.invoice-title h1 { margin: 0 0 5px; font-size: 17px; font-weight: 800; }
+.invoice-title strong { font-size: 12px; }
+.invoice-title img,
+.invoice-logo { width: 42px; height: 42px; object-fit: contain; }
+.invoice-logo { display: grid; place-items: center; border: 1px dashed currentColor; font-size: 9px; }
+.party-details {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+  margin-top: 8px;
+  border: 1px solid currentColor;
+  border-bottom: 0;
+}
+.party-details > * { min-width: 0; padding: 5px 8px; border-bottom: 1px solid currentColor; overflow-wrap: anywhere; }
+.party-details > :nth-child(even) { border-left: 1px solid currentColor; }
+.party-heading { grid-column: 1 / -1; font-weight: 800; text-align: center; }
+.invoice-lines { width: 100%; border-collapse: collapse; table-layout: fixed; text-align: center; }
+.invoice-lines th,
+.invoice-lines td { padding: 6px 5px; border: 1px solid currentColor; vertical-align: middle; overflow-wrap: anywhere; }
+.invoice-lines th { background: var(--el-fill-color-light); font-weight: 800; }
+.invoice-lines tbody tr { break-inside: avoid; page-break-inside: avoid; }
+.invoice-lines .line-number { width: 6%; }
+.invoice-lines .line-product { width: 31%; }
+.invoice-lines .line-unit { width: 10%; }
+.invoice-lines .line-quantity { width: 11%; }
+.invoice-lines .line-price,
+.invoice-lines .line-total { width: 19%; }
+.invoice-lines .line-action { width: 7%; }
+.invoice-lines :deep(.el-input-number),
+.invoice-lines :deep(.el-input) { width: 100%; }
+.invoice-lines :deep(.el-input__wrapper) { min-height: 30px; padding-inline: 5px; border-radius: 3px; }
+.invoice-lines :deep(.el-input-number .el-input__wrapper) { padding-inline: 4px; }
+.print-value { display: none; }
+.invoice-lines tfoot td { font-size: 13px; font-weight: 700; text-align: left; }
+.invoice-lines tfoot strong { white-space: nowrap; }
+.empty-line td { height: 45px; color: var(--el-text-color-secondary); }
+.invoice-notes { min-height: 42px; padding: 8px; border: 1px solid currentColor; border-top: 0; line-height: 1.8; overflow-wrap: anywhere; }
+.invoice-signatures { display: grid; grid-template-columns: 1fr 1fr; min-height: 72px; border: 1px solid currentColor; border-top: 0; }
+.invoice-signatures div { padding: 10px; text-align: center; font-weight: 700; }
+.invoice-signatures div + div { border-right: 1px solid currentColor; }
+
+@media (max-width: 640px) {
+  .paper { padding: 14px; overflow-x: auto; }
+  .invoice-header { grid-template-columns: 1fr; text-align: center; }
+  .invoice-reference,
+  .invoice-store-details { text-align: center; }
+  .invoice-lines { min-width: 650px; }
+}
+
+@media print {
+  @page { size: A5 landscape; margin: 6mm; }
+  :global(html),
+  :global(body) { width: 210mm !important; height: auto !important; background: #fff !important; }
+  .invoice-page { display: block !important; width: 198mm !important; margin: 0 !important; padding: 0 !important; color: #000 !important; font-family: Vazirmatn, Tahoma, sans-serif !important; }
+  .paper { display: block !important; width: 198mm !important; max-width: 198mm !important; min-height: 0 !important; margin: 0 !important; padding: 0 !important; border: 1px solid #111 !important; border-radius: 0 !important; background: #fff !important; color: #000 !important; font-size: 8.5pt !important; box-shadow: none !important; }
+  .invoice-header { grid-template-columns: 1fr 1.4fr 1fr !important; gap: 6px !important; padding: 6px 8px !important; border-color: #111 !important; }
+  .invoice-reference,
+  .invoice-store-details { gap: 2px !important; font-size: 7.5pt !important; }
+  .invoice-title h1 { margin-bottom: 2px !important; font-size: 12pt !important; }
+  .invoice-title strong { font-size: 8pt !important; }
+  .invoice-title img,
+  .invoice-logo { width: 30px !important; height: 30px !important; }
+  .party-details { margin-top: 4px !important; border-color: #111 !important; }
+  .party-details > * { padding: 3px 6px !important; border-color: #111 !important; font-size: 7.5pt !important; line-height: 1.45 !important; }
+  .invoice-lines { width: 100% !important; font-size: 7.5pt !important; }
+  .invoice-lines thead { display: table-header-group; }
+  .invoice-lines tr { break-inside: avoid !important; page-break-inside: avoid !important; }
+  .invoice-lines th,
+  .invoice-lines td { padding: 3px 4px !important; border-color: #111 !important; background: #fff !important; color: #000 !important; line-height: 1.4 !important; }
+  .invoice-lines th { font-weight: 800 !important; }
+  .invoice-lines :deep(.el-input),
+  .invoice-lines :deep(.el-input-number) { display: none !important; }
+  .print-value { display: inline !important; }
+  .invoice-lines tfoot { display: table-row-group; }
+  .invoice-lines tfoot td { padding: 5px 6px !important; font-size: 8pt !important; }
+  .invoice-notes { min-height: 24px !important; padding: 5px 7px !important; border-color: #111 !important; font-size: 7.5pt !important; }
+  .invoice-signatures { min-height: 48px !important; border-color: #111 !important; break-inside: avoid; page-break-inside: avoid; }
+  .invoice-signatures div { padding: 6px !important; font-size: 8pt !important; }
+  .invoice-signatures div + div { border-color: #111 !important; }
 }
 </style>

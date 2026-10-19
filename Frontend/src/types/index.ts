@@ -42,3 +42,4 @@ export interface InventoryMovement {
 export interface InvoiceItem { id: number; productId: number; name: string; unit: string; quantity: number; unitPrice: number; total: number }
 export interface Invoice { id: number; number: string; buyerFirstName: string | null; buyerLastName: string | null; buyerNationalId: string | null; buyerAddress: string | null; notes: string | null; total: number; createdAt: string; items: InvoiceItem[] }
 export interface StoreSettings { id: number; name: string; address: string; phone: string; logoUrl: string | null }
+export interface Buyer { id: number; firstName: string; lastName: string; nationalId: string | null; phone: string | null; address: string | null; notes: string | null; createdAt: string; updatedAt: string }

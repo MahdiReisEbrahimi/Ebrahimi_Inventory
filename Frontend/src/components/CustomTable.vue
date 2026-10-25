@@ -33,6 +33,9 @@
     <div
       v-else
       class="table-scroll"
+      tabindex="0"
+      role="region"
+      :aria-label="header || 'فهرست کالاها'"
       :style="
         height ? { maxHeight: typeof height === 'number' ? height + 'px' : height } : undefined
       "
@@ -148,6 +151,7 @@ const actionLabel = (name: string) =>
 .table-toolbar {
   padding: 12px 20px;
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   gap: 12px;
   align-items: center;
@@ -183,6 +187,8 @@ const actionLabel = (name: string) =>
     border: 0;
     padding: 7px 0;
     text-align: end;
+    min-width: 0;
+    overflow-wrap: anywhere;
   }
   .responsive-table td::before {
     content: attr(data-label);

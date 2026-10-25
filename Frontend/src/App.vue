@@ -43,7 +43,11 @@
             <Menu :size="22" />
           </button>
           <span class="topbar-store">فروشگاه ابراهیمی</span
-          ><ChevronLeft :size="14" class="breadcrumb-arrow" /><span>{{ title }}</span>
+          ><ChevronLeft :size="14" class="breadcrumb-arrow" /><span
+            class="topbar-title"
+            :title="String(title)"
+            >{{ title }}</span
+          >
         </div>
         <div class="topbar-actions">
           <time class="today">{{ today }}</time>
@@ -232,7 +236,8 @@ watch(
 <style>
 .app-shell {
   display: flex;
-  min-height: 100dvh;
+  height: 100dvh;
+  overflow: hidden;
 }
 .sidebar {
   width: 246px;
@@ -246,6 +251,8 @@ watch(
   background: var(--sidebar);
   color: var(--sidebar-foreground);
   overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
 }
 .brand {
   display: flex;
@@ -362,8 +369,12 @@ watch(
 .main-container {
   flex: 1;
   min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
 }
 .topbar {
+  flex-shrink: 0;
   min-height: 76px;
   padding: 0 36px;
   border-bottom: 1px solid var(--border);
@@ -379,7 +390,19 @@ watch(
   gap: 14px;
 }
 .topbar-context {
+  min-width: 0;
   font-size: 12px;
+}
+.topbar-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.topbar-actions,
+.topbar-store,
+.topbar-context > .icon-button {
+  flex-shrink: 0;
 }
 .topbar-store,
 .today,
@@ -399,7 +422,18 @@ watch(
   background: var(--card);
 }
 .page-content {
-  max-width: 1560px;
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+.page-content > * {
+  max-width: 1488px;
+  margin-inline: auto;
+}
+.page-content {
   padding: 32px 36px 48px;
   margin: 0 auto;
 }
@@ -418,8 +452,10 @@ watch(
 .stock-popover {
   z-index: 60;
   width: min(360px, calc(100vw - 32px));
-  max-height: min(560px, 80dvh);
-  overflow-y: auto;
+  max-height: min(560px, 80dvh, var(--reka-popover-content-available-height, 80dvh));
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   padding: 18px;
   border: 1px solid var(--border);
   border-radius: 16px;
@@ -429,6 +465,7 @@ watch(
   direction: rtl;
 }
 .stock-popover__head {
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -436,8 +473,10 @@ watch(
   padding-bottom: 12px;
 }
 .stock-popover__list {
+  min-height: 0;
   max-height: 320px;
   overflow: auto;
+  overscroll-behavior: contain;
 }
 .stock-alert {
   display: flex;
@@ -459,6 +498,7 @@ watch(
   font-size: 12px;
 }
 .stock-link {
+  flex-shrink: 0;
   width: 100%;
   margin-top: 12px;
 }
@@ -481,9 +521,17 @@ watch(
   color: var(--sidebar-foreground);
   z-index: 91;
   padding: 20px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.mobile-sidebar nav {
+  min-height: 0;
   overflow-y: auto;
+  overscroll-behavior: contain;
 }
 .mobile-sidebar__heading {
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: space-between;

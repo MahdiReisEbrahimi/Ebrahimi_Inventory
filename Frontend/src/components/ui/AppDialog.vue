@@ -46,7 +46,9 @@ const emit = defineEmits<{ 'update:open': [value: boolean] }>()
   z-index: 81;
   width: calc(100vw - 32px);
   max-height: calc(100dvh - 32px);
-  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   transform: translate(-50%, -50%);
   border: 1px solid var(--border);
   border-radius: 20px;
@@ -55,9 +57,7 @@ const emit = defineEmits<{ 'update:open': [value: boolean] }>()
   box-shadow: var(--shadow-lg);
 }
 .dialog-heading {
-  position: sticky;
-  top: 0;
-  z-index: 2;
+  flex-shrink: 0;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -84,6 +84,9 @@ const emit = defineEmits<{ 'update:open': [value: boolean] }>()
   background: var(--muted);
 }
 .dialog-body {
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
   padding: 18px 20px;
 }
 @media (max-width: 600px) {

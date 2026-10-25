@@ -1,0 +1,5 @@
+My name is Mehdi.
+Im a software engineere. 
+for now im working in a company as a vue developer.
+I know little about nest.js and backend things.
+I can recognize only persian and english. I prefere persian for now.

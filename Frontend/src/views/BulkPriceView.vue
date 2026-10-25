@@ -1,515 +1,189 @@
 <template>
   <div class="bulk-price">
-    <!-- تنظیمات -->
-    <section class="price-card">
-      <div class="section-header">
-        <div class="section-icon">
-          <el-icon>
-            <PriceTag />
-          </el-icon>
-        </div>
-
-        <div>
-          <h3>تغییر گروهی قیمت</h3>
-          <p>قیمت محصولات یک دسته را به‌صورت گروهی تغییر دهید.</p>
-        </div>
-      </div>
-
+    <p class="muted">
+      قیمت خرید یا فروش کالاهای فعال را تغییر دهید. قبل از ثبت، قیمت‌های جدید را در پیش‌نمایش بررسی
+      کنید.
+    </p>
+    <form @submit.prevent="preview">
       <div class="form-grid">
-        <!-- دسته بندی -->
-        <div class="field">
-          <label>دسته‌بندی</label>
-
-          <el-select v-model="form.categoryId" placeholder="همه دسته‌ها" clearable filterable>
-            <el-option v-for="c in categories" :key="c.id" :label="c.name" :value="c.id" />
-          </el-select>
-
-          <small>در صورت انتخاب نکردن، همه محصولات بررسی می‌شوند.</small>
-        </div>
-
-        <!-- نوع قیمت -->
-        <div class="field">
-          <label>نوع قیمت</label>
-
-          <el-select v-model="form.priceType">
-            <el-option label="قیمت فروش" value="SELL" />
-            <el-option label="قیمت خرید" value="BUY" />
-          </el-select>
-        </div>
-
-        <!-- نوع تغییر -->
-        <div class="field">
-          <label>نوع تغییر</label>
-
-          <el-select v-model="form.type">
-            <el-option label="درصدی" value="PERCENTAGE" />
-            <el-option label="مبلغ ثابت" value="FIXED" />
-          </el-select>
-        </div>
-
-        <!-- مقدار -->
-        <div class="field">
-          <label> مقدار تغییر </label>
-
-          <el-input-number
-            v-model="form.value"
-            :precision="0"
-            controls-position="right"
-            :placeholder="form.type === 'PERCENTAGE' ? 'مثلاً 10' : 'مثلاً 500000'"
-          />
-
-          <small>
-            {{ form.type === 'PERCENTAGE' ? 'درصد افزایش قیمت' : 'مبلغ افزایش قیمت به تومان' }}
-          </small>
-        </div>
+        <label class="form-field"
+          ><span>دسته‌بندی</span
+          ><select v-model.number="form.categoryId">
+            <option :value="undefined">همه دسته‌بندی‌ها</option>
+            <option v-for="c in categories" :key="c.id" :value="c.id">{{ c.name }}</option>
+          </select></label
+        >
+        <label class="form-field"
+          ><span>قیمت مورد نظر</span
+          ><select v-model="form.priceType">
+            <option value="SELL">قیمت فروش</option>
+            <option value="BUY">قیمت خرید</option>
+          </select></label
+        >
+        <label class="form-field"
+          ><span>روش تغییر</span
+          ><select v-model="form.type">
+            <option value="PERCENTAGE">افزایش درصدی</option>
+            <option value="FIXED">جایگزینی با مبلغ ثابت</option>
+          </select></label
+        >
+        <label class="form-field"
+          ><span>{{ form.type === 'PERCENTAGE' ? 'درصد افزایش' : 'قیمت جدید · تومان' }}</span
+          ><input
+            v-model.number="form.value"
+            type="number"
+            min="0"
+            :step="form.type === 'PERCENTAGE' ? '0.1' : '1'"
+            required
+          /><small>{{
+            form.type === 'PERCENTAGE'
+              ? 'مثلاً ۱۰ یعنی ده درصد افزایش نسبت به قیمت فعلی.'
+              : 'این مبلغ جایگزین قیمت فعلی تمام کالاهای انتخابی می‌شود.'
+          }}</small></label
+        >
       </div>
-
-      <div class="form-footer">
-        <span class="hint">
-          <el-icon>
-            <WarningFilled />
-          </el-icon>
-
-          ابتدا پیش‌نمایش را بررسی کنید، سپس تغییرات را ثبت کنید.
-        </span>
-
-        <el-button type="primary" :loading="loading" @click="preview"> پیش‌نمایش </el-button>
+      <p v-if="error" class="notice notice--error" role="alert">{{ error }}</p>
+      <div class="form-actions">
+        <Button type="submit" variant="outline" :disabled="loading || applying"
+          ><Eye :size="17" />{{ loading ? 'در حال محاسبه…' : 'محاسبه و پیش‌نمایش' }}</Button
+        >
       </div>
-    </section>
-
-    <!-- Preview -->
-    <section v-if="rows.length" class="preview-card">
-      <div class="preview-header">
-        <div class="preview-title">
-          <div class="success-icon">
-            <el-icon>
-              <CircleCheck />
-            </el-icon>
-          </div>
-
-          <div>
-            <h3>پیش‌نمایش تغییرات</h3>
-
-            <span>
-              {{ rows.length }}
-              محصول تحت تأثیر این تغییر قرار می‌گیرد
-            </span>
-          </div>
-        </div>
-
-        <div class="preview-actions">
-          <el-button text @click="clearPreview"> لغو پیش‌نمایش </el-button>
-
-          <el-button type="success" :loading="applying" :icon="CircleCheck" @click="apply">
-            تأیید و اعمال تغییرات
-          </el-button>
-        </div>
+    </form>
+    <section v-if="previewed" class="bulk-preview">
+      <div class="notice">
+        <Info :size="18" /><span
+          >{{ number(rows.length) }} کالای فعال تحت تأثیر این تغییر قرار می‌گیرد.</span
+        >
       </div>
-
-      <div class="preview-info">
-        <span>
-          {{ priceTypeLabel() }}
-        </span>
-
-        <span class="arrow">←</span>
-
-        <strong>
-          {{ form.type === 'PERCENTAGE' ? `${form.value}%` : money(form.value) }}
-        </strong>
+      <div v-if="rows.length" class="table-scroll">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>کالا</th>
+              <th>قیمت فعلی</th>
+              <th>قیمت جدید</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="row in rows" :key="row.id">
+              <td>{{ row.name }}</td>
+              <td class="muted">{{ money(row.oldPrice) }}</td>
+              <td class="new-price">{{ money(row.newPrice) }}</td>
+            </tr>
+          </tbody>
+        </table>
       </div>
-
-      <el-table :data="rows" class="preview-table" stripe>
-        <el-table-column type="index" label="#" width="55" align="center" />
-
-        <el-table-column prop="name" label="محصول" min-width="220" align="center" />
-
-        <el-table-column label="قیمت قبلی" min-width="150" align="center">
-          <template #default="{ row }">
-            <span class="old-price">
-              {{ money(row.oldPrice) }}
-            </span>
-          </template>
-        </el-table-column>
-
-        <el-table-column label="قیمت جدید" min-width="170" align="center">
-          <template #default="{ row }">
-            <span
-              class="new-price"
-              :style="{ color: row.newPrice >= row.oldPrice ? 'darkGreen' : 'darkRed' }"
-            >
-              {{ money(row.newPrice) }}
-            </span>
-          </template>
-        </el-table-column>
-
-        <el-table-column label="تغییر" width="130" align="center">
-          <template #default="{ row }">
-            <el-tag
-              style="direction: ltr"
-              :type="row.newPrice >= row.oldPrice ? 'success' : 'danger'"
-              effect="light"
-            >
-              {{
-                row.oldPrice
-                  ? `${Math.round(((row.newPrice - row.oldPrice) / row.oldPrice) * 100)}%`
-                  : '-'
-              }}
-            </el-tag>
-          </template>
-        </el-table-column>
-      </el-table>
+      <EmptyState
+        v-else
+        title="کالای فعالی پیدا نشد"
+        description="دسته‌بندی یا وضعیت کالاها را بررسی کنید."
+      />
+      <div v-if="rows.length" class="form-actions">
+        <Button variant="outline" :disabled="applying" @click="previewed = false">انصراف</Button
+        ><Button :disabled="applying" @click="apply"
+          ><Check :size="17" />{{ applying ? 'در حال اعمال…' : 'تأیید و ثبت قیمت‌ها' }}</Button
+        >
+      </div>
     </section>
   </div>
 </template>
 <script setup lang="ts">
-import { reactive, ref } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { onMounted, reactive, ref, watch } from 'vue'
+import { Check, Eye, Info } from '@lucide/vue'
+import Button from '@/components/ui/Button.vue'
+import EmptyState from '@/components/ui/EmptyState.vue'
+import { toast } from '@/lib/toast'
+import { money, number } from '@/lib/format'
 import { productsApi } from '@/services/products'
 import { categoriesApi } from '@/services/categories'
 import type { Category } from '@/types'
-import { PriceTag, View, CircleCheck, WarningFilled } from '@element-plus/icons-vue'
-
-const emits = defineEmits(['close'])
+const emit = defineEmits<{ close: [saved: boolean] }>()
 const form = reactive({
   categoryId: undefined as number | undefined,
   type: 'PERCENTAGE',
-  value: 0,
+  value: 10,
   priceType: 'SELL',
 })
-
-const rows = ref<{ id: number; name: string; oldPrice: number; newPrice: number }[]>([])
-
 const categories = ref<Category[]>([])
-const loading = ref(false)
-const applying = ref(false)
-
-categoriesApi
-  .list()
-  .then((r) => (categories.value = r))
-  .catch(() => {})
-
-const money = (v: number) => new Intl.NumberFormat('fa-IR').format(v) + ' تومان'
-
-const priceTypeLabel = () => (form.priceType === 'SELL' ? 'قیمت فروش' : 'قیمت خرید')
-
-const typeLabel = () => (form.type === 'PERCENTAGE' ? 'درصدی' : 'مبلغ ثابت')
-
+const rows = ref<{ id: number; name: string; oldPrice: number; newPrice: number }[]>([])
+const loading = ref(false),
+  applying = ref(false),
+  previewed = ref(false),
+  error = ref('')
+let previewVersion = 0
+watch(form, () => {
+  previewed.value = false
+  rows.value = []
+  previewVersion++
+})
 async function preview() {
-  if (!form.value || form.value === 0) {
-    ElMessage.warning(`لطفاً مقدار ${typeLabel()} را وارد کنید`)
+  if (
+    !Number.isFinite(form.value) ||
+    form.value < 0 ||
+    (form.type === 'FIXED' && !Number.isInteger(form.value))
+  ) {
+    error.value = 'مقدار معتبر و غیرمنفی وارد کنید.'
     return
   }
-
+  const version = ++previewVersion
   loading.value = true
-
+  error.value = ''
   try {
-    rows.value = (await productsApi.previewBulk(form)).items
-
-    if (!rows.value.length) {
-      ElMessage.info('محصولی برای تغییر قیمت پیدا نشد')
+    const result = await productsApi.previewBulk({ ...form })
+    if (version === previewVersion) {
+      rows.value = result.items
+      previewed.value = true
     }
   } catch (e) {
-    ElMessage.error(e instanceof Error ? e.message : 'خطا در دریافت پیش‌نمایش')
+    error.value = e instanceof Error ? e.message : 'پیش‌نمایش دریافت نشد.'
   } finally {
     loading.value = false
   }
 }
-
 async function apply() {
-  if (!rows.value.length) return
-
+  if (!previewed.value || !rows.value.length || applying.value) return
+  applying.value = true
+  error.value = ''
   try {
-    await ElMessageBox.confirm(
-      `قیمت ${rows.value.length} محصول تغییر خواهد کرد. آیا از انجام این عملیات مطمئن هستید؟`,
-      'تأیید تغییر قیمت',
-      {
-        confirmButtonText: 'بله، اعمال کن',
-        cancelButtonText: 'انصراف',
-        type: 'warning',
-      },
-    )
-
-    applying.value = true
-
-    const r = await productsApi.bulk(form)
-
-    ElMessage.success(`قیمت ${r.affectedProducts} محصول با موفقیت تغییر کرد`)
-    emits('close', true)
-    rows.value = []
+    const result = await productsApi.bulk({ ...form })
+    toast.success(`قیمت ${number(result.affectedProducts)} کالا به‌روز شد.`)
+    emit('close', true)
   } catch (e) {
-    if (e !== 'cancel' && e !== 'close') {
-      ElMessage.error(e instanceof Error ? e.message : 'خطا در اعمال تغییرات')
-    }
+    error.value = e instanceof Error ? e.message : 'ثبت قیمت‌ها انجام نشد.'
   } finally {
     applying.value = false
   }
 }
-
-function clearPreview() {
-  rows.value = []
-}
+onMounted(async () => {
+  try {
+    categories.value = await categoriesApi.list()
+  } catch {
+    error.value = 'دسته‌بندی‌ها دریافت نشدند.'
+  }
+})
 </script>
 <style scoped>
-.bulk-price {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-/* ---------- common card ---------- */
-
-.price-card,
-.preview-card {
-  background: var(--el-bg-color);
-  border: 1px solid var(--el-border-color-lighter);
-  border-radius: 12px;
-  padding: 20px;
-}
-
-/* ---------- header ---------- */
-
-.section-header {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 22px;
-}
-
-.section-icon {
-  width: 42px;
-  height: 42px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--el-color-primary-light-9);
-  color: var(--el-color-primary);
-  font-size: 21px;
-}
-
-.section-header h3,
-.preview-header h3 {
-  margin: 0 0 4px;
-  font-size: 16px;
-  font-weight: 700;
-}
-
-.section-header p {
-  margin: 0;
-  color: var(--el-text-color-secondary);
-  font-size: 13px;
-}
-
-/* ---------- form ---------- */
-
-.form-grid {
-  display: grid;
-  grid-template-columns:
-    minmax(180px, 1.3fr)
-    minmax(150px, 1fr)
-    minmax(150px, 1fr)
-    minmax(180px, 1fr);
-  gap: 16px;
-}
-
-.field {
-  display: flex;
-  flex-direction: column;
-  gap: 7px;
-}
-
-.field label {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--el-text-color-primary);
-}
-
-.field .el-select,
-.field .el-input-number {
-  width: 100%;
-}
-
-.field small {
-  color: var(--el-text-color-secondary);
-  font-size: 11px;
-  line-height: 1.5;
-}
-
-/* ---------- summary ---------- */
-
-.operation-summary {
-  display: flex;
-  align-items: center;
-  margin-top: 20px;
-  padding: 12px 16px;
-  border-radius: 8px;
-  background: var(--el-fill-color-light);
-}
-
-.summary-item {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  flex: 1;
-}
-
-.summary-item span {
-  font-size: 11px;
-  color: var(--el-text-color-secondary);
-}
-
-.summary-item strong {
-  font-size: 13px;
-}
-
-.summary-divider {
-  width: 1px;
-  height: 30px;
-  background: var(--el-border-color);
-}
-
-/* ---------- footer ---------- */
-
-.form-footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  margin-top: 20px;
-  padding: 0 2px;
-}
-
-.hint {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  color: var(--el-text-color-secondary);
+.bulk-price > p {
   font-size: 12px;
+  line-height: 2;
+  margin-bottom: 24px;
 }
-
-/* ---------- preview ---------- */
-
-.preview-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 20px;
-  margin-bottom: 16px;
+.bulk-preview {
+  margin-top: 24px;
+  border-top: 1px solid var(--border);
+  padding-top: 24px;
 }
-
-.preview-title {
-  display: flex;
-  align-items: center;
-  gap: 10px;
+.bulk-preview .table-scroll {
+  margin-top: 16px;
+  max-height: 320px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
 }
-
-.preview-title span {
-  font-size: 12px;
-  color: var(--el-text-color-secondary);
-}
-
-.success-icon {
-  width: 38px;
-  height: 38px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--el-color-success-light-9);
-  color: var(--el-color-success);
-  font-size: 20px;
-}
-
-.preview-actions {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.preview-info {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 14px;
-  margin-bottom: 14px;
-  border-radius: 7px;
-  background: var(--el-fill-color-light);
-  color: var(--el-text-color-secondary);
-  font-size: 12px;
-}
-
-.preview-info strong {
-  color: var(--el-color-success);
-}
-
-.arrow {
-  color: var(--el-text-color-placeholder);
-}
-
-.preview-table {
-  border-radius: 8px;
-  overflow: hidden;
-}
-
-.old-price {
-  color: var(--el-text-color-secondary);
-}
-
 .new-price {
-  color: var(--el-color-success);
-  font-weight: 700;
+  color: var(--primary);
+  font-weight: 650;
 }
-
-/* ---------- responsive ---------- */
-
-@media (max-width: 900px) {
-  .form-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  .preview-header {
-    align-items: flex-start;
-    flex-direction: column;
-  }
-
-  .preview-actions {
-    width: 100%;
-    justify-content: flex-end;
-  }
-}
-
-@media (max-width: 600px) {
-  .price-card,
-  .preview-card {
-    padding: 14px;
-  }
-
-  .form-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .operation-summary {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 10px;
-  }
-
-  .summary-divider {
-    width: 100%;
-    height: 1px;
-  }
-
-  .form-footer {
-    align-items: stretch;
-    flex-direction: column;
-  }
-
-  .form-footer .el-button {
-    width: 100%;
-  }
-
-  .preview-actions {
-    flex-direction: column-reverse;
-    align-items: stretch;
-  }
+form > .notice {
+  margin-top: 18px;
 }
 </style>

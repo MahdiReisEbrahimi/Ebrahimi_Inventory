@@ -1,820 +1,523 @@
 <template>
-  <el-container class="app-shell">
-    <!-- Mobile overlay -->
-    <div v-if="isMobileSidebarOpen" class="sidebar-overlay" @click="closeMobileSidebar" />
-
-    <!-- Sidebar -->
-    <aside
-      class="sidebar"
-      :class="{
-        'sidebar--collapsed': isSidebarCollapsed,
-        'sidebar--mobile-open': isMobileSidebarOpen,
-      }"
-    >
-      <!-- Sidebar header -->
-      <div class="sidebar-header">
-        <router-link v-if="!isSidebarCollapsed" class="brand" to="/" @click="closeMobileSidebar">
-          <div class="brand-logo">Z</div>
-          <div class="brand-content">
-            <b>انبارک</b>
-            <span>مدیریت هوشمند موجودی</span>
-          </div>
-        </router-link>
-
-        <!-- Desktop collapse -->
-        <el-button
-          class="sidebar-toggle"
-          text
-          circle
-          :aria-label="isSidebarCollapsed ? 'باز کردن منو' : 'جمع کردن منو'"
-          :aria-expanded="!isSidebarCollapsed"
-          @click="toggleSidebar"
+  <div class="app-shell">
+    <a class="skip-link" href="#main-content">رفتن به محتوای صفحه</a>
+    <aside class="sidebar">
+      <RouterLink to="/" class="brand" aria-label="انبارک، صفحه اصلی">
+        <span class="brand-symbol"><Boxes :size="25" :stroke-width="1.6" /></span>
+        <span
+          ><b>انبارک<span class="brand-dot">.</span></b
+          ><small>همراه هر روز فروشگاه شما</small></span
         >
-          <el-icon :size="20">
-            <Fold v-if="!isSidebarCollapsed" />
-            <Expand v-else />
-          </el-icon>
-        </el-button>
-      </div>
-
-      <!-- Navigation -->
-      <nav class="sidebar-nav">
-        <router-link
-          v-for="item in nav"
+      </RouterLink>
+      <div class="workspace-label">میز کار فروشگاه</div>
+      <nav aria-label="منوی اصلی">
+        <RouterLink
+          v-for="item in navigation"
           :key="item.to"
           :to="item.to"
           class="nav-link"
-          @click="closeMobileSidebar"
+          :class="{ 'is-active': isActive(item.to) }"
         >
-          <el-icon class="nav-icon">
-            <component :is="item.icon" />
-          </el-icon>
-
-          <span class="nav-text">
-            {{ item.text }}
-          </span>
-        </router-link>
+          <component :is="item.icon" :size="20" :stroke-width="1.7" /><span>{{ item.text }}</span>
+          <span v-if="isActive(item.to)" class="nav-dot" />
+        </RouterLink>
       </nav>
-
-      <!-- Sidebar bottom -->
-      <div class="sidebar-bottom">
-        <div class="user-avatar">م</div>
-
-        <div class="user-info">
-          <b>مدیر سیستم</b>
-          <small>مدیریت فروشگاه</small>
-        </div>
+      <div class="sidebar-note">
+        <Sprout :size="24" /><strong>نظم بیشتر، خیال آسوده‌تر</strong>
+        <p>همه چیز برای مدیریت ساده‌تر کالاها و فروش، در یک جا.</p>
+      </div>
+      <div class="sidebar-footer">
+        <span class="store-avatar"><Store :size="20" /></span>
+        <div><b>فروشگاه ابراهیمی</b><small>مدیریت موجودی و فروش</small></div>
       </div>
     </aside>
 
-    <!-- Main content -->
-    <el-container class="main-container">
-      <!-- Topbar -->
-      <el-header class="topbar">
-        <div class="topbar-right">
-          <!-- Hamburger -->
-          <el-button
-            class="mobile-menu-button"
-            text
-            circle
-            aria-label="باز کردن منو"
-            :aria-expanded="isMobileSidebarOpen"
-            @click="toggleSidebar"
+    <div class="main-container">
+      <header class="topbar no-print">
+        <div class="topbar-context">
+          <button
+            class="icon-button mobile-menu"
+            aria-label="باز کردن منوی اصلی"
+            @click="mobileOpen = true"
           >
-            <el-icon :size="22">
-              <Fold />
-            </el-icon>
-          </el-button>
-
-          <div class="page-heading">
-            <h1>{{ title }}</h1>
-            <p>مدیریت موجودی و قیمت‌گذاری کالاها</p>
-          </div>
+            <Menu :size="22" />
+          </button>
+          <span class="topbar-store">فروشگاه ابراهیمی</span
+          ><ChevronLeft :size="14" class="breadcrumb-arrow" /><span>{{ title }}</span>
         </div>
-
-        <!-- Top actions -->
-        <div class="top-actions">
-          <!-- Search -->
-          <el-tooltip content="جست‌وجو" placement="bottom">
-            <el-button circle aria-label="جست‌وجو">
-              <el-icon :size="18">
-                <Search />
-              </el-icon>
-            </el-button>
-          </el-tooltip>
-
-          <!-- Low stock -->
-          <el-popover
-            placement="bottom-start"
-            :width="340"
-            trigger="click"
-            @show="loadLowStockAlerts"
+        <div class="topbar-actions">
+          <time class="today">{{ today }}</time>
+          <button
+            class="icon-button theme-toggle"
+            :aria-label="isDark ? 'فعال کردن حالت روشن' : 'فعال کردن حالت تاریک'"
+            :title="isDark ? 'حالت روشن' : 'حالت تاریک'"
+            @click="toggleTheme"
           >
-            <template #reference>
-              <el-badge
-                :value="lowStockProducts.length"
-                :hidden="lowStockProducts.length === 0"
-                type="danger"
+            <Sun v-if="isDark" :size="20" /><Moon v-else :size="20" />
+          </button>
+          <PopoverRoot v-model:open="alertsOpen">
+            <PopoverTrigger
+              class="icon-button"
+              aria-label="کالاهای نیازمند تأمین"
+              title="کالاهای نیازمند تأمین"
+              @click="loadAlerts"
+              ><Bell :size="20"
+            /></PopoverTrigger>
+            <PopoverPortal>
+              <PopoverContent
+                class="stock-popover"
+                side="bottom"
+                align="end"
+                :side-offset="12"
+                :collision-padding="16"
               >
-                <el-tooltip content="هشدار موجودی کم" placement="bottom">
-                  <el-button circle aria-label="هشدار موجودی کم">
-                    <el-icon :size="18">
-                      <Bell />
-                    </el-icon>
-                  </el-button>
-                </el-tooltip>
-              </el-badge>
-            </template>
-
-            <div class="stock-alerts">
-              <div class="stock-alerts__header">
-                <b>کالاهای نیازمند تأمین</b>
-
-                <el-tag v-if="lowStockProducts.length" type="danger" size="small">
-                  {{ lowStockProducts.length }} کالا
-                </el-tag>
-              </div>
-
-              <el-skeleton v-if="lowStockLoading" :rows="3" animated />
-
-              <template v-else-if="lowStockProducts.length">
-                <router-link
-                  v-for="product in lowStockProducts"
-                  :key="product.id"
-                  :to="`/products/${product.id}`"
-                  class="stock-alert"
-                >
-                  <span>
-                    <b>{{ product.name }}</b>
-                    <small>{{ product.sku }}</small>
-                  </span>
-
-                  <em>
-                    {{ product.stock }}
-                    / حداقل {{ product.minStock }}
-                  </em>
-                </router-link>
-              </template>
-
-              <p v-else class="stock-alerts__empty">همه کالاها موجودی کافی دارند.</p>
-            </div>
-          </el-popover>
-
-          <!-- Theme -->
-          <el-tooltip :content="isDark ? 'حالت روشن' : 'حالت تاریک'" placement="bottom">
-            <el-button circle aria-label="تغییر حالت نمایش" @click="changeThemeHandle">
-              <el-icon :size="18">
-                <Sunny v-if="isDark" />
-                <Moon v-else />
-              </el-icon>
-            </el-button>
-          </el-tooltip>
-
-          <!-- User -->
-          <div class="top-user-avatar">م</div>
+                <div class="stock-popover__head">
+                  <b>نیازمند تأمین</b
+                  ><span class="badge badge--warning">{{ number(lowStock.length) }} کالا</span>
+                </div>
+                <div v-if="alertsLoading" class="table-loading" role="status">در حال دریافت…</div>
+                <p v-else-if="alertsError" class="notice notice--error" role="alert">
+                  {{ alertsError }}
+                </p>
+                <div v-else-if="lowStock.length" class="stock-popover__list">
+                  <RouterLink
+                    v-for="product in lowStock"
+                    :key="product.id"
+                    :to="{ path: '/products', query: { search: product.sku } }"
+                    class="stock-alert"
+                    @click="alertsOpen = false"
+                  >
+                    <span
+                      ><b>{{ product.name }}</b
+                      ><small>{{ product.sku }}</small></span
+                    >
+                    <span class="badge badge--warning"
+                      >{{ number(product.stock) }} {{ product.unit }}</span
+                    >
+                  </RouterLink>
+                </div>
+                <p v-else class="muted stock-empty">کالایی نیازمند تأمین نیست.</p>
+                <RouterLink
+                  to="/inventory"
+                  class="button button--outline stock-link"
+                  @click="alertsOpen = false"
+                  >ثبت ورود کالا<ArrowLeft :size="15"
+                /></RouterLink>
+              </PopoverContent>
+            </PopoverPortal>
+          </PopoverRoot>
         </div>
-      </el-header>
+      </header>
+      <main id="main-content" class="page-content" tabindex="-1"><RouterView /></main>
+    </div>
 
-      <!-- Page -->
-      <el-main class="page-content">
-        <router-view />
-      </el-main>
-    </el-container>
-  </el-container>
+    <DialogRoot v-model:open="mobileOpen">
+      <DialogPortal>
+        <DialogOverlay class="sidebar-overlay" />
+        <DialogContent class="mobile-sidebar" :aria-describedby="undefined" dir="rtl">
+          <div class="mobile-sidebar__heading">
+            <DialogTitle>انبارک · منوی اصلی</DialogTitle
+            ><DialogClose class="icon-button" aria-label="بستن منو"><X :size="20" /></DialogClose>
+          </div>
+          <nav aria-label="منوی موبایل">
+            <RouterLink
+              v-for="item in navigation"
+              :key="item.to"
+              :to="item.to"
+              class="nav-link"
+              :class="{ 'is-active': isActive(item.to) }"
+              @click="mobileOpen = false"
+              ><component :is="item.icon" :size="20" /><span>{{ item.text }}</span></RouterLink
+            >
+          </nav>
+        </DialogContent>
+      </DialogPortal>
+    </DialogRoot>
+    <ToastHost />
+  </div>
 </template>
+
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import {
-  Fold,
-  Expand,
-  House,
-  Goods,
-  Box,
-  Switch,
-  DataAnalysis,
-  Tickets,
-  Search,
+  ArrowLeft,
+  ArrowLeftRight,
   Bell,
+  Boxes,
+  ChartNoAxesColumn,
+  ChevronLeft,
+  House,
+  Menu,
   Moon,
-  Sunny,
-} from '@element-plus/icons-vue'
-
+  Package,
+  Receipt,
+  Sprout,
+  Store,
+  Sun,
+  X,
+} from '@lucide/vue'
+import {
+  DialogRoot,
+  DialogPortal,
+  DialogOverlay,
+  DialogContent,
+  DialogTitle,
+  DialogClose,
+  PopoverRoot,
+  PopoverTrigger,
+  PopoverPortal,
+  PopoverContent,
+} from 'reka-ui'
+import ToastHost from '@/components/ui/ToastHost.vue'
 import { productsApi } from '@/services/products'
+import { number } from '@/lib/format'
 import type { Product } from '@/types'
+import { useTheme } from '@/composables/useTheme'
 
 const route = useRoute()
-
-const title = computed(() => route.meta.title ?? 'انبارک')
-
-/* -----------------------------
- * Sidebar
- * ----------------------------- */
-
-const isSidebarCollapsed = ref(false)
-const isMobileSidebarOpen = ref(false)
-
-const nav = [
-  {
-    to: '/',
-    text: 'داشبورد',
-    icon: House,
-  },
-  {
-    to: '/products',
-    text: 'محصولات',
-    icon: Goods,
-  },
-  {
-    to: '/inventory',
-    text: 'موجودی و انبار',
-    icon: Box,
-  },
-  {
-    to: '/transactions',
-    text: 'تراکنش‌ها',
-    icon: Switch,
-  },
-  { to: '/invoices', text: 'فاکتور فروش', icon: Tickets },
-  {
-    to: '/reports',
-    text: 'گزارش‌ها',
-    icon: DataAnalysis,
-  },
+const title = computed(() => route.meta.title || 'نمای کلی')
+const today = new Intl.DateTimeFormat('fa-IR', {
+  weekday: 'long',
+  day: 'numeric',
+  month: 'long',
+}).format(new Date())
+const { isDark, toggleTheme } = useTheme()
+const mobileOpen = ref(false)
+const alertsOpen = ref(false)
+const alertsLoading = ref(false)
+const alertsError = ref('')
+const lowStock = ref<Product[]>([])
+const navigation = [
+  { to: '/', text: 'نمای کلی', icon: House },
+  { to: '/products', text: 'کالاها و قیمت‌ها', icon: Package },
+  { to: '/inventory', text: 'ورود و مرجوعی کالا', icon: Boxes },
+  { to: '/transactions', text: 'گردش موجودی', icon: ArrowLeftRight },
+  { to: '/invoices', text: 'فاکتورهای فروش', icon: Receipt },
+  { to: '/reports', text: 'گزارش‌ها', icon: ChartNoAxesColumn },
 ]
-
-function toggleSidebar() {
-  if (window.innerWidth <= 768) {
-    isMobileSidebarOpen.value = !isMobileSidebarOpen.value
-  } else {
-    isSidebarCollapsed.value = !isSidebarCollapsed.value
-  }
-}
-
-function closeMobileSidebar() {
-  if (window.innerWidth <= 768) {
-    isMobileSidebarOpen.value = false
-  }
-}
-
-/* -----------------------------
- * Theme
- * ----------------------------- */
-
-const isDark = ref(false)
-
-/* -----------------------------
- * Low stock
- * ----------------------------- */
-
-const lowStockProducts = ref<Product[]>([])
-const lowStockLoading = ref(false)
-
-async function loadLowStockAlerts() {
-  lowStockLoading.value = true
-
+const isActive = (path: string) => (path === '/' ? route.path === '/' : route.path.startsWith(path))
+async function loadAlerts() {
+  alertsLoading.value = true
+  alertsError.value = ''
   try {
-    const result = await productsApi.list({
-      page: 1,
-      limit: 100,
-      lowStock: true,
-      isActive: true,
-    })
-
-    lowStockProducts.value = result.data
+    lowStock.value = (
+      await productsApi.list({ page: 1, limit: 100, lowStock: true, isActive: true })
+    ).data
   } catch {
-    lowStockProducts.value = []
+    alertsError.value = 'دریافت موجودی ممکن نشد. دوباره تلاش کنید.'
   } finally {
-    lowStockLoading.value = false
+    alertsLoading.value = false
   }
 }
-
-/* -----------------------------
- * Lifecycle
- * ----------------------------- */
-
-onMounted(() => {
-  isDark.value = localStorage.getItem('theme') === 'dark'
-  document.documentElement.classList.toggle('dark', isDark.value)
-
-  void loadLowStockAlerts()
-
-  // در شروع روی موبایل سایدبار بسته باشد
-  if (window.innerWidth <= 768) {
-    isMobileSidebarOpen.value = false
-  }
-})
-
-function changeThemeHandle() {
-  isDark.value = !isDark.value
-  localStorage.setItem('theme', isDark.value ? 'dark' : 'light')
-  document.documentElement.classList.toggle('dark', isDark.value)
-}
+watch(
+  () => route.fullPath,
+  () => {
+    mobileOpen.value = false
+    alertsOpen.value = false
+  },
+)
 </script>
-<style scoped>
-/* --------------------------------
-   Layout
---------------------------------- */
 
+<style>
 .app-shell {
-  min-height: 100vh;
-  overflow: hidden;
-  background: var(--el-bg-color-page);
-  direction: rtl;
-}
-
-.main-container {
-  min-width: 0;
-}
-
-/* --------------------------------
-   Sidebar
---------------------------------- */
-
-.sidebar {
-  width: 250px;
-  min-width: 250px;
-  height: 100vh;
-
   display: flex;
-  flex-direction: column;
-
-  background: var(--app-surface);
-  border-left: 1px solid var(--el-border-color-lighter);
-
-  transition:
-    width 0.25s ease,
-    min-width 0.25s ease,
-    transform 0.25s ease;
-
+  min-height: 100dvh;
+}
+.sidebar {
+  width: 246px;
+  flex: 0 0 246px;
   position: sticky;
   top: 0;
-  z-index: 100;
-}
-
-.sidebar--collapsed {
-  width: 76px;
-  min-width: 76px;
-}
-
-/* --------------------------------
-   Sidebar header
---------------------------------- */
-
-.sidebar-header {
-  height: 60px;
+  height: 100dvh;
+  padding: 32px 20px 20px;
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  border-bottom: 1px solid var(--el-border-color-lighter);
+  flex-direction: column;
+  background: var(--sidebar);
+  color: var(--sidebar-foreground);
+  overflow-y: auto;
 }
-
 .brand {
-  min-width: 0;
-
   display: flex;
   align-items: center;
-  gap: 11px;
-
-  color: inherit;
-  text-decoration: none;
+  gap: 12px;
+  padding: 0 8px;
 }
-
-.brand-logo {
-  width: 38px;
-  height: 38px;
-
-  flex-shrink: 0;
-
-  display: flex;
-  align-items: center;
-  justify-content: center;
-
-  border-radius: 11px;
-
-  background: var(--el-color-primary);
-  color: white;
-
-  font-size: 18px;
-  font-weight: 800;
-}
-
-.brand-content {
-  min-width: 0;
-
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-
-  overflow: hidden;
-  white-space: nowrap;
-
-  transition: opacity 0.15s ease;
-}
-
-.brand-content b {
-  font-size: 16px;
-}
-
-.brand-content span {
-  color: var(--el-text-color-secondary);
-  font-size: 11px;
-}
-
-.sidebar--collapsed .brand-content {
-  display: none;
-}
-
-.sidebar-toggle {
-  flex-shrink: 0;
-  color: var(--el-text-color-secondary);
-  margin-top: -20px;
-  margin-right: 4px;
-  scale: 1.5;
-}
-
-.sidebar-toggle:hover {
-  /* color: var(--el-color-primary); */
-}
-
-/* --------------------------------
-   Navigation
---------------------------------- */
-
-.sidebar-nav {
-  flex: 1;
-
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding-top: 20px;
-}
-
-.nav-link {
+.brand-symbol {
+  display: grid;
+  place-items: center;
+  width: 46px;
   height: 46px;
+  border: 1px solid var(--sidebar-border);
+  border-radius: 14px;
+  background: var(--sidebar-accent);
+}
+.brand b {
+  font-size: 27px;
+  line-height: 1.2;
+  font-weight: 850;
+}
+.brand-dot {
+  color: #c4d890;
+}
+.brand small {
+  display: block;
+  color: var(--sidebar-muted);
+  font-size: 10px;
+  margin-top: 7px;
+}
+.workspace-label {
+  font-size: 10px;
+  color: var(--sidebar-muted);
+  margin: 44px 14px 12px;
+}
+.sidebar nav,
+.mobile-sidebar nav {
+  display: grid;
+  gap: 7px;
+}
+.nav-link {
+  min-height: 48px;
   display: flex;
   align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
   border-radius: 10px;
-  text-decoration: none;
-  transition:
-    background 0.2s ease,
-    color 0.2s ease;
+  font-size: 13px;
+  color: var(--sidebar-muted);
 }
-
 .nav-link:hover {
-  background: var(--el-fill-color-light);
-  color: var(--el-color-primary);
+  background: var(--sidebar-accent);
+  color: var(--sidebar-foreground);
 }
-
-.nav-link.router-link-active {
-  background: var(--el-color-primary-light-9);
-  color: var(--el-color-primary);
-  font-weight: 600;
+.nav-link.is-active {
+  background: var(--sidebar-accent);
+  color: var(--sidebar-accent-foreground);
+  font-weight: 650;
 }
-
-.nav-icon {
-  width: 50px;
+.nav-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #c4d890;
+  margin-inline-start: auto;
+}
+.sidebar-note {
+  padding: 20px 16px;
+  border: 1px solid var(--sidebar-border);
+  border-radius: 14px;
+  margin-top: auto;
+  margin-bottom: 24px;
+}
+.sidebar-note svg {
+  color: #c4d890;
+  margin-bottom: 12px;
+}
+.sidebar-note strong {
+  display: block;
+  font-size: 12px;
+}
+.sidebar-note p {
+  font-size: 11px;
+  line-height: 2;
+  margin: 7px 0 0;
+  color: var(--sidebar-muted);
+}
+.sidebar nav {
+  margin-bottom: 44px;
+}
+.sidebar-footer {
   display: flex;
-  justify-content: center;
-}
-
-.nav-text {
-  white-space: nowrap;
-  font-weight: bold;
-  font-size: large;
-}
-
-/* Collapsed sidebar */
-
-.sidebar--collapsed .nav-link {
-  justify-content: center;
-  padding: 0;
-}
-
-.sidebar--collapsed .nav-text {
-  display: none;
-}
-
-/* --------------------------------
-   Sidebar bottom
---------------------------------- */
-
-.sidebar-bottom {
-  margin: 12px;
-  padding: 12px;
-
-  display: flex;
-  align-items: center;
   gap: 10px;
-
-  border-radius: 12px;
-  background: var(--el-fill-color-light);
+  padding: 18px 4px 0;
+  border-top: 1px solid var(--sidebar-border);
+  align-items: center;
 }
-
-.user-avatar,
-.top-user-avatar {
+.store-avatar {
   width: 36px;
   height: 36px;
-
-  flex-shrink: 0;
-
-  display: flex;
-  align-items: center;
-  justify-content: center;
-
-  border-radius: 50%;
-
-  background: var(--el-color-primary-light-8);
-  color: var(--el-color-primary);
-
-  font-weight: 700;
+  display: grid;
+  place-items: center;
+  background: var(--sidebar-accent);
+  border-radius: 11px;
 }
-
-.user-info {
+.sidebar-footer b {
+  font-size: 12px;
+}
+.sidebar-footer small {
+  display: block;
+  font-size: 10px;
+  color: var(--sidebar-muted);
+}
+.main-container {
+  flex: 1;
   min-width: 0;
-
-  display: flex;
-  flex-direction: column;
 }
-
-.user-info b {
-  font-size: 13px;
-}
-
-.user-info small {
-  margin-top: 2px;
-
-  color: var(--el-text-color-secondary);
-  font-size: 11px;
-}
-
-.sidebar--collapsed .sidebar-bottom {
-  justify-content: center;
-  padding: 10px 0;
-}
-
-.sidebar--collapsed .user-info {
-  display: none;
-}
-
-/* --------------------------------
-   Topbar
---------------------------------- */
-
 .topbar {
-  height: 76px;
-
+  min-height: 76px;
+  padding: 0 36px;
+  border-bottom: 1px solid var(--border);
   display: flex;
-  align-items: center;
   justify-content: space-between;
-
-  padding: 0 28px;
-
-  background: var(--el-bg-color);
-  border-bottom: 1px solid var(--el-border-color-lighter);
+  align-items: center;
+  gap: 16px;
 }
-
-.topbar-right {
+.topbar-context,
+.topbar-actions {
   display: flex;
   align-items: center;
   gap: 14px;
 }
-
-.page-heading h1 {
-  margin: 0;
-
-  font-size: 20px;
-  font-weight: 700;
-}
-
-.page-heading p {
-  margin: 4px 0 0;
-
-  color: var(--el-text-color-secondary);
+.topbar-context {
   font-size: 12px;
 }
-
-.top-actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+.topbar-store,
+.today,
+.breadcrumb-arrow {
+  color: var(--muted-foreground);
 }
-
-.top-user-avatar {
-  margin-right: 4px;
+.today {
+  font-size: 11px;
+  margin-inline-end: 12px;
 }
-
-/* --------------------------------
-   Mobile menu
---------------------------------- */
-
-.mobile-menu-button {
-  display: none;
+.theme-toggle {
+  border: 1px solid var(--border);
+  background: var(--card);
 }
-
-/* --------------------------------
-   Page
---------------------------------- */
-
 .page-content {
-  padding: 24px 28px;
-  max-height: calc(100vh - 100px);
+  max-width: 1560px;
+  padding: 32px 36px 48px;
+  margin: 0 auto;
 }
-
-/* --------------------------------
-   Mobile overlay
---------------------------------- */
-
-.sidebar-overlay {
-  display: none;
+.skip-link {
+  position: fixed;
+  top: -100px;
+  inset-inline-start: 12px;
+  z-index: 150;
+  background: var(--card);
+  padding: 10px 16px;
+  border-radius: 8px;
 }
-
-/* --------------------------------
-   Stock alerts
---------------------------------- */
-
-.stock-alerts {
+.skip-link:focus {
+  top: 12px;
+}
+.stock-popover {
+  z-index: 60;
+  width: min(360px, calc(100vw - 32px));
+  max-height: min(560px, 80dvh);
+  overflow-y: auto;
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--popover);
+  color: var(--foreground);
+  box-shadow: var(--shadow-lg);
   direction: rtl;
 }
-
-.stock-alerts__header {
+.stock-popover__head {
   display: flex;
   align-items: center;
   justify-content: space-between;
-
-  margin-bottom: 12px;
-  padding-bottom: 10px;
-
-  border-bottom: 1px solid var(--el-border-color-lighter);
+  gap: 10px;
+  padding-bottom: 12px;
 }
-
+.stock-popover__list {
+  max-height: 320px;
+  overflow: auto;
+}
 .stock-alert {
   display: flex;
   align-items: center;
   justify-content: space-between;
-
   gap: 12px;
-
-  padding: 11px 8px;
-
-  border-radius: 8px;
-
-  color: inherit;
-  text-decoration: none;
-}
-
-.stock-alert:hover {
-  background: var(--el-fill-color-light);
-}
-
-.stock-alert > span {
-  min-width: 0;
-
-  display: flex;
-  flex-direction: column;
-}
-
-.stock-alert b {
-  overflow: hidden;
-
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.stock-alert small {
-  margin-top: 3px;
-
-  color: var(--el-text-color-secondary);
-}
-
-.stock-alert em {
-  flex-shrink: 0;
-
-  color: var(--el-color-danger);
-
+  padding: 14px 0;
+  border-top: 1px solid var(--border);
   font-size: 12px;
-  font-style: normal;
 }
-
-.stock-alerts__empty {
-  margin: 20px 0;
-
-  color: var(--el-text-color-secondary);
+.stock-alert small {
+  display: block;
+  color: var(--muted-foreground);
+  font-size: 10px;
+}
+.stock-empty {
+  padding: 24px 0;
   text-align: center;
+  font-size: 12px;
 }
-
-/* --------------------------------
-   Responsive
---------------------------------- */
-
-@media (max-width: 768px) {
+.stock-link {
+  width: 100%;
+  margin-top: 12px;
+}
+.mobile-menu {
+  display: none;
+}
+.sidebar-overlay {
+  position: fixed;
+  inset: 0;
+  background: #0c201b80;
+  backdrop-filter: blur(3px);
+  z-index: 90;
+}
+.mobile-sidebar {
+  position: fixed;
+  inset-block: 0;
+  inset-inline-start: 0;
+  width: min(300px, 86vw);
+  background: var(--sidebar);
+  color: var(--sidebar-foreground);
+  z-index: 91;
+  padding: 20px;
+  overflow-y: auto;
+}
+.mobile-sidebar__heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 28px;
+  font-weight: 700;
+}
+.mobile-sidebar__heading .icon-button {
+  color: inherit;
+}
+@media (max-width: 1100px) {
   .sidebar {
-    position: fixed;
-    right: 0;
-    top: 0;
-    bottom: 0;
-
-    width: 260px;
-    min-width: 260px;
-
-    transform: translateX(100%);
-
-    box-shadow: -10px 0 30px rgba(0, 0, 0, 0.12);
+    width: 220px;
+    flex-basis: 220px;
+    padding-inline: 14px;
   }
-
-  .sidebar--mobile-open {
-    transform: translateX(0);
-  }
-
-  .sidebar--collapsed {
-    width: 260px;
-    min-width: 260px;
-  }
-
-  .sidebar--collapsed .brand-content,
-  .sidebar--collapsed .nav-text,
-  .sidebar--collapsed .user-info {
-    display: flex;
-  }
-
-  .sidebar--collapsed .nav-link {
-    justify-content: flex-start;
-    padding: 0 13px;
-  }
-
-  .sidebar--collapsed .sidebar-bottom {
-    justify-content: flex-start;
-    padding: 12px;
-  }
-
-  .sidebar-toggle {
-    display: none;
-  }
-
-  .mobile-menu-button {
-    display: inline-flex;
-  }
-
-  .sidebar-overlay {
-    display: block;
-
-    position: fixed;
-    inset: 0;
-
-    background: rgba(0, 0, 0, 0.35);
-
-    z-index: 90;
-
-    backdrop-filter: blur(2px);
-  }
-
-  .topbar {
-    height: 64px;
-    padding: 0 14px;
-  }
-
-  .page-heading h1 {
-    font-size: 17px;
-  }
-
-  .page-heading p {
-    display: none;
-  }
-
-  .top-actions {
-    gap: 4px;
-  }
-
-  .top-actions > .el-button,
-  .top-actions .el-badge .el-button {
-    width: 36px;
-    height: 36px;
-  }
-
-  .top-user-avatar {
-    display: none;
-  }
-
   .page-content {
-    padding: 16px;
+    padding: 26px 24px;
+  }
+  .topbar {
+    padding-inline: 24px;
+  }
+  .today {
+    display: none;
   }
 }
-
-@media (max-width: 480px) {
+@media (max-width: 820px) {
+  .sidebar {
+    display: none;
+  }
+  .mobile-menu {
+    display: inline-grid;
+  }
   .topbar {
-    padding: 0 10px;
+    padding-inline: 16px;
+    min-height: 66px;
   }
-
-  .topbar-right {
-    gap: 7px;
+  .page-content {
+    padding: 24px 16px 36px;
   }
-
-  .page-heading h1 {
-    font-size: 16px;
+}
+@media (max-width: 480px) {
+  .topbar-store,
+  .breadcrumb-arrow {
+    display: none;
   }
-
-  .top-actions {
-    gap: 2px;
+  .topbar-context,
+  .topbar-actions {
+    gap: 6px;
   }
 }
 </style>

@@ -1,443 +1,412 @@
-<template>
-  <div v-if="categoryTitle" class="selected-category">
-    <span>دسته‌بندی انتخاب‌شده</span>
-    <el-tag type="primary" effect="dark" size="large">{{ categoryTitle }}</el-tag>
-  </div>
-  <el-alert v-if="categoryTitle" class="category-filter-alert" type="info" :closable="false">
-    <template #title>کالاهای دسته‌بندی «{{ categoryTitle }}»</template>
-    <template #default> <router-link to="/products">نمایش همه کالاها</router-link> </template>
-  </el-alert>
-  <div class="page-actions">
-    <div class="filters">
-      <el-input
-        v-model="query.search"
-        class="filter-item"
-        placeholder="جست‌وجو در نام یا کد کالا"
-        clearable
+﻿<template>
+  <div class="page-stack">
+    <PageHeader
+      title="کالاها و قیمت‌ها"
+      description="کالاها را پیدا کنید، موجودی را ببینید و قیمت‌ها را به‌روز نگه دارید."
+      eyebrow="مدیریت کالا"
+    >
+      <Button variant="outline" @click="bulkOpen = true"
+        ><Tags :size="17" />تغییر گروهی قیمت</Button
       >
-        <i slot="prefix" class="el-icon-search"></i>
-      </el-input>
-
-      <el-select v-model="query.categoryId" class="filter-item" placeholder="همه دسته‌ها" clearable>
-        <el-option v-for="c in categories" :key="c.id" :label="c.name" :value="c.id" />
-      </el-select>
-
-      <el-select v-model="query.isActive" class="filter-item" placeholder="همه وضعیت‌ها" clearable>
-        <el-option label="فعال" :value="true" />
-        <el-option label="غیرفعال" :value="false" />
-      </el-select>
+      <Button @click="openForm()"><Plus :size="18" />کالای جدید</Button>
+    </PageHeader>
+    <div class="product-summary">
+      <span
+        ><Package :size="16" /><b>{{ number(items.length) }}</b> کالای دریافت‌شده</span
+      ><span
+        ><i class="status-dot" /><b>{{ number(items.filter((p) => p.isActive).length) }}</b> کالای
+        فعال</span
+      ><button
+        @click="query.lowStock = !query.lowStock"
+        :aria-pressed="query.lowStock"
+        :class="{ selected: query.lowStock }"
+      >
+        <TriangleAlert :size="16" />{{
+          number(items.filter((p) => p.isActive && p.stock <= p.minStock).length)
+        }}
+        کالا نیازمند تأمین
+      </button>
     </div>
-    <div class="actions">
-      <el-button class="bulk-price-btn" @click="showDialogs.bulkPriceUpdate = true">
-        <i class="el-icon-money"></i>
-        تغییر گروهی قیمت
-      </el-button>
-
-      <el-button type="primary" class="new-product-btn" @click="showDialogs.newProduct = true">
-        <i class="el-icon-plus"></i>
-        محصول جدید
-      </el-button>
-    </div>
+    <section class="panel products-panel">
+      <div class="filter-bar">
+        <label class="search-field"
+          ><Search :size="18" /><input
+            v-model="query.search"
+            type="search"
+            placeholder="نام یا کد کالا را جست‌وجو کنید…"
+            aria-label="جست‌وجوی نام یا کد کالا"
+        /></label>
+        <select v-model="query.categoryId" aria-label="فیلتر دسته‌بندی">
+          <option :value="undefined">همه دسته‌بندی‌ها</option>
+          <option v-for="category in categories" :key="category.id" :value="category.id">
+            {{ category.name }}
+          </option>
+        </select>
+        <select v-model="query.isActive" aria-label="فیلتر وضعیت">
+          <option :value="undefined">همه وضعیت‌ها</option>
+          <option :value="true">فعال</option>
+          <option :value="false">غیرفعال</option>
+        </select>
+        <button
+          class="icon-button"
+          aria-label="دریافت دوباره کالاها"
+          :disabled="loading"
+          @click="load"
+        >
+          <RefreshCw :size="18" />
+        </button>
+      </div>
+      <div v-if="hasFilters" class="active-filters">
+        <span>{{ number(filtered.length) }} نتیجه پیدا شد</span
+        ><button class="button button--ghost button--small" @click="clearFilters">
+          <X :size="14" />پاک‌کردن فیلترها
+        </button>
+      </div>
+      <CustomTable
+        :table-data="pageItems"
+        :table-columns="columns"
+        :row-actions="rowActions"
+        :loading="loading"
+        :error="error"
+        @refresh="load"
+        @action-click="handleAction"
+      >
+        <template #name="{ row }"
+          ><div class="product-cell">
+            <span class="product-mark"><Package :size="19" /></span><b>{{ row.name }}</b>
+          </div></template
+        >
+        <template #stock="{ row }"
+          ><span class="stock-value" :class="{ danger: row.stock <= row.minStock }"
+            >{{ number(row.stock) }} <small>{{ row.unit }}</small></span
+          ></template
+        >
+        <template #isActive="{ row }"
+          ><button
+            class="badge status-button"
+            :class="row.isActive ? 'badge--success' : ''"
+            :disabled="statusSaving === row.id"
+            :aria-label="row.isActive ? 'غیرفعال کردن ' + row.name : 'فعال کردن ' + row.name"
+            @click="toggleStatus(row as Product)"
+          >
+            {{ row.isActive ? 'فعال' : 'غیرفعال' }}
+          </button></template
+        >
+        <template #empty
+          ><Button variant="outline" @click="openForm()">ثبت کالای جدید</Button></template
+        >
+      </CustomTable>
+      <div v-if="!loading && !error && filtered.length" class="pagination-controls">
+        <span
+          >{{ number(filtered.length) }} کالا<span v-if="totalRecords > items.length">
+            از {{ number(totalRecords) }} کالای سرور</span
+          ></span
+        >
+        <div class="pagination-buttons">
+          <select v-model.number="query.limit" aria-label="تعداد کالا در صفحه">
+            <option :value="10">۱۰</option>
+            <option :value="20">۲۰</option>
+            <option :value="50">۵۰</option></select
+          ><button
+            class="icon-button"
+            :disabled="query.page === 1"
+            aria-label="صفحه قبل"
+            @click="query.page--"
+          >
+            <ChevronRight :size="17" /></button
+          ><span>{{ number(query.page) }} از {{ number(pages) }}</span
+          ><button
+            class="icon-button"
+            :disabled="query.page >= pages"
+            aria-label="صفحه بعد"
+            @click="query.page++"
+          >
+            <ChevronLeft :size="17" />
+          </button>
+        </div>
+      </div>
+    </section>
+    <AppDialog
+      v-model:open="formOpen"
+      :title="selected ? 'ویرایش کالا' : 'ثبت کالای جدید'"
+      width="720px"
+      ><ProductFormView
+        v-if="formOpen"
+        embedded
+        :edit-data="selected || undefined"
+        @close="onFormClose"
+    /></AppDialog>
+    <AppDialog v-model:open="detailsOpen" title="شناسنامه کالا" width="760px"
+      ><ProductDetailsDialog v-if="detailsOpen && selected" :selected-row="selected"
+    /></AppDialog>
+    <AppDialog v-model:open="deleteOpen" title="حذف کالا" width="440px"
+      ><DeleteProductDialog
+        v-if="deleteOpen && selected"
+        :selected-row="selected"
+        @close="onDeleteClose"
+    /></AppDialog>
+    <AppDialog v-model:open="bulkOpen" title="تغییر گروهی قیمت" width="850px"
+      ><BulkPriceView v-if="bulkOpen" @close="onBulkClose"
+    /></AppDialog>
   </div>
-  <CustomTable
-    :rowActions="[
-      { name: 'view', icon: View },
-      { name: 'edit', icon: Edit },
-      { name: 'delete', icon: Delete },
-    ]"
-    :tableColumns="[
-      { prop: 'name', label: 'نام کالا' },
-      { prop: 'sku', label: 'کد کالا' },
-      { prop: 'category.name', label: 'دسته‌بندی' },
-      { prop: 'sellPrice', label: 'قیمت فروش (تومان)', type: 'price' },
-      { prop: 'stock', label: 'موجودی' },
-      { prop: 'isActive', label: 'وضعیت' },
-    ]"
-    :tableData="paginatedItems"
-    @actionClick="(action) => handleTableActions(action.actionName, action.row)"
-    :searchable="false"
-    refreshable
-  />
-  <div class="pagination" style="direction: ltr; text-align: center">
-    <el-pagination
-      v-model:current-page="query.page"
-      v-model:page-size="query.limit"
-      :total="total"
-      :page-sizes="[10, 20, 50, 100]"
-      layout="total, sizes, prev, pager, next"
-      @size-change="query.page = 1"
-    />
-  </div>
-  <el-dialog
-    v-for="dialog in dialogs"
-    :key="dialog.title"
-    v-model="showDialogs[dialog.model]"
-    :title="dialog.title"
-    :width="dialog.width"
-    :max-width="300"
-    align-center
-    destroy-on-close
-  >
-    <component :is="dialog.component" v-bind="dialog.props" v-on="dialog.emits" />
-  </el-dialog>
 </template>
-
 <script setup lang="ts">
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import { ElMessage } from 'element-plus'
-import { productsApi } from '@/services/products'
-import { categoriesApi } from '@/services/categories'
-import type { Category, Product } from '@/types'
-import { Delete, Edit, View } from '@element-plus/icons-vue'
+import {
+  ChevronLeft,
+  ChevronRight,
+  Eye,
+  Package,
+  Pencil,
+  Plus,
+  RefreshCw,
+  Search,
+  Tags,
+  Trash2,
+  TriangleAlert,
+  X,
+} from '@lucide/vue'
+import PageHeader from '@/components/ui/PageHeader.vue'
+import Button from '@/components/ui/Button.vue'
+import AppDialog from '@/components/ui/AppDialog.vue'
+import CustomTable, { type TableColumn } from '@/components/CustomTable.vue'
+import ProductDetailsDialog from '@/components/dialogs/ProductDetailsDialog.vue'
 import DeleteProductDialog from '@/components/dialogs/DeleteProductDialog.vue'
 import ProductFormView from './ProductFormView.vue'
-import ProductDetailsDialog from '@/components/dialogs/ProductDetailsDialog.vue'
-import { computed, onMounted, reactive, ref, watch } from 'vue'
 import BulkPriceView from './BulkPriceView.vue'
-import CustomTable from '@/components/CustomTable.vue'
-
-const filteredItems = computed(() => {
-  let result = [...items.value]
-
-  if (query.search.trim()) {
-    const search = query.search.trim().toLowerCase()
-
-    result = result.filter((item) => {
-      return item.name?.toLowerCase().includes(search) || item.sku?.toLowerCase().includes(search)
-    })
-  }
-
-  if (query.categoryId !== undefined) {
-    result = result.filter((item) => item.categoryId === query.categoryId)
-  }
-
-  if (query.isActive !== undefined) {
-    result = result.filter((item) => item.isActive === query.isActive)
-  }
-
-  if (query.lowStock !== undefined) {
-    result = result.filter((item) => {
-      const isLowStock = item.stock <= item.minStock
-
-      return query.lowStock ? isLowStock : !isLowStock
-    })
-  }
-
-  return result
-})
-
-const paginatedItems = computed(() => {
-  const start = (query.page - 1) * query.limit
-  const end = start + query.limit
-
-  return filteredItems.value.slice(start, end)
-})
-
-const total = computed(() => filteredItems.value.length)
-const items = ref<Product[]>([])
-const categories = ref<Category[]>([])
-const loading = ref(false)
-const selectedRow = ref<null | Product>(null)
+import { productsApi } from '@/services/products'
+import { categoriesApi } from '@/services/categories'
+import { number } from '@/lib/format'
+import { toast } from '@/lib/toast'
+import type { Product, Category } from '@/types'
+const route = useRoute()
+const items = ref<Product[]>([]),
+  categories = ref<Category[]>([])
+const loading = ref(true),
+  error = ref(''),
+  totalRecords = ref(0),
+  statusSaving = ref<number>()
+const selected = ref<Product | null>(null)
+const formOpen = ref(false),
+  detailsOpen = ref(false),
+  deleteOpen = ref(false),
+  bulkOpen = ref(false)
 const query = reactive({
-  page: 1,
-  limit: 10,
   search: '',
   categoryId: undefined as number | undefined,
   isActive: undefined as boolean | undefined,
-  lowStock: undefined as boolean | undefined,
+  lowStock: false,
+  page: 1,
+  limit: 10,
 })
-const showDialogs = reactive({
-  editProduct: false,
-  deleteProduct: false,
-  newProduct: false,
-  moreInfo: false,
-  bulkPriceUpdate: false,
-})
-
-const dialogs = reactive([
-  {
-    title: 'حذف محصول',
-    model: 'deleteProduct',
-    width: '400',
-    component: DeleteProductDialog,
-    emits: {
-      close: async (status: boolean) => {
-        if (status) await load()
-        showDialogs.deleteProduct = false
-      },
-    },
-    props: {
-      selectedRow,
-    },
-  },
-  {
-    title: 'محصول جدید',
-    model: 'newProduct',
-    width: '700',
-    maxWidth: '700',
-    component: ProductFormView,
-    emits: {
-      close: async (status: boolean) => {
-        if (status) await load()
-        showDialogs.newProduct = false
-      },
-    },
-  },
-  {
-    title: 'ویرایش محصول',
-    model: 'editProduct',
-    width: '700',
-    maxWidth: '700',
-    component: ProductFormView,
-    emits: {
-      close: async (status: boolean) => {
-        if (status) await load()
-        showDialogs.editProduct = false
-      },
-    },
-    props: {
-      editData: selectedRow,
-    },
-  },
-  {
-    title: 'اطلاعات محصول',
-    model: 'moreInfo',
-    width: '700',
-    maxWidth: '700',
-    component: ProductDetailsDialog,
-    props: {
-      selectedRow: selectedRow,
-    },
-    emits: {
-      close: async (status: boolean) => {
-        if (status) await load()
-        showDialogs.editProduct = false
-      },
-    },
-  },
-  {
-    title: 'تغییر قیمت گروهی',
-    model: 'bulkPriceUpdate',
-    width: '800',
-    maxWidth: '800',
-    component: BulkPriceView,
-    props: {
-      selectedRow: selectedRow,
-    },
-    emits: {
-      close: async (status: boolean) => {
-        if (status) await load()
-        showDialogs.bulkPriceUpdate = false
-      },
-    },
-  },
-])
-
-const actions = reactive([
-  {
-    hint: 'ویرایش',
-    icon: Edit,
-    type: 'success',
-    handler: (row: any) => {
-      selectedRow.value = row
-      showDialogs.editProduct = true
-    },
-  },
-  {
-    hint: 'حذف',
-    icon: Delete,
-    type: 'danger',
-    handler: (row: any) => {
-      selectedRow.value = row
-      showDialogs.deleteProduct = true
-    },
-  },
-  {
-    hint: 'اطلاعات بیشتر',
-    icon: View,
-    type: 'info',
-    handler: (row: any) => {
-      selectedRow.value = row
-      console.log(selectedRow.value)
-      showDialogs.moreInfo = true
-    },
-  },
-])
-const route = useRoute()
-const categoryTitle = ref('')
-const money = (v: number) => new Intl.NumberFormat('fa-IR').format(v)
-
-function handleTableActions(actionName: string, row: Product) {
-  switch (actionName) {
-    case 'view':
-      selectedRow.value = row
-      showDialogs.moreInfo = true
-      break
-    case 'edit':
-      selectedRow.value = row
-      showDialogs.editProduct = true
-      break
-    case 'delete':
-      selectedRow.value = row
-      showDialogs.deleteProduct = true
-  }
-}
-
-async function load() {
-  loading.value = true
-
-  try {
-    const r = await productsApi.list({
-      page: 1,
-      limit: 10000,
-    })
-
-    items.value = r.data
-  } catch (e) {
-    ElMessage.error(e instanceof Error ? e.message : 'خطا در دریافت محصولات')
-  } finally {
-    loading.value = false
-  }
-}
-
-async function toggle(p: any) {
-  try {
-    await productsApi.status(p.id, !p.isActive)
-    p.isActive = !p.isActive
-    ElMessage.success('وضعیت محصول تغییر کرد')
-  } catch (e) {
-    ElMessage.error(e instanceof Error ? e.message : 'خطا')
-  }
-}
-
-onMounted(async () => {
-  const categoryId = Number(route.query.categoryId)
-  if (Number.isInteger(categoryId) && categoryId > 0) {
-    query.categoryId = categoryId
-    categoryTitle.value = String(route.query.categoryName ?? '')
-  }
-  await Promise.all([
-    load(),
-    categoriesApi
-      .list()
-      .then((r) => (categories.value = r))
-      .catch(() => {}),
-  ])
-})
-
-watch(
-  () => route.query.categoryId,
-  (categoryId) => {
-    query.categoryId = categoryId ? Number(categoryId) : undefined
-
-    categoryTitle.value = String(route.query.categoryName ?? '')
-
-    query.page = 1
-  },
+const columns: TableColumn[] = [
+  { prop: 'name', label: 'نام کالا' },
+  { prop: 'sku', label: 'کد کالا' },
+  { prop: 'category.name', label: 'دسته‌بندی' },
+  { prop: 'sellPrice', label: 'قیمت فروش · تومان', type: 'price' },
+  { prop: 'stock', label: 'موجودی' },
+  { prop: 'isActive', label: 'وضعیت' },
+]
+const rowActions = [
+  { name: 'view', icon: Eye },
+  { name: 'edit', icon: Pencil },
+  { name: 'delete', icon: Trash2 },
+]
+const filtered = computed(() =>
+  items.value.filter(
+    (p) =>
+      (!query.search.trim() ||
+        [p.name, p.sku].some((v) => v.toLowerCase().includes(query.search.trim().toLowerCase()))) &&
+      (query.categoryId === undefined || p.categoryId === query.categoryId) &&
+      (query.isActive === undefined || p.isActive === query.isActive) &&
+      (!query.lowStock || (p.isActive && p.stock <= p.minStock)),
+  ),
 )
-
+const pages = computed(() => Math.max(1, Math.ceil(filtered.value.length / query.limit)))
+const pageItems = computed(() =>
+  filtered.value.slice((query.page - 1) * query.limit, query.page * query.limit),
+)
+const hasFilters = computed(
+  () =>
+    query.search ||
+    query.categoryId !== undefined ||
+    query.isActive !== undefined ||
+    query.lowStock,
+)
 watch(
-  () => [query.search, query.categoryId, query.isActive, query.lowStock],
+  () => [query.search, query.categoryId, query.isActive, query.lowStock, query.limit],
   () => {
     query.page = 1
   },
 )
+watch(pages, (value) => {
+  query.page = Math.min(query.page, value)
+})
+watch(
+  () => route.query,
+  (value) => {
+    query.search = typeof value.search === 'string' ? value.search : ''
+    query.lowStock = value.lowStock === 'true'
+    query.categoryId = value.categoryId ? Number(value.categoryId) : undefined
+  },
+  { immediate: true },
+)
+function clearFilters() {
+  Object.assign(query, {
+    search: '',
+    categoryId: undefined,
+    isActive: undefined,
+    lowStock: false,
+    page: 1,
+  })
+}
+function openForm(product?: Product) {
+  selected.value = product || null
+  formOpen.value = true
+}
+function handleAction({ actionName, row }: { actionName: string; row: Product }) {
+  selected.value = row
+  if (actionName === 'view') detailsOpen.value = true
+  if (actionName === 'edit') formOpen.value = true
+  if (actionName === 'delete') deleteOpen.value = true
+}
+async function onFormClose(saved: boolean) {
+  formOpen.value = false
+  if (saved) await load()
+}
+async function onBulkClose(saved: boolean) {
+  bulkOpen.value = false
+  if (saved) await load()
+}
+async function onDeleteClose(deleted: boolean) {
+  deleteOpen.value = false
+  if (deleted) await load()
+}
+async function load() {
+  loading.value = true
+  error.value = ''
+  try {
+    const [result, groups] = await Promise.all([
+      productsApi.list({ page: 1, limit: 10000 }),
+      categoriesApi.list(),
+    ])
+    items.value = result.data
+    totalRecords.value = result.meta.total
+    categories.value = groups
+  } catch {
+    error.value = 'دریافت فهرست کالاها ممکن نشد. اتصال به سرور را بررسی کنید.'
+  } finally {
+    loading.value = false
+  }
+}
+async function toggleStatus(product: Product) {
+  statusSaving.value = product.id
+  try {
+    await productsApi.status(product.id, !product.isActive)
+    product.isActive = !product.isActive
+    toast.success('وضعیت کالا به‌روز شد.')
+  } catch (e) {
+    toast.error(e instanceof Error ? e.message : 'تغییر وضعیت انجام نشد.')
+  } finally {
+    statusSaving.value = undefined
+  }
+}
+onMounted(load)
 </script>
 <style scoped>
-.page-actions {
+.product-summary {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
-  gap: 20px;
-  padding: 16px 18px;
-  margin-bottom: 20px;
-  background: var(--card-bg, #fff);
-  border: 1px solid var(--border-color, #ebeef5);
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+  gap: 24px;
+  font-size: 12px;
+  color: var(--muted-foreground);
 }
-
-.filters {
+.product-summary > span,
+.product-summary > button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.product-summary b {
+  color: var(--foreground);
+  font-weight: 650;
+}
+.product-summary button {
+  background: transparent;
+  color: var(--warning);
+  border: 1px solid transparent;
+  padding: 7px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+}
+.product-summary button.selected {
+  border-color: var(--warning);
+  background: color-mix(in srgb, var(--warning) 8%, transparent);
+}
+.status-dot {
+  width: 7px;
+  height: 7px;
+  background: var(--success);
+  border-radius: 50%;
+}
+.products-panel {
+  overflow: hidden;
+}
+.product-cell {
   display: flex;
   align-items: center;
   gap: 10px;
-  flex: 1;
+  min-width: 150px;
 }
-
-.actions {
+.product-cell b {
+  font-weight: 600;
+}
+.product-mark {
+  width: 36px;
+  height: 36px;
+  background: var(--muted);
+  color: var(--primary);
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+.stock-value {
+  white-space: nowrap;
+  font-weight: 650;
+}
+.stock-value small {
+  font-size: 10px;
+  color: var(--muted-foreground);
+  font-weight: 400;
+}
+.status-button {
+  border: 1px solid transparent;
+  min-height: 32px;
+}
+.status-button:hover {
+  border-color: currentColor;
+}
+.active-filters {
   display: flex;
   align-items: center;
-  gap: 8px;
-  white-space: nowrap;
+  justify-content: space-between;
+  padding: 8px 20px;
+  font-size: 12px;
+  color: var(--muted-foreground);
+  border-bottom: 1px solid var(--border);
 }
-
-.filter-item {
-  min-width: 200px !important;
-  height: 40px !important;
-}
-::v-deep .el-select__wrapper {
-  height: 40px !important;
-}
-
-.page-actions .el-input,
-.page-actions .el-select {
-  height: 40px;
-}
-
-.page-actions .el-input /deep/ .el-input__inner,
-.page-actions .el-select /deep/ .el-input__inner {
-  border-radius: 8px;
-}
-
-.page-actions .el-button {
-  height: 40px;
-  border-radius: 8px;
-  font-weight: 500;
-}
-
-.bulk-price-btn {
-  color: #409eff;
-  border-color: #d9ecff;
-  background: #f0f8ff;
-}
-
-.new-product-btn {
-  min-width: 125px;
-}
-
-/* Responsive */
-@media (max-width: 1100px) {
-  .page-actions {
-    flex-direction: column;
-    align-items: stretch;
+@media (max-width: 640px) {
+  .product-summary {
+    gap: 10px;
   }
-
-  .filters {
-    width: 100%;
+  .product-cell {
+    min-width: 0;
   }
-
-  .actions {
-    justify-content: flex-start;
-  }
-}
-
-@media (max-width: 700px) {
-  .filters {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .search-input,
-  .filter-select {
-    width: 100%;
-  }
-
-  .actions {
-    width: 100%;
-  }
-
-  .actions .el-button {
-    flex: 1;
+  .product-mark {
+    display: none;
   }
 }
 </style>

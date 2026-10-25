@@ -1,155 +1,303 @@
 <template>
-  <el-form :model="form" :rules="rules" label-position="top" @submit.prevent="submit">
-    <div class="form-grid">
-      <el-form-item label="نام محصول" prop="name">
-        <el-input v-model="form.name" />
-      </el-form-item>
-      <el-form-item label="کد کالا (SKU)" prop="sku">
-        <el-input v-model="form.sku" />
-      </el-form-item>
-      <el-form-item label="دسته‌بندی" prop="categoryId">
-        <el-select v-model="form.categoryId" style="width: 100%">
-          <el-option v-for="c in categories" :key="c.id" :label="c.name" :value="c.id" />
-        </el-select>
-      </el-form-item>
-      <el-form-item label="واحد"> <el-input v-model="form.unit" /> </el-form-item>
-      <el-form-item label="قیمت خرید (تومان)">
-        <el-input
-          type="text"
-          v-model="form.buyPrice"
-          @input="form.buyPrice = handlePriceInput(form.buyPrice)"
-          controls-position="right"
-          style="width: 100%"
-        />
-      </el-form-item>
-      <el-form-item label="قیمت فروش (تومان)">
-        <el-input
-          type="text"
-          v-model="form.sellPrice"
-          @input="form.sellPrice = handlePriceInput(form.sellPrice)"
-          controls-position="right"
-          style="width: 100%"
-        />
-      </el-form-item>
-      <el-form-item label="حداقل موجودی">
-        <el-input-number v-model="form.minStock" :min="0" style="width: 100%" />
-      </el-form-item>
-    </div>
-    <el-form-item label="توضیحات">
-      <el-input v-model="form.description" type="textarea" :rows="4" />
-    </el-form-item>
-    <div class="form-actions">
-      <el-button @click="emits('close', false)">انصراف</el-button>
-      <el-button
-        v-if="props.editData"
-        @click="resetEditForm"
-        type="warning"
-        style="margin-left: 0px"
-        >بازنشانی</el-button
-      >
-      <el-button type="primary" native-type="submit" :loading="saving" style="margin-left: 0px">
-        {{ props.editData ? 'ویرایش محصول' : 'ذخیره محصول' }}
-      </el-button>
-    </div>
-  </el-form>
+  <div :class="embedded ? '' : 'page-stack'">
+    <PageHeader
+      v-if="!embedded"
+      :title="editing ? 'ویرایش کالا' : 'ثبت کالای جدید'"
+      description="اطلاعات پایه و قیمت را وارد کنید؛ موجودی از بخش ورود کالا ثبت می‌شود."
+      eyebrow="کالاها و قیمت‌ها"
+    />
+    <form
+      :class="embedded ? 'product-form' : 'product-form panel panel-body standalone-form'"
+      @submit.prevent="submit"
+    >
+      <div v-if="loading" class="table-loading" role="status">در حال دریافت اطلاعات…</div>
+      <div v-else-if="loadError" class="notice notice--error" role="alert">
+        {{ loadError }}<Button variant="outline" @click="load">تلاش دوباره</Button>
+      </div>
+      <template v-else>
+        <section class="form-section">
+          <h3><Package :size="18" /> مشخصات کالا</h3>
+          <div class="form-grid">
+            <label class="form-field"
+              ><span>نام کالا <small>الزامی</small></span
+              ><input
+                v-model="form.name"
+                required
+                maxlength="200"
+                placeholder="مثلاً شیر روشویی"
+                autocomplete="off"
+            /></label>
+            <label class="form-field"
+              ><span>کد کالا <small>الزامی و یکتا</small></span
+              ><input
+                v-model="form.sku"
+                required
+                maxlength="100"
+                placeholder="مثلاً PR-1001"
+                dir="ltr"
+                autocomplete="off"
+            /></label>
+            <label class="form-field"
+              ><span>دسته‌بندی <small>الزامی</small></span
+              ><select v-model.number="form.categoryId" required>
+                <option :value="undefined" disabled>انتخاب دسته‌بندی</option>
+                <option v-for="c in categories" :key="c.id" :value="c.id">
+                  {{ c.name }}
+                </option></select
+              ><button type="button" class="inline-link" @click="addingCategory = !addingCategory">
+                <Plus :size="14" />ثبت دسته‌بندی جدید
+              </button></label
+            >
+            <label class="form-field"
+              ><span>واحد شمارش</span
+              ><input
+                v-model="form.unit"
+                required
+                maxlength="50"
+                placeholder="عدد، بسته، جعبه…"
+              /><small>همان واحدی که در انبار و فاکتور استفاده می‌کنید.</small></label
+            >
+          </div>
+          <div v-if="addingCategory" class="category-create">
+            <label class="form-field"
+              ><span>نام دسته‌بندی جدید</span
+              ><input
+                v-model="categoryName"
+                maxlength="100"
+                @keydown.enter.prevent="createCategory" /></label
+            ><Button
+              variant="outline"
+              :disabled="categorySaving || !categoryName.trim()"
+              @click="createCategory"
+              >{{ categorySaving ? 'در حال ثبت…' : 'ثبت دسته‌بندی' }}</Button
+            >
+          </div>
+        </section>
+        <section class="form-section">
+          <h3><Tags :size="18" /> قیمت و موجودی</h3>
+          <div class="form-grid">
+            <label class="form-field"
+              ><span>قیمت خرید <small>تومان</small></span
+              ><input
+                v-model="form.buyPrice"
+                inputmode="numeric"
+                required
+                dir="ltr"
+                @blur="formatPrice('buyPrice')"
+            /></label>
+            <label class="form-field"
+              ><span>قیمت فروش <small>تومان</small></span
+              ><input
+                v-model="form.sellPrice"
+                inputmode="numeric"
+                required
+                dir="ltr"
+                @blur="formatPrice('sellPrice')"
+            /></label>
+            <label class="form-field"
+              ><span>حداقل موجودی</span
+              ><input
+                v-model.number="form.minStock"
+                type="number"
+                min="0"
+                step="1"
+                required
+              /><small>در این مقدار یا کمتر، هشدار تأمین نمایش داده می‌شود.</small></label
+            >
+            <div class="notice">
+              <Info :size="18" /><span
+                >برای تغییر تعداد موجودی، از بخش «ورود و مرجوعی کالا» استفاده کنید.</span
+              >
+            </div>
+          </div>
+        </section>
+        <section class="form-section">
+          <label class="form-field"
+            ><span>توضیحات <small>اختیاری</small></span
+            ><textarea
+              v-model="form.description"
+              rows="3"
+              placeholder="اطلاعات تکمیلی درباره کالا…"
+            />
+          </label>
+        </section>
+        <p v-if="formError" class="notice notice--error" role="alert">{{ formError }}</p>
+        <div class="form-actions">
+          <Button variant="outline" @click="close(false)">انصراف</Button
+          ><Button type="submit" :disabled="saving">{{
+            saving ? 'در حال ذخیره…' : editing ? 'ذخیره تغییرات' : 'ثبت کالا'
+          }}</Button>
+        </div>
+      </template>
+    </form>
+  </div>
 </template>
 <script setup lang="ts">
-import { onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
+import { Info, Package, Plus, Tags } from '@lucide/vue'
+import PageHeader from '@/components/ui/PageHeader.vue'
+import Button from '@/components/ui/Button.vue'
+import { toast } from '@/lib/toast'
+import { number, parseNumber } from '@/lib/format'
 import { categoriesApi } from '@/services/categories'
 import { productsApi } from '@/services/products'
-import type { Category } from '@/types'
-import { handlePriceInput } from '@/utils/general'
-
-const emits = defineEmits(['close'])
-const props = defineProps({
-  editData: {
-    type: Object,
-    required: false,
-  },
-})
-
-let id = 0
+import type { Category, Product } from '@/types'
+const props = defineProps<{ editData?: Product; embedded?: boolean }>()
+const emit = defineEmits<{ close: [saved: boolean] }>()
 const route = useRoute(),
-  router = useRouter(),
-  editing = Boolean(id),
-  categories = ref<Category[]>([]),
+  router = useRouter()
+const id = computed(
+  () =>
+    props.editData?.id ||
+    (!props.embedded && route.params.id ? Number(route.params.id) : undefined),
+)
+const editing = computed(() => Boolean(id.value))
+const categories = ref<Category[]>([]),
+  loading = ref(true),
   saving = ref(false)
+const loadError = ref(''),
+  formError = ref(''),
+  addingCategory = ref(false),
+  categoryName = ref(''),
+  categorySaving = ref(false)
 const form = reactive({
   name: '',
   sku: '',
   categoryId: undefined as number | undefined,
   unit: 'عدد',
-  buyPrice: '0' as number | string,
-  sellPrice: '0' as number | string,
+  buyPrice: '0',
+  sellPrice: '0',
   minStock: 0,
   description: '',
 })
-const rules = {
-  name: [{ required: true, message: 'نام محصول الزامی است' }],
-  sku: [{ required: true, message: 'کد کالا الزامی است' }],
-  categoryId: [{ required: true, message: 'دسته‌بندی را انتخاب کنید' }],
+function assignProduct(p: Product) {
+  Object.assign(form, {
+    name: p.name,
+    sku: p.sku,
+    categoryId: p.categoryId,
+    unit: p.unit,
+    buyPrice: number(p.buyPrice),
+    sellPrice: number(p.sellPrice),
+    minStock: p.minStock,
+    description: p.description || '',
+  })
 }
-onMounted(async () => {
+async function load() {
+  loading.value = true
+  loadError.value = ''
   try {
     categories.value = await categoriesApi.list()
-    if (editing) Object.assign(form, await productsApi.get(id))
+    if (props.editData) assignProduct(props.editData)
+    else if (id.value) assignProduct(await productsApi.get(id.value))
+  } catch {
+    loadError.value = 'دریافت اطلاعات فرم ممکن نشد.'
+  } finally {
+    loading.value = false
+  }
+}
+function formatPrice(key: 'buyPrice' | 'sellPrice') {
+  const value = parseNumber(form[key])
+  if (Number.isFinite(value) && value >= 0) form[key] = number(value)
+}
+function close(saved: boolean) {
+  emit('close', saved)
+  if (!props.embedded) void router.push('/products')
+}
+async function createCategory() {
+  if (!categoryName.value.trim() || categorySaving.value) return
+  categorySaving.value = true
+  try {
+    const category = await categoriesApi.create(categoryName.value.trim())
+    categories.value.push(category)
+    form.categoryId = category.id
+    addingCategory.value = false
+    categoryName.value = ''
+    toast.success('دسته‌بندی ثبت شد.')
   } catch (e) {
-    ElMessage.error(e instanceof Error ? e.message : 'خطا در دریافت اطلاعات')
+    toast.error(e instanceof Error ? e.message : 'ثبت دسته‌بندی انجام نشد.')
+  } finally {
+    categorySaving.value = false
   }
-
-  if (props.editData) {
-    resetEditForm()
-    id = props.editData.id
-  }
-})
+}
 async function submit() {
-  if (!form.categoryId) return ElMessage.warning('دسته‌بندی را انتخاب کنید')
+  if (saving.value) return
+  formError.value = ''
+  const buyPrice = parseNumber(form.buyPrice),
+    sellPrice = parseNumber(form.sellPrice)
+  if (!form.categoryId || !form.name.trim() || !form.sku.trim() || !form.unit.trim()) {
+    formError.value = 'نام، کد، واحد و دسته‌بندی کالا را تکمیل کنید.'
+    return
+  }
+  if (
+    ![buyPrice, sellPrice, form.minStock].every(
+      (v) => Number.isInteger(v) && v >= 0 && v <= 2147483647,
+    )
+  ) {
+    formError.value = 'قیمت‌ها و حداقل موجودی باید عدد صحیح و غیرمنفی باشند.'
+    return
+  }
   saving.value = true
   try {
-    const submitData = {
+    const data = {
       ...form,
+      name: form.name.trim(),
+      sku: form.sku.trim(),
+      unit: form.unit.trim(),
+      buyPrice,
+      sellPrice,
     }
-    submitData.sellPrice = Number((form.sellPrice as string).split(',').join(''))
-    submitData.buyPrice = Number((form.buyPrice as string).split(',').join(''))
-
-    const p = props.editData
-      ? await productsApi.update(id, submitData)
-      : await productsApi.create(submitData)
-    ElMessage.success(props.editData ? 'اطلاعات محصول ویرایش شد' : 'اطلاعات محصول ذخیره شد')
-    emits('close', true)
+    if (id.value) await productsApi.update(id.value, data)
+    else await productsApi.create(data)
+    toast.success(
+      editing.value
+        ? 'تغییرات کالا ذخیره شد.'
+        : 'کالا ثبت شد. اکنون می‌توانید موجودی آن را وارد کنید.',
+    )
+    close(true)
   } catch (e) {
-    ElMessage.error(e instanceof Error ? e.message : 'خطا')
+    formError.value = e instanceof Error ? e.message : 'ذخیره اطلاعات انجام نشد.'
   } finally {
     saving.value = false
   }
 }
-
-function resetEditForm() {
-  if (!props.editData) return
-
-  form.name = props.editData.name
-  form.sku = props.editData.sku
-  form.categoryId = props.editData.categoryId
-  form.unit = props.editData.unit
-  form.buyPrice = handlePriceInput(String(props.editData.buyPrice))
-  form.sellPrice = handlePriceInput(String(props.editData.sellPrice))
-  form.minStock = props.editData.minStock
-  form.description = props.editData.description
-}
+onMounted(load)
 </script>
 <style scoped>
-.form-grid,
-.details-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 0 20px;
+.standalone-form {
+  max-width: 860px;
 }
-.form-actions {
+.form-section h3 {
   display: flex;
-  justify-content: end;
-  gap: 10px;
-  width: 100%;
+  align-items: center;
+  gap: 8px;
+}
+.form-section h3 svg {
+  color: var(--primary);
+}
+.inline-link {
+  display: inline-flex;
+  gap: 5px;
+  align-items: center;
+  justify-self: start;
+  background: none;
+  border: 0;
+  color: var(--primary);
+  font-size: 11px;
+  padding: 3px 0;
+}
+.category-create {
+  display: flex;
+  align-items: end;
+  gap: 12px;
+  padding: 16px;
+  background: var(--muted);
+  border-radius: 12px;
+}
+.category-create .form-field {
+  flex: 1;
+}
+.product-form > .notice {
+  margin-top: 18px;
 }
 </style>

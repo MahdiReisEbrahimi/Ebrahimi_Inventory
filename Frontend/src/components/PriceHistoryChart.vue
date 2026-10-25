@@ -1,173 +1,92 @@
 <template>
   <div class="price-history-chart">
-    <div v-if="!data.length" class="empty">تاریخچه‌ای برای نمایش وجود ندارد.</div>
-
-    <VChart v-else class="chart" :option="chartOption" autoresize />
+    <EmptyState
+      v-if="!data.length"
+      title="هنوز تغییری در قیمت ثبت نشده"
+      description="پس از اولین تغییر قیمت، روند خرید و فروش کالا اینجا نمایش داده می‌شود."
+    />
+    <VChart
+      v-else
+      class="chart"
+      :option="chartOption"
+      autoresize
+      aria-label="نمودار تاریخچه قیمت خرید و فروش"
+    />
   </div>
 </template>
-
 <script setup lang="ts">
 import { computed } from 'vue'
 import VChart from 'vue-echarts'
-
 import { use } from 'echarts/core'
 import { LineChart } from 'echarts/charts'
-import {
-  GridComponent,
-  LegendComponent,
-  TooltipComponent,
-  DataZoomComponent,
-} from 'echarts/components'
+import { GridComponent, LegendComponent, TooltipComponent } from 'echarts/components'
 import { CanvasRenderer } from 'echarts/renderers'
-
-use([
-  LineChart,
-  GridComponent,
-  LegendComponent,
-  TooltipComponent,
-  DataZoomComponent,
-  CanvasRenderer,
-])
-
-interface PriceHistory {
-  id: number
-  productId: number
-
-  oldBuyPrice: number
-  newBuyPrice: number
-
-  oldSellPrice: number
-  newSellPrice: number
-
-  changePercent: number | null
-
-  type: string
-
-  changedById: number | null
-  changedByName: string | null
-
-  createdAt: string
-
-  oldPrice: number
-  newPrice: number
-
-  changedBy: unknown | null
-}
-
-interface Props {
-  data: PriceHistory[]
-}
-
-const props = defineProps<Props>()
-
-const formatPrice = (price: number) => {
-  return new Intl.NumberFormat('fa-IR').format(price)
-}
-
-const formatDate = (date: string) => {
-  return new Intl.DateTimeFormat('fa-IR', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).format(new Date(date))
-}
-
-const sortedData = computed(() => {
-  return [...props.data].sort(
-    (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
-  )
-})
-
+import EmptyState from '@/components/ui/EmptyState.vue'
+import { useTheme } from '@/composables/useTheme'
+import { date, number } from '@/lib/format'
+use([LineChart, GridComponent, LegendComponent, TooltipComponent, CanvasRenderer])
+const props = defineProps<{
+  data: { createdAt: string; newBuyPrice: number | null; newSellPrice: number | null }[]
+}>()
+const { isDark } = useTheme()
+const sorted = computed(() =>
+  [...props.data].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()),
+)
 const chartOption = computed(() => {
+  const dark = isDark.value
+  const style = getComputedStyle(document.documentElement)
+  const token = (name: string) => style.getPropertyValue(name).trim()
   return {
+    color: [dark ? '#e7bf7c' : '#93611b', token('--primary')],
+    textStyle: { fontFamily: 'Vazirmatn', color: token('--muted-foreground') },
     tooltip: {
       trigger: 'axis',
-
-      formatter: (params: any[]) => {
-        if (!params?.length) return ''
-
-        const index = params[0].dataIndex
-        const item = sortedData.value[index]
-
-        return `
-          <div style=" direction: rtl; text-align: right; min-width: 190px; padding: 4px 2px; font-family: inherit; " > <!-- Date --> <div style=" display: flex; align-items: center; gap: 6px; padding-bottom: 10px; margin-bottom: 9px; border-bottom: 1px solid rgba(128,128,128,.2); color: #909399; font-size: 12px; " > <span style="font-size: 14px;">🕐</span>
-            <span> ${formatDate(item.createdAt)} </span> </div> <!-- Buy --> <div style=" display: flex; align-items: center; justify-content: space-between; gap: 20px; margin-bottom: 8px; " > <div style=" display: flex; align-items: center; gap: 7px; color: #606266; font-size: 12px; " >
-            <span style=" width: 7px; height: 7px; border-radius: 50%; background: #e6a23c; display: inline-block; " ></span> <span>قیمت خرید</span> </div> <strong style=" color: #303133; font-size: 13px; white-space: nowrap; " >
-           ${formatPrice(item.newBuyPrice)} <small style=" font-size: 10px; font-weight: normal; color: #909399; " >
-            تومان </small> </strong> </div>
-             <!-- Sell --> <div style=" display: flex; align-items: center; justify-content: space-between; gap: 20px; " >
-             <div style=" display: flex; align-items: center; gap: 7px; color: #606266; font-size: 12px; " > <span style=" width: 7px; height: 7px; border-radius: 50%; background: #67c23a; display: inline-block; " ></span> <span>قیمت فروش</span> </div> <strong style=" color: #303133; font-size: 13px; white-space: nowrap; " > ${formatPrice(item.newSellPrice)} <small style=" font-size: 10px; font-weight: normal; color: #909399; " > تومان </small> </strong> </div>
-          </div>
-        `
-      },
+      confine: true,
+      backgroundColor: token('--popover'),
+      borderColor: token('--border'),
+      textStyle: { color: token('--foreground'), fontFamily: 'Vazirmatn' },
+      valueFormatter: (value: number | null) => (value == null ? '—' : number(value) + ' تومان'),
     },
-
     legend: {
-      data: ['قیمت خرید', 'قیمت فروش'],
-      top: 0,
+      top: 16,
+      textStyle: { color: token('--foreground'), fontFamily: 'Vazirmatn', fontSize: 11 },
+      icon: 'roundRect',
+      itemWidth: 14,
+      itemHeight: 5,
     },
-
-    grid: {
-      top: 50,
-      left: 20,
-      right: 20,
-      bottom: 60,
-      containLabel: true,
-    },
-
+    grid: { top: 64, left: 16, right: 16, bottom: 20, containLabel: true },
     xAxis: {
       type: 'category',
-      boundaryGap: false,
-
-      data: sortedData.value.map((item) => formatDate(item.createdAt)),
-
-      axisLabel: {
-        rotate: 30,
-      },
+      data: sorted.value.map((item) => date(item.createdAt)),
+      axisLine: { lineStyle: { color: token('--border') } },
+      axisLabel: { color: token('--muted-foreground'), fontSize: 10 },
+      axisTick: { show: false },
     },
-
     yAxis: {
       type: 'value',
-
       axisLabel: {
-        formatter: (value: number) => {
-          return formatPrice(value)
-        },
+        color: token('--muted-foreground'),
+        fontSize: 10,
+        formatter: (value: number) => number(value),
       },
+      splitLine: { lineStyle: { color: token('--border'), type: 'dashed' } },
     },
-
-    dataZoom: [
-      {
-        type: 'inside',
-      },
-      {
-        type: 'slider',
-        height: 20,
-        bottom: 10,
-      },
-    ],
-
     series: [
       {
         name: 'قیمت خرید',
         type: 'line',
-        smooth: true,
-
-        data: sortedData.value.map((item) => item.newBuyPrice),
-
-        symbol: 'circle',
-        symbolSize: 8,
+        smooth: false,
+        symbolSize: 7,
+        connectNulls: true,
+        data: sorted.value.map((item) => item.newBuyPrice),
       },
-
       {
         name: 'قیمت فروش',
         type: 'line',
-        smooth: true,
-
-        data: sortedData.value.map((item) => item.newSellPrice),
-
-        symbol: 'circle',
-        symbolSize: 8,
+        smooth: false,
+        symbolSize: 7,
+        connectNulls: true,
+        data: sorted.value.map((item) => item.newSellPrice),
       },
     ],
   }
@@ -176,20 +95,11 @@ const chartOption = computed(() => {
 <style scoped>
 .price-history-chart {
   width: 100%;
+  min-width: 0;
+  margin-top: 12px;
 }
-
 .chart {
   width: 100%;
-  height: 350px;
-}
-
-.empty {
   height: 300px;
-
-  display: flex;
-  align-items: center;
-  justify-content: center;
-
-  color: #909399;
 }
 </style>

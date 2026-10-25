@@ -1,353 +1,424 @@
 <template>
-  <section dir="rtl" class="invoice-page">
-    <el-tabs v-model="activeTab" class="invoice-tabs no-print" @tab-change="onTabChange">
-      <el-tab-pane label="فاکتور جدید" name="new">
-        <section class="product-adder">
-          <h3>افزودن کالا به فاکتور</h3>
-          <div class="add-row">
-            <el-select v-model="selectedCategoryId" class="category-picker" clearable placeholder="انتخاب دسته‌بندی" @change="selectedProduct = undefined">
-              <el-option v-for="category in productCategories" :key="category.id" :label="category.name" :value="category.id" />
-            </el-select>
-            <el-select
-              v-model="selectedProduct"
-              class="product-picker"
-              filterable
-              :disabled="!selectedCategoryId"
-              placeholder="انتخاب کالا"
-              style="width: 100%"
+  <div class="page-stack invoice-page">
+    <PageHeader
+      class="no-print"
+      title="فاکتورهای فروش"
+      description="از انتخاب کالا تا صدور و چاپ فاکتور، در چند قدم ساده."
+      eyebrow="فروش فروشگاه"
+      ><Button variant="outline" @click="settingsOpen = true"
+        ><Settings2 :size="17" />اطلاعات فروشگاه</Button
+      ></PageHeader
+    >
+    <div class="invoice-toolbar no-print">
+      <div class="segmented-control">
+        <button :aria-pressed="activeTab === 'new'" @click="switchTab('new')">فاکتور جدید</button
+        ><button :aria-pressed="activeTab === 'archive'" @click="switchTab('archive')">
+          بایگانی فاکتورها
+        </button>
+      </div>
+      <span class="muted">قیمت‌ها به تومان هستند</span>
+    </div>
+    <div v-if="loadError" class="notice notice--error no-print" role="alert">
+      {{ loadError }}<Button variant="outline" @click="load">تلاش دوباره</Button>
+    </div>
+    <div v-if="loading" class="table-loading panel no-print" role="status">
+      در حال دریافت اطلاعات فروش…
+    </div>
+    <div
+      v-else-if="activeTab === 'new' && !activeInvoice"
+      class="invoice-editor no-print"
+      :aria-busy="saving"
+    >
+      <div class="invoice-steps">
+        <section class="panel">
+          <div class="panel-heading">
+            <div class="step-heading">
+              <span class="step-number">۱</span>
+              <div>
+                <h2>خریدار فاکتور</h2>
+                <p>یک خریدار انتخاب کنید یا خریدار تازه‌ای ثبت کنید.</p>
+              </div>
+            </div>
+            <Button variant="ghost" size="sm" @click="openBuyer()"
+              ><Plus :size="15" />خریدار جدید</Button
             >
-              <el-option v-for="p in selectedCategoryProducts" :key="p.id" :label="`${p.name} | موجودی ${p.stock} ${p.unit}`" :value="p.id" />
-            </el-select>
-            <el-button @click="addProduct">افزودن به فاکتور</el-button>
+          </div>
+          <div class="panel-body">
+            <label class="form-field"
+              ><span>نام خریدار</span
+              ><select v-model.number="selectedBuyerId">
+                <option :value="undefined">انتخاب خریدار</option>
+                <option v-for="buyer in buyers" :key="buyer.id" :value="buyer.id">
+                  {{ buyer.firstName }} {{ buyer.lastName
+                  }}{{ buyer.nationalId ? ' · ' + buyer.nationalId : '' }}
+                </option>
+              </select></label
+            >
+            <div v-if="selectedBuyer" class="buyer-preview">
+              <div>
+                <b>{{ selectedBuyer.firstName }} {{ selectedBuyer.lastName }}</b>
+                <p>
+                  {{ selectedBuyer.phone || 'شماره تماس ثبت نشده' }} ·
+                  {{ selectedBuyer.address || 'نشانی ثبت نشده' }}
+                </p>
+              </div>
+              <button
+                class="icon-button"
+                aria-label="ویرایش خریدار"
+                @click="openBuyer(selectedBuyer)"
+              >
+                <Pencil :size="17" /></button
+              ><button
+                class="icon-button icon-button--delete"
+                aria-label="حذف خریدار"
+                @click="buyerToDelete = selectedBuyer"
+              >
+                <Trash2 :size="17" />
+              </button>
+            </div>
           </div>
         </section>
-      </el-tab-pane>
-      <el-tab-pane label="فاکتورهای بایگانی‌شده" name="archive">
-        <section class="archive-panel">
-          <div class="archive-panel-heading">
-            <div>
-              <h3>فاکتورهای ثبت‌شده</h3>
-              <p>فاکتور مورد نظر را از میان نتایج انتخاب یا چاپ کنید.</p>
+        <section class="panel">
+          <div class="panel-heading">
+            <div class="step-heading">
+              <span class="step-number">۲</span>
+              <div>
+                <h2>کالاهای فاکتور</h2>
+                <p>کالا را اضافه کنید؛ سپس تعداد و قیمت را بررسی کنید.</p>
+              </div>
             </div>
-            <el-button plain @click="clearArchiveFilters">پاک‌کردن فیلترها</el-button>
+            <Package :size="22" class="muted" />
           </div>
-          <div class="archive-filters">
-            <el-select
-              v-model="archiveFilters.customerId"
-              clearable
-              filterable
-              placeholder="فیلتر خریدار"
-              @change="loadInvoices"
+          <div class="panel-body product-adder">
+            <label class="form-field"
+              ><span>دسته‌بندی</span
+              ><select v-model.number="selectedCategoryId" @change="selectedProductId = undefined">
+                <option :value="undefined">همه دسته‌بندی‌ها</option>
+                <option
+                  v-for="category in productCategories"
+                  :key="category.id"
+                  :value="category.id"
+                >
+                  {{ category.name }}
+                </option>
+              </select></label
+            ><label class="form-field"
+              ><span>کالا</span
+              ><select v-model.number="selectedProductId">
+                <option :value="undefined">انتخاب کالا</option>
+                <option
+                  v-for="product in availableProducts"
+                  :key="product.id"
+                  :value="product.id"
+                  :disabled="product.stock < 1"
+                >
+                  {{ product.name }} · موجودی {{ number(product.stock) }} {{ product.unit }}
+                </option>
+              </select></label
+            ><Button variant="outline" :disabled="!selectedProductId" @click="addProduct"
+              ><Plus :size="16" />افزودن</Button
             >
-              <el-option
-                v-for="customer in buyers"
-                :key="customer.id"
-                :label="`${customer.firstName} ${customer.lastName}`"
-                :value="customer.id"
-              />
-            </el-select>
-            <el-input
-              v-model="archiveFilters.buyer"
-              clearable
-              placeholder="جست‌وجوی نام یا کد ملی"
-              @keyup.enter="loadInvoices"
-              @clear="loadInvoices"
-            />
-            <el-date-picker
-              v-model="archiveFilters.from"
-              type="date"
-              value-format="YYYY-MM-DD"
-              placeholder="از تاریخ"
-              @change="loadInvoices"
-            />
-            <el-date-picker
-              v-model="archiveFilters.to"
-              type="date"
-              value-format="YYYY-MM-DD"
-              placeholder="تا تاریخ"
-              @change="loadInvoices"
-            />
-            <el-input
-              v-model="archiveFilters.product"
-              clearable
-              placeholder="نام یا کد کالای فاکتور"
-              @keyup.enter="loadInvoices"
-              @clear="loadInvoices"
-            />
-            <el-button type="primary" @click="loadInvoices">اعمال فیلتر</el-button>
           </div>
-          <div v-loading="loading" class="invoice-archive-grid">
-            <article v-for="invoice in invoices" :key="invoice.id" class="archive-invoice-card">
-              <div class="archive-card-topline">
-                <span>فاکتور {{ invoice.number }}</span>
-                <time>{{ new Date(invoice.createdAt).toLocaleDateString('fa-IR') }}</time>
+          <EmptyState
+            v-if="!draft.length"
+            title="اولین کالا را اضافه کنید"
+            description="اقلام فاکتور و جمع مبلغ در این قسمت نمایش داده می‌شود."
+          />
+          <div v-else class="draft-lines">
+            <article v-for="(line, index) in draft" :key="line.productId" class="draft-line">
+              <div class="draft-line__head">
+                <span class="line-counter">{{ number(index + 1) }}</span>
+                <div>
+                  <b>{{ line.name }}</b
+                  ><small
+                    >موجودی قابل فروش: {{ number(stockOf(line.productId)) }} {{ line.unit }}</small
+                  >
+                </div>
+                <button
+                  class="icon-button icon-button--delete"
+                  :aria-label="'حذف ' + line.name + ' از فاکتور'"
+                  @click="draft.splice(index, 1)"
+                >
+                  <Trash2 :size="17" />
+                </button>
               </div>
-              <div class="archive-card-buyer">
-                <span>خریدار</span>
-                <strong>{{ invoice.buyerFirstName }} {{ invoice.buyerLastName }}</strong>
-              </div>
-              <div class="archive-card-total">
-                <span>جمع فاکتور</span>
-                <strong>{{ money(invoice.total) }}</strong>
-              </div>
-              <div class="archive-card-actions">
-                <el-button @click="openInvoice(invoice)">پیش‌نمایش</el-button>
-                <el-button type="primary" @click="openInvoice(invoice, true)">چاپ</el-button>
+              <div class="draft-line__fields">
+                <label class="form-field"
+                  ><span>تعداد · {{ line.unit }}</span
+                  ><input
+                    v-model.number="line.quantity"
+                    type="number"
+                    min="1"
+                    :max="stockOf(line.productId)"
+                    step="1"
+                    required /></label
+                ><label class="form-field"
+                  ><span>قیمت واحد · تومان</span
+                  ><input
+                    v-model="line.priceText"
+                    inputmode="numeric"
+                    @input="line.unitPrice = parseNumber(line.priceText)"
+                    @blur="formatLinePrice(line)"
+                /></label>
+                <div class="line-total">
+                  <small>جمع این کالا</small
+                  ><strong>{{ money(line.quantity * line.unitPrice) }}</strong>
+                </div>
               </div>
             </article>
-            <el-empty v-if="!loading && !invoices.length" description="فاکتوری با این شرایط پیدا نشد." />
           </div>
         </section>
-      </el-tab-pane>
-    </el-tabs>
-
-    <el-dialog
-      v-model="settingsDialogVisible"
-      title="ویرایش اطلاعات فروشگاه"
-      width="560px"
-      destroy-on-close
-    >
-      <el-form label-position="top" class="dialog-form">
-        <el-form-item label="نام فروشگاه"><el-input v-model="settingsForm.name" /></el-form-item>
-        <el-form-item label="نشانی فروشگاه"
-          ><el-input v-model="settingsForm.address" type="textarea" :rows="2"
-        /></el-form-item>
-        <el-form-item label="شماره تماس"><el-input v-model="settingsForm.phone" /></el-form-item>
-        <el-form-item label="نشانی لوگو"
-          ><el-input v-model="settingsForm.logoUrl" placeholder="آدرس تصویر لوگو"
-        /></el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="settingsDialogVisible = false">انصراف</el-button>
-        <el-button type="primary" :loading="settingsSaving" @click="saveSettings"
-          >ذخیره اطلاعات فروشگاه</el-button
-        >
-      </template>
-    </el-dialog>
-
-    <el-dialog
-      v-model="buyerDialogVisible"
-      :title="editingBuyerId ? 'ویرایش خریدار' : 'ثبت خریدار جدید'"
-      width="600px"
-      destroy-on-close
-    >
-      <el-form label-position="top" class="dialog-form">
-        <div class="dialog-grid">
-          <el-form-item label="نام"><el-input v-model="buyerForm.firstName" /></el-form-item>
-          <el-form-item label="نام خانوادگی"
-            ><el-input v-model="buyerForm.lastName"
-          /></el-form-item>
-          <el-form-item label="کد ملی"><el-input v-model="buyerForm.nationalId" /></el-form-item>
-          <el-form-item label="شماره تماس"><el-input v-model="buyerForm.phone" /></el-form-item>
-        </div>
-        <el-form-item label="آدرس"
-          ><el-input v-model="buyerForm.address" type="textarea" :rows="2"
-        /></el-form-item>
-        <el-form-item label="توضیحات"
-          ><el-input v-model="buyerForm.notes" type="textarea" :rows="2"
-        /></el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="buyerDialogVisible = false">انصراف</el-button>
-        <el-button type="primary" :loading="buyerSaving" @click="saveBuyer">ثبت خریدار</el-button>
-      </template>
-    </el-dialog>
-
-    <article class="paper">
-      <header class="invoice-header">
-        <div class="invoice-reference">
-          <img v-if="settings?.logoUrl" style="width: 150px" :src="settings.logoUrl" alt="لوگو" />
-          <div v-else class="invoice-logo">لوگو</div>
-        </div>
-        <div class="invoice-title">
-          <div>
-            <h1>صورتحساب فروش کالا و خدمات</h1>
-            <strong>{{ settings?.name || 'فروشگاه' }}</strong>
+      </div>
+      <aside class="invoice-summary panel">
+        <div class="panel-heading">
+          <div class="step-heading">
+            <span class="step-number">۳</span>
+            <h2>بررسی و صدور</h2>
           </div>
         </div>
-        <div class="invoice-store-details">
-          <span
-            >شماره فاکتور: <b>{{ activeInvoice?.number || 'پس از ثبت' }}</b></span
-          >
-          <span
-            >تاریخ:
-            {{ new Date(activeInvoice?.createdAt || Date.now()).toLocaleDateString('fa-IR') }}</span
-          >
+        <div class="panel-body">
+          <div class="summary-row">
+            <span>خریدار</span
+            ><b>{{
+              selectedBuyer ? selectedBuyer.firstName + ' ' + selectedBuyer.lastName : 'انتخاب نشده'
+            }}</b>
+          </div>
+          <div class="summary-row">
+            <span>تعداد ردیف</span><b>{{ number(draft.length) }}</b>
+          </div>
+          <div class="summary-total">
+            <span>مبلغ نهایی</span><strong>{{ money(draftTotal) }}</strong>
+          </div>
+          <p class="summary-note">
+            <Info :size="16" />با صدور فاکتور، تعداد کالاها از موجودی کم می‌شود.
+          </p>
+          <p v-if="saveError" class="notice notice--error" role="alert">{{ saveError }}</p>
+          <Button :disabled="saving || !draft.length || !selectedBuyer || !!loadError" @click="save"
+            ><Receipt :size="18" />{{ saving ? 'در حال صدور…' : 'ثبت و صدور فاکتور' }}</Button
+          ><Button variant="outline" :disabled="!draft.length" @click="printDraft"
+            ><Printer :size="17" />پیش‌نمایش چاپ</Button
+          ><small class="summary-help">پیش‌نمایش، موجودی را تغییر نمی‌دهد.</small>
         </div>
-      </header>
+      </aside>
+    </div>
 
-      <section class="party-details">
-        <div class="party-heading">
-          <span>مشخصات فروشنده</span>
-          <el-button class="party-edit-button no-print" text circle aria-label="ویرایش اطلاعات فروشگاه" @click="settingsDialogVisible = true"><el-icon><Edit /></el-icon></el-button>
+    <section v-if="activeTab === 'archive'" class="panel no-print">
+      <div class="panel-heading">
+        <div>
+          <h2>بایگانی فروش</h2>
+          <p>حداکثر ۵۰۰ فاکتور اخیر، مطابق فیلترهای انتخابی</p>
         </div>
-        <div class="party-field"><b>نام:</b> {{ settings?.name || 'فروشگاه' }}</div>
-        <div class="party-field"><b>شماره تماس:</b> {{ settings?.phone || '—' }}</div>
-        <div class="party-field party-field--wide"><b>نشانی:</b> {{ settings?.address || '—' }}</div>
-      </section>
-      <section class="party-details">
-        <div class="party-heading">
-          <span>مشخصات خریدار</span>
-          <template v-if="selectedBuyer && !activeInvoice">
-            <el-button class="party-edit-button no-print" text circle aria-label="ویرایش خریدار" @click="editBuyer(selectedBuyer)"><el-icon><Edit /></el-icon></el-button>
-            <el-button class="party-edit-button no-print" text circle type="danger" aria-label="حذف خریدار" @click="deleteBuyer(selectedBuyer)"><el-icon><Delete /></el-icon></el-button>
-          </template>
-        </div>
-        <div v-if="!activeInvoice" class="party-picker no-print">
-          <el-select v-model="selectedBuyerId" filterable clearable placeholder="انتخاب خریدار" @change="applyBuyer">
-            <template #header><el-button class="new-buyer-option" text @click="openBuyerDialog()"><el-icon><Plus /></el-icon> ثبت خریدار جدید</el-button></template>
-            <el-option v-for="customer in buyers" :key="customer.id" :label="`${customer.firstName} ${customer.lastName}`" :value="customer.id" />
-          </el-select>
-        </div>
-        <div class="party-field">
-          <b>نام و نام خانوادگی:</b>
-          {{
-            activeInvoice
-              ? `${activeInvoice.buyerFirstName || ''} ${activeInvoice.buyerLastName || ''}`
-              : `${selectedBuyer?.firstName || ''} ${selectedBuyer?.lastName || ''}`
-          }}
-        </div>
-        <div class="party-field">
-          <b>کد ملی:</b> {{ activeInvoice?.buyerNationalId || selectedBuyer?.nationalId || '—' }}
-        </div>
-        <div class="party-field"><b>نشانی:</b> {{ activeInvoice?.buyerAddress || selectedBuyer?.address || '—' }}</div>
-        <div class="party-field"><b>شماره تماس:</b> {{ selectedBuyer?.phone || '—' }}</div>
-      </section>
-
-      <table class="invoice-lines">
-        <colgroup>
-          <col class="line-number" />
-          <col class="line-product" />
-          <col class="line-unit" />
-          <col class="line-quantity" />
-          <col class="line-price" />
-          <col class="line-total" />
-        </colgroup>
-        <thead>
-          <tr>
-            <th>ردیف</th>
-            <th>شرح کالا یا خدمات</th>
-            <th>واحد</th>
-            <th>تعداد</th>
-            <th>مبلغ واحد (تومان)</th>
-            <th>مبلغ کل (تومان)</th>
-            <!-- <th v-if="!activeInvoice" class="no-print">عملیات</th> -->
-          </tr>
-        </thead>
-        <tbody>
-          <tr
-            v-for="(line, index) in activeInvoice?.items || draft"
-            :key="line.id || line.productId"
-          >
-            <td class="line-number-cell">
-              <span>{{ index + 1 }}</span>
-              <el-button
-                v-if="!activeInvoice"
-                class="line-delete no-print"
-                type="danger"
-                size="small"
-                circle
-                :icon="Delete"
-                @click="draft.splice(index, 1)"
-              />
-            </td>
-            <td>{{ line.name }}</td>
-            <td>{{ line.unit }}</td>
-            <td>
-              <el-input-number
-                v-if="!activeInvoice"
-                v-model="line.quantity"
-                :min="1"
-                :max="products.find((p) => p.id === line.productId)?.stock || 999999"
-                size="small"
-                controls-position="right"
-              /><span v-else>{{ line.quantity }}</span
-              ><span v-if="!activeInvoice" class="print-value">{{ line.quantity }}</span>
-            </td>
-            <td>
-              <el-input
-                v-if="!activeInvoice"
-                :model-value="priceFormat(line.unitPrice)"
-                inputmode="numeric"
-                @input="(value: string) => setPrice(line, value)"
-              /><span v-else>{{ money(line.unitPrice) }}</span
-              ><span v-if="!activeInvoice" class="print-value">{{ money(line.unitPrice) }}</span>
-            </td>
-            <td>{{ money(line.quantity * line.unitPrice) }}</td>
-          </tr>
-          <tr v-if="!(activeInvoice?.items || draft).length" class="empty-line">
-            <td colspan="6">کالایی به فاکتور افزوده نشده است.</td>
-          </tr>
-        </tbody>
-        <tfoot>
-          <tr>
-            <td colspan="5"><b>جمع کل مبلغ قابل پرداخت</b></td>
-            <td>
-              <strong>{{ money(total) }}</strong>
-            </td>
-          </tr>
-        </tfoot>
-      </table>
-
-      <div class="invoice-notes">
-        <b>توضیحات:</b> {{ activeInvoice?.notes || selectedBuyer?.notes || '—' }}
+        <Button variant="ghost" size="sm" @click="clearFilters">پاک‌کردن فیلترها</Button>
       </div>
-      <footer class="invoice-signatures">
-        <div>مهر و امضای فروشنده</div>
-        <div>امضا و تأیید خریدار</div>
-      </footer>
-      <div class="no-print print-actions">
-        <el-button
-          v-if="!activeInvoice"
-          type="primary"
-          :loading="saving"
-          :disabled="!draft.length"
-          @click="save"
+      <form class="archive-filters panel-body" @submit.prevent="loadInvoices">
+        <label class="form-field"
+          ><span>خریدار</span
+          ><select v-model.number="archiveFilters.customerId">
+            <option :value="undefined">همه خریداران</option>
+            <option v-for="buyer in buyers" :key="buyer.id" :value="buyer.id">
+              {{ buyer.firstName }} {{ buyer.lastName }}
+            </option>
+          </select></label
+        ><label class="form-field"
+          ><span>نام یا کد ملی</span
+          ><input v-model="archiveFilters.buyer" placeholder="جست‌وجوی خریدار" /></label
+        ><label class="form-field"
+          ><span>کالا</span
+          ><input v-model="archiveFilters.product" placeholder="نام یا کد کالا" /></label
+        ><label class="form-field"
+          ><span>از تاریخ</span><input v-model="archiveFilters.from" type="date" /></label
+        ><label class="form-field"
+          ><span>تا تاریخ</span><input v-model="archiveFilters.to" type="date" /></label
+        ><Button type="submit" :disabled="archiveLoading"><Search :size="16" />جست‌وجو</Button>
+      </form>
+      <p v-if="archiveError" class="notice notice--error" role="alert">{{ archiveError }}</p>
+      <div v-if="archiveLoading" class="table-loading" role="status">در حال دریافت فاکتورها…</div>
+      <div v-else-if="invoices.length" class="archive-grid">
+        <article v-for="invoice in invoices" :key="invoice.id" class="archive-card">
+          <div class="archive-card__top">
+            <span class="invoice-icon"><Receipt :size="21" /></span
+            ><time>{{ date(invoice.createdAt) }}</time>
+          </div>
+          <b class="archive-buyer"
+            >{{ invoice.buyerFirstName || 'خریدار' }} {{ invoice.buyerLastName }}</b
+          ><span class="invoice-number">{{ invoice.number }}</span>
+          <div class="archive-amount">
+            <span>جمع فاکتور</span><strong>{{ money(invoice.total) }}</strong>
+          </div>
+          <div class="archive-card__actions">
+            <Button variant="outline" size="sm" @click="openInvoice(invoice)">مشاهده</Button
+            ><Button variant="ghost" size="sm" @click="openInvoice(invoice, true)"
+              ><Printer :size="15" />چاپ</Button
+            >
+          </div>
+        </article>
+      </div>
+      <EmptyState
+        v-else-if="!archiveError"
+        title="فاکتوری پیدا نشد"
+        description="فیلترها را تغییر دهید یا اولین فاکتور فروش را ثبت کنید."
+      />
+    </section>
+    <section v-if="activeInvoice || previewDraft" ref="paperSection" class="invoice-preview">
+      <div class="paper-toolbar no-print">
+        <div>
+          <span v-if="activeInvoice" class="badge badge--success"
+            ><Check :size="14" />فاکتور ثبت‌شده</span
+          ><span v-else class="badge badge--warning">پیش‌نویس · ثبت نشده</span>
+        </div>
+        <div>
+          <Button variant="outline" @click="printCurrent"><Printer :size="17" />چاپ فاکتور</Button
+          ><Button v-if="activeInvoice" @click="newDraft"><Plus :size="17" />فاکتور جدید</Button
+          ><Button v-else variant="ghost" @click="previewDraft = false">بستن پیش‌نمایش</Button>
+        </div>
+      </div>
+      <InvoicePaper
+        :invoice="activeInvoice || draftInvoice"
+        :settings="settings"
+        :draft="!activeInvoice"
+      />
+    </section>
+
+    <AppDialog
+      v-model:open="leaveOpen"
+      title="فاکتور هنوز ثبت نشده است"
+      width="460px"
+      @update:open="!$event && finishLeaving(false)"
+    >
+      <p>با خروج از این صفحه، اقلام فاکتور ثبت‌نشده از دست می‌روند.</p>
+      <div class="form-actions">
+        <Button variant="outline" @click="finishLeaving(false)">ادامه ویرایش</Button>
+        <Button variant="destructive" @click="finishLeaving(true)">خروج بدون ثبت</Button>
+      </div>
+    </AppDialog>
+    <AppDialog
+      v-model:open="buyerOpen"
+      :title="editingBuyerId ? 'ویرایش خریدار' : 'ثبت خریدار جدید'"
+      width="620px"
+      ><form @submit.prevent="saveBuyer">
+        <div class="form-grid">
+          <label class="form-field"
+            ><span>نام</span><input v-model="buyerForm.firstName" required maxlength="100" /></label
+          ><label class="form-field"
+            ><span>نام خانوادگی</span
+            ><input v-model="buyerForm.lastName" required maxlength="100" /></label
+          ><label class="form-field"
+            ><span>کد ملی <small>اختیاری</small></span
+            ><input v-model="buyerForm.nationalId" inputmode="numeric" maxlength="20" /></label
+          ><label class="form-field"
+            ><span>شماره تماس <small>اختیاری</small></span
+            ><input v-model="buyerForm.phone" type="tel" maxlength="30" /></label
+          ><label class="form-field full-width"
+            ><span>نشانی</span
+            ><textarea v-model="buyerForm.address" rows="2" maxlength="500" /></label
+          ><label class="form-field full-width"
+            ><span>توضیحات</span><textarea v-model="buyerForm.notes" rows="2" maxlength="1000" />
+          </label>
+        </div>
+        <p v-if="buyerError" class="notice notice--error" role="alert">{{ buyerError }}</p>
+        <div class="form-actions">
+          <Button variant="outline" @click="buyerOpen = false">انصراف</Button
+          ><Button type="submit" :disabled="buyerSaving">{{
+            buyerSaving ? 'در حال ذخیره…' : 'ذخیره خریدار'
+          }}</Button>
+        </div>
+      </form></AppDialog
+    >
+    <AppDialog
+      :open="!!buyerToDelete"
+      title="حذف خریدار"
+      width="440px"
+      @update:open="!$event && (buyerToDelete = null)"
+      ><p>
+        خریدار «{{ buyerToDelete?.firstName }} {{ buyerToDelete?.lastName }}» حذف شود؟ اطلاعات
+        فاکتورهای قبلی باقی می‌ماند.
+      </p>
+      <p v-if="deleteError" class="notice notice--error" role="alert">{{ deleteError }}</p>
+      <div class="form-actions">
+        <Button variant="outline" @click="buyerToDelete = null">انصراف</Button
+        ><Button variant="destructive" :disabled="buyerSaving" @click="deleteBuyer"
+          >تأیید حذف</Button
         >
-          ثبت و صدور فاکتور
-        </el-button>
-        <el-button @click="windowPrint">پیش‌نمایش</el-button>
-        <el-button v-if="activeInvoice" @click="newDraft">فاکتور جدید</el-button>
-      </div>
-    </article>
-  </section>
+      </div></AppDialog
+    >
+    <AppDialog v-model:open="settingsOpen" title="اطلاعات فروشگاه" width="600px"
+      ><form @submit.prevent="saveSettings">
+        <div class="form-grid">
+          <label class="form-field"
+            ><span>نام فروشگاه</span><input v-model="settingsForm.name" required /></label
+          ><label class="form-field"
+            ><span>شماره تماس</span><input v-model="settingsForm.phone" type="tel" /></label
+          ><label class="form-field full-width"
+            ><span>نشانی فروشگاه</span><textarea v-model="settingsForm.address" rows="2" /></label
+          ><label class="form-field full-width"
+            ><span>نشانی تصویر لوگو <small>اختیاری</small></span
+            ><input v-model="settingsForm.logoUrl" type="url" placeholder="https://…" dir="ltr"
+          /></label>
+        </div>
+        <p v-if="settingsError" class="notice notice--error" role="alert">{{ settingsError }}</p>
+        <div class="form-actions">
+          <Button variant="outline" @click="settingsOpen = false">انصراف</Button
+          ><Button type="submit" :disabled="settingsSaving">{{
+            settingsSaving ? 'در حال ذخیره…' : 'ذخیره اطلاعات'
+          }}</Button>
+        </div>
+      </form></AppDialog
+    >
+  </div>
 </template>
 <script setup lang="ts">
-import { computed, nextTick, onMounted, reactive, ref } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
-import { Delete, Edit, Plus } from '@element-plus/icons-vue'
+import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue'
+import { onBeforeRouteLeave } from 'vue-router'
+import {
+  Check,
+  Info,
+  Package,
+  Pencil,
+  Plus,
+  Printer,
+  Receipt,
+  Search,
+  Settings2,
+  Trash2,
+} from '@lucide/vue'
+import PageHeader from '@/components/ui/PageHeader.vue'
+import EmptyState from '@/components/ui/EmptyState.vue'
+import Button from '@/components/ui/Button.vue'
+import AppDialog from '@/components/ui/AppDialog.vue'
+import InvoicePaper from '@/components/InvoicePaper.vue'
+import { toast } from '@/lib/toast'
+import { date, money, number, parseNumber } from '@/lib/format'
+import { validateInvoiceLines } from '@/lib/invoice'
 import { productsApi } from '@/services/products'
 import { inventoryApi } from '@/services/inventory'
 import type { Buyer, Invoice, InvoiceItem, Product, StoreSettings } from '@/types'
-
-type DraftLine = InvoiceItem
-type BuyerRecord = Buyer
-
-const products = ref<Product[]>([])
-const invoices = ref<Invoice[]>([])
-const activeInvoice = ref<Invoice | null>(null)
-const settings = ref<StoreSettings | null>(null)
-const buyers = ref<BuyerRecord[]>([])
-const loading = ref(false)
-const saving = ref(false)
-const settingsSaving = ref(false)
-const buyerSaving = ref(false)
-const selectedProduct = ref<number>()
-const selectedCategoryId = ref<number>()
-const selectedBuyerId = ref<number>()
-const draft = ref<DraftLine[]>([])
-const activeTab = ref<'new' | 'archive'>('new')
-const settingsDialogVisible = ref(false)
-const buyerDialogVisible = ref(false)
-const editingBuyerId = ref<number | null>(null)
-const archiveFilters = reactive<{
-  customerId?: number
-  buyer: string
-  from?: string
-  to?: string
-  product: string
-}>({ buyer: '', product: '' })
-
+const products = ref<Product[]>([]),
+  buyers = ref<Buyer[]>([]),
+  invoices = ref<Invoice[]>([]),
+  draft = ref<Array<InvoiceItem & { priceText: string }>>([])
+const settings = ref<StoreSettings | null>(null),
+  activeInvoice = ref<Invoice | null>(null)
+const activeTab = ref<'new' | 'archive'>('new'),
+  selectedBuyerId = ref<number>(),
+  selectedCategoryId = ref<number>(),
+  selectedProductId = ref<number>()
+const loading = ref(true),
+  saving = ref(false),
+  loadError = ref(''),
+  saveError = ref('')
+const archiveLoading = ref(false),
+  archiveError = ref(''),
+  previewDraft = ref(false),
+  paperSection = ref<HTMLElement>()
+const buyerOpen = ref(false),
+  buyerSaving = ref(false),
+  buyerError = ref(''),
+  editingBuyerId = ref<number | null>(null),
+  buyerToDelete = ref<Buyer | null>(null),
+  deleteError = ref('')
+const settingsOpen = ref(false),
+  settingsSaving = ref(false),
+  settingsError = ref('')
 const buyerForm = reactive({
   firstName: '',
   lastName: '',
@@ -357,58 +428,71 @@ const buyerForm = reactive({
   notes: '',
 })
 const settingsForm = reactive({ name: '', address: '', phone: '', logoUrl: '' })
-const selectedBuyer = computed(
-  () => buyers.value.find((b) => b.id === selectedBuyerId.value) || null,
-)
-const productCategories = computed(() => {
-  const groups = new Map<number, { id: number; name: string; products: Product[] }>()
-
-  for (const product of products.value) {
-    const group = groups.get(product.categoryId) ?? {
-      id: product.categoryId,
-      name: product.category?.name || 'بدون دسته‌بندی',
-      products: [],
-    }
-
-    group.products.push(product)
-    groups.set(product.categoryId, group)
-  }
-
-  return [...groups.values()].sort((a, b) => a.name.localeCompare(b.name, 'fa'))
+const archiveFilters = reactive({
+  customerId: undefined as number | undefined,
+  buyer: '',
+  product: '',
+  from: '',
+  to: '',
 })
-const selectedCategoryProducts = computed(
-  () => productCategories.value.find((category) => category.id === selectedCategoryId.value)?.products ?? [],
+const selectedBuyer = computed(() => buyers.value.find((b) => b.id === selectedBuyerId.value))
+const productCategories = computed(() => [
+  ...new Map(products.value.map((p) => [p.categoryId, p.category])).values(),
+])
+const availableProducts = computed(() =>
+  products.value.filter(
+    (p) => selectedCategoryId.value === undefined || p.categoryId === selectedCategoryId.value,
+  ),
 )
-const total = computed(
-  () =>
-    activeInvoice.value?.total ??
-    draft.value.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0),
+const draftTotal = computed(() =>
+  draft.value.reduce((sum, line) => sum + Number(line.quantity) * line.unitPrice, 0),
 )
-const money = (v: number) => `${new Intl.NumberFormat('fa-IR').format(v)} تومان`
-const priceFormat = (v: number) => new Intl.NumberFormat('fa-IR').format(v)
-
-function setPrice(row: InvoiceItem, value: string) {
-  row.unitPrice =
-    Number(
-      value
-        .replace(/[۰-۹]/g, (d) => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d)))
-        .replace(/[٠-٩]/g, (d) => String('٠١٢٣٤٥٦٧٨٩'.indexOf(d)))
-        .replace(/\D/g, ''),
-    ) || 0
+const draftInvoice = computed<Invoice>(() => ({
+  id: 0,
+  number: 'پیش‌نویس',
+  createdAt: new Date().toISOString(),
+  buyerFirstName: selectedBuyer.value?.firstName || '',
+  buyerLastName: selectedBuyer.value?.lastName || '',
+  buyerNationalId: selectedBuyer.value?.nationalId || null,
+  buyerAddress: selectedBuyer.value?.address || null,
+  notes: selectedBuyer.value?.notes || null,
+  total: draftTotal.value,
+  items: draft.value,
+}))
+const stockOf = (id: number) => products.value.find((p) => p.id === id)?.stock || 0
+const leaveOpen = ref(false)
+let resolveLeaving: ((leave: boolean) => void) | undefined
+onBeforeRouteLeave(() => {
+  if (saving.value) return false
+  if (!draft.value.length) return true
+  return new Promise<boolean>((resolve) => {
+    resolveLeaving?.(false)
+    resolveLeaving = resolve
+    leaveOpen.value = true
+  })
+})
+function finishLeaving(leave: boolean) {
+  leaveOpen.value = false
+  resolveLeaving?.(leave)
+  resolveLeaving = undefined
 }
-
-function applyBuyer() {
-  // Buyer details are read from the selected saved record and displayed on the invoice.
+watch(activeTab, () => {
+  previewDraft.value = false
+})
+watch(buyerToDelete, () => {
+  deleteError.value = ''
+})
+function switchTab(tab: 'new' | 'archive') {
+  activeTab.value = tab
+  activeInvoice.value = null
 }
-
 function addProduct() {
-  const product = products.value.find((item) => item.id === selectedProduct.value)
+  const product = products.value.find((p) => p.id === selectedProductId.value)
   if (!product) return
-  const line = draft.value.find((item) => item.productId === product.id)
-  if (line) {
-    if (line.quantity < product.stock) line.quantity++
-    else ElMessage.warning('تعداد انتخاب‌شده از موجودی بیشتر است.')
-  } else {
+  const line = draft.value.find((l) => l.productId === product.id)
+  if ((line?.quantity || 0) + 1 > product.stock) return toast.warning('موجودی این کالا کافی نیست.')
+  if (line) line.quantity++
+  else
     draft.value.push({
       id: 0,
       productId: product.id,
@@ -416,1399 +500,532 @@ function addProduct() {
       unit: product.unit,
       quantity: 1,
       unitPrice: product.sellPrice,
+      priceText: number(product.sellPrice),
       total: product.sellPrice,
     })
-  }
-  selectedProduct.value = undefined
+  selectedProductId.value = undefined
 }
-
+function formatLinePrice(line: InvoiceItem & { priceText: string }) {
+  if (Number.isInteger(line.unitPrice) && line.unitPrice >= 0) {
+    line.priceText = number(line.unitPrice)
+  }
+}
 async function load() {
   loading.value = true
+  loadError.value = ''
   try {
-    const [productResult, storeResult, buyerResult] = await Promise.all([
+    const [p, b, s] = await Promise.all([
       productsApi.list({ page: 1, limit: 10000, isActive: true }),
-      inventoryApi.settings(),
       inventoryApi.buyers(),
+      inventoryApi.settings(),
     ])
-    products.value = productResult.data
-    settings.value = storeResult
-    buyers.value = buyerResult
-    await loadInvoices()
+    products.value = p.data
+    buyers.value = b
+    settings.value = s
     Object.assign(settingsForm, {
-      name: storeResult.name,
-      address: storeResult.address || '',
-      phone: storeResult.phone || '',
-      logoUrl: storeResult.logoUrl || '',
+      name: s.name,
+      address: s.address,
+      phone: s.phone,
+      logoUrl: s.logoUrl || '',
     })
-  } catch (error) {
-    ElMessage.error(error instanceof Error ? error.message : 'دریافت اطلاعات ناموفق بود.')
+    await loadInvoices()
+  } catch {
+    loadError.value = 'دریافت اطلاعات فروش ممکن نشد. دوباره تلاش کنید.'
   } finally {
     loading.value = false
   }
 }
-
+async function loadInvoices() {
+  archiveLoading.value = true
+  archiveError.value = ''
+  try {
+    if (archiveFilters.from && archiveFilters.to && archiveFilters.from > archiveFilters.to) {
+      archiveError.value = 'تاریخ شروع باید قبل از تاریخ پایان باشد.'
+      return
+    }
+    invoices.value = await inventoryApi.invoices(archiveFilters)
+  } catch {
+    archiveError.value = 'دریافت فاکتورها انجام نشد. دوباره جست‌وجو کنید.'
+  } finally {
+    archiveLoading.value = false
+  }
+}
+function clearFilters() {
+  Object.assign(archiveFilters, { customerId: undefined, buyer: '', product: '', from: '', to: '' })
+  void loadInvoices()
+}
+function validateDraft() {
+  return validateInvoiceLines(draft.value, stockOf)
+}
 async function save() {
-  if (
-    !draft.value.length ||
-    draft.value.some(
-      (item) => item.quantity < 1 || !Number.isInteger(item.unitPrice) || item.unitPrice < 0,
-    )
-  ) {
-    ElMessage.warning('اقلام و قیمت‌های فاکتور را بررسی کنید.')
-    return
-  }
-  if (!selectedBuyer.value) {
-    ElMessage.warning('ابتدا خریدار را انتخاب کنید یا خریدار جدید ثبت کنید.')
-    return
-  }
+  if (saving.value) return
+  saveError.value = validateDraft()
+  if (!selectedBuyer.value) saveError.value = 'خریدار فاکتور را انتخاب کنید.'
+  if (saveError.value) return
   saving.value = true
   try {
     activeInvoice.value = await inventoryApi.createInvoice({
-      buyerFirstName: selectedBuyer.value.firstName,
-      customerId: selectedBuyer.value.id,
-      buyerLastName: selectedBuyer.value.lastName,
-      buyerNationalId: selectedBuyer.value.nationalId || '',
-      buyerAddress: selectedBuyer.value.address || '',
-      notes: selectedBuyer.value.notes || '',
+      customerId: selectedBuyerId.value,
       items: draft.value.map(({ productId, quantity, unitPrice }) => ({
         productId,
         quantity,
         unitPrice,
       })),
     })
-    ElMessage.success('فاکتور ثبت شد و موجودی به‌روز شد.')
     draft.value = []
-    activeTab.value = 'new'
+    previewDraft.value = false
+    toast.success('فاکتور صادر شد و موجودی کالاها به‌روز شد.')
     await load()
     await nextTick()
-    windowPrint()
-  } catch (error) {
-    ElMessage.error(error instanceof Error ? error.message : 'ثبت فاکتور ناموفق بود.')
+    paperSection.value?.scrollIntoView({ block: 'start' })
+  } catch (e) {
+    saveError.value = e instanceof Error ? e.message : 'صدور فاکتور انجام نشد.'
   } finally {
     saving.value = false
   }
 }
-
-async function openInvoice(row: Invoice, shouldPrint = false) {
+async function openInvoice(invoice: Invoice, print = false) {
   try {
-    activeInvoice.value = await inventoryApi.invoice(Number(row.id))
-    activeTab.value = 'archive'
-    if (shouldPrint) {
-      await nextTick()
-      windowPrint()
-    }
-  } catch (error) {
-    ElMessage.error(error instanceof Error ? error.message : 'دریافت فاکتور ناموفق بود.')
+    activeInvoice.value = await inventoryApi.invoice(invoice.id)
+    previewDraft.value = false
+    await nextTick()
+    paperSection.value?.scrollIntoView({ block: 'start' })
+    if (print) await printCurrent()
+  } catch (e) {
+    toast.error(e instanceof Error ? e.message : 'دریافت فاکتور انجام نشد.')
   }
 }
-
 function newDraft() {
   activeInvoice.value = null
-  draft.value = []
-  selectedBuyerId.value = undefined
+  previewDraft.value = false
   activeTab.value = 'new'
+  saveError.value = ''
+  selectedBuyerId.value = undefined
 }
-
-function onTabChange(tab: string | number) {
-  if (tab === 'new' && activeInvoice.value) newDraft()
+async function printDraft() {
+  saveError.value = validateDraft()
+  if (saveError.value) return
+  previewDraft.value = true
+  await printCurrent()
 }
-
-function openBuyerDialog() {
-  editingBuyerId.value = null
+async function printCurrent() {
+  await nextTick()
+  await document.fonts.ready
+  window.print()
+}
+function openBuyer(buyer?: Buyer) {
+  editingBuyerId.value = buyer?.id || null
+  buyerError.value = ''
   Object.assign(buyerForm, {
-    firstName: '',
-    lastName: '',
-    nationalId: '',
-    phone: '',
-    address: '',
-    notes: '',
+    firstName: buyer?.firstName || '',
+    lastName: buyer?.lastName || '',
+    nationalId: buyer?.nationalId || '',
+    phone: buyer?.phone || '',
+    address: buyer?.address || '',
+    notes: buyer?.notes || '',
   })
-  buyerDialogVisible.value = true
+  buyerOpen.value = true
 }
-
-function editBuyer(buyer: BuyerRecord) {
-  editingBuyerId.value = buyer.id
-  Object.assign(buyerForm, {
-    firstName: buyer.firstName,
-    lastName: buyer.lastName,
-    nationalId: buyer.nationalId || '',
-    phone: buyer.phone || '',
-    address: buyer.address || '',
-    notes: buyer.notes || '',
-  })
-  buyerDialogVisible.value = true
-}
-
-async function deleteBuyer(buyer: BuyerRecord) {
-  try {
-    await ElMessageBox.confirm(
-      `خریدار «${buyer.firstName} ${buyer.lastName}» حذف شود؟`,
-      'حذف خریدار',
-      { type: 'warning', confirmButtonText: 'حذف', cancelButtonText: 'انصراف' },
-    )
-    await inventoryApi.deleteBuyer(buyer.id)
-    buyers.value = buyers.value.filter((item) => item.id !== buyer.id)
-    if (selectedBuyerId.value === buyer.id) selectedBuyerId.value = undefined
-    ElMessage.success('خریدار حذف شد.')
-  } catch (error) {
-    if (error !== 'cancel' && error !== 'close')
-      ElMessage.error(error instanceof Error ? error.message : 'حذف خریدار ناموفق بود.')
-  }
-}
-
 async function saveBuyer() {
+  if (buyerSaving.value) return
+  buyerError.value = ''
   if (!buyerForm.firstName.trim() || !buyerForm.lastName.trim()) {
-    ElMessage.warning('نام و نام خانوادگی خریدار الزامی است.')
+    buyerError.value = 'نام و نام خانوادگی الزامی است.'
     return
   }
   buyerSaving.value = true
-  const editing = editingBuyerId.value !== null
   try {
-    const saved = editingBuyerId.value
+    const buyer = editingBuyerId.value
       ? await inventoryApi.updateBuyer(editingBuyerId.value, { ...buyerForm })
       : await inventoryApi.createBuyer({ ...buyerForm })
-    const existingIndex = buyers.value.findIndex((buyer) => buyer.id === saved.id)
-    if (existingIndex === -1) buyers.value.push(saved)
-    else buyers.value[existingIndex] = saved
-    selectedBuyerId.value = saved.id
-    buyerDialogVisible.value = false
-    editingBuyerId.value = null
-    ElMessage.success(editing ? 'اطلاعات خریدار ویرایش شد.' : 'خریدار ثبت و انتخاب شد.')
-  } catch (error) {
-    ElMessage.error(error instanceof Error ? error.message : 'ثبت خریدار ناموفق بود.')
+    const index = buyers.value.findIndex((b) => b.id === buyer.id)
+    if (index < 0) buyers.value.push(buyer)
+    else buyers.value[index] = buyer
+    selectedBuyerId.value = buyer.id
+    buyerOpen.value = false
+    toast.success('اطلاعات خریدار ذخیره شد.')
+  } catch (e) {
+    buyerError.value = e instanceof Error ? e.message : 'ذخیره خریدار انجام نشد.'
   } finally {
     buyerSaving.value = false
   }
 }
-
+async function deleteBuyer() {
+  if (!buyerToDelete.value || buyerSaving.value) return
+  buyerSaving.value = true
+  deleteError.value = ''
+  try {
+    const id = buyerToDelete.value.id
+    await inventoryApi.deleteBuyer(id)
+    buyers.value = buyers.value.filter((b) => b.id !== id)
+    if (selectedBuyerId.value === id) selectedBuyerId.value = undefined
+    buyerToDelete.value = null
+    toast.success('خریدار حذف شد.')
+  } catch (e) {
+    deleteError.value = e instanceof Error ? e.message : 'حذف خریدار انجام نشد.'
+  } finally {
+    buyerSaving.value = false
+  }
+}
 async function saveSettings() {
+  if (settingsSaving.value) return
+  settingsError.value = ''
+  if (!settingsForm.name.trim()) {
+    settingsError.value = 'نام فروشگاه الزامی است.'
+    return
+  }
   settingsSaving.value = true
   try {
-    settings.value = await inventoryApi.saveSettings(settingsForm)
-    settingsDialogVisible.value = false
-    ElMessage.success('اطلاعات فروشگاه ذخیره شد.')
-  } catch (error) {
-    ElMessage.error(error instanceof Error ? error.message : 'ذخیره اطلاعات فروشگاه ناموفق بود.')
+    settings.value = await inventoryApi.saveSettings({ ...settingsForm })
+    settingsOpen.value = false
+    toast.success('اطلاعات فروشگاه ذخیره شد.')
+  } catch (e) {
+    settingsError.value = e instanceof Error ? e.message : 'ذخیره اطلاعات انجام نشد.'
   } finally {
     settingsSaving.value = false
   }
 }
-
-function windowPrint() {
-  window.print()
-}
-
-async function loadInvoices() {
-  try {
-    invoices.value = await inventoryApi.invoices(archiveFilters)
-  } catch (error) {
-    ElMessage.error(error instanceof Error ? error.message : 'دریافت بایگانی فاکتورها ناموفق بود.')
-  }
-}
-
-function clearArchiveFilters() {
-  Object.assign(archiveFilters, {
-    customerId: undefined,
-    buyer: '',
-    from: undefined,
-    to: undefined,
-    product: '',
-  })
-  void loadInvoices()
-}
-
 onMounted(load)
 </script>
 <style scoped>
-.invoice-page {
-  --invoice-accent: var(--el-color-primary, #409eff);
-  --invoice-radius: 18px;
-  display: grid;
-  gap: 22px;
-  min-width: 0;
-  color: var(--el-text-color-primary);
-  padding: 4px 2px 28px;
-}
-
-/* Page heading */
-.toolbar {
-  position: relative;
-  isolation: isolate;
+.invoice-toolbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 20px;
-  overflow: hidden;
-  padding: 25px 28px;
-  border: 1px solid var(--el-border-color-lighter);
-  border-radius: 22px;
-  background:
-    radial-gradient(
-      ellipse at 100% 0%,
-      color-mix(in srgb, var(--invoice-accent) 18%, transparent),
-      transparent 48%
-    ),
-    var(--el-bg-color-overlay, var(--el-bg-color));
-  box-shadow: 0 8px 28px rgb(0 0 0 / 5%);
+  gap: 16px;
 }
-.toolbar::before {
-  position: absolute;
-  z-index: -1;
-  top: -48px;
-  right: -34px;
-  width: 170px;
-  height: 170px;
-  border: 1px solid color-mix(in srgb, var(--invoice-accent) 24%, transparent);
-  border-radius: 50%;
-  content: '';
+.invoice-toolbar > span {
+  font-size: 11px;
 }
-.toolbar h2 {
-  display: flex;
-  align-items: center;
-  gap: 11px;
-  margin: 0 0 8px;
-  font-size: clamp(20px, 2vw, 27px);
-  font-weight: 800;
-  letter-spacing: -0.5px;
-}
-.toolbar h2::before {
-  display: inline-block;
-  width: 5px;
-  height: 29px;
-  border-radius: 8px;
-  background: var(--invoice-accent);
-  content: '';
-}
-.toolbar p {
-  margin: 0;
-  color: var(--el-text-color-secondary);
-  font-size: 13px;
-  line-height: 1.9;
-}
-
-/* Cards and section headers */
-.invoice-page :deep(.el-card) {
-  overflow: hidden;
-  border: 1px solid var(--el-border-color-lighter);
-  border-radius: var(--invoice-radius);
-  background: var(--el-bg-color-overlay, var(--el-bg-color));
-  box-shadow: 0 5px 20px rgb(0 0 0 / 3%);
-}
-.invoice-page :deep(.el-card__header) {
-  padding: 18px 22px;
-  border-bottom: 1px solid var(--el-border-color-lighter);
-  background: color-mix(in srgb, var(--el-fill-color-light) 60%, transparent);
-}
-.invoice-page :deep(.el-card__header b) {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 14px;
-  font-weight: 800;
-}
-.invoice-page :deep(.el-card__header b::before) {
-  width: 8px;
-  height: 8px;
-  border-radius: 3px;
-  background: var(--invoice-accent);
-  content: '';
-}
-.invoice-page :deep(.el-card__body) {
-  padding: 22px;
-}
-
-/* Forms */
-.invoice-page :deep(.el-form--inline) {
+.invoice-editor {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 4px 18px;
+  grid-template-columns: minmax(0, 1fr) 285px;
+  gap: 24px;
+  align-items: start;
 }
-.invoice-page :deep(.el-form--inline .el-form-item) {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
+.invoice-steps {
+  display: grid;
+  gap: 24px;
   min-width: 0;
-  margin: 0 0 13px;
 }
-.invoice-page :deep(.el-form-item__label) {
-  display: block;
-  width: auto !important;
-  padding-bottom: 7px;
-  color: var(--el-text-color-regular);
-  font-size: 12px;
+.step-heading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.step-heading h2 {
+  font-size: 16px;
+}
+.step-number {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  background: var(--accent);
+  color: var(--primary);
   font-weight: 700;
-  line-height: 1.7;
+  flex-shrink: 0;
 }
-.invoice-page :deep(.el-form--inline .el-form-item__content) {
-  display: block;
+.buyer-preview {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px;
+  margin-top: 16px;
+  border-radius: 10px;
+  background: var(--muted);
+}
+.buyer-preview > div {
   flex: 1;
   min-width: 0;
 }
-.invoice-page :deep(.el-input__wrapper),
-.invoice-page :deep(.el-select__wrapper),
-.invoice-page :deep(.el-textarea__inner) {
-  min-height: 42px;
-  border-radius: 11px;
-  background: var(--el-fill-color-blank);
-  box-shadow: 0 0 0 1px var(--el-border-color) inset;
-  transition:
-    box-shadow 0.18s ease,
-    background 0.18s ease;
+.buyer-preview b {
+  font-size: 12px;
 }
-.invoice-page :deep(.el-input__wrapper:hover),
-.invoice-page :deep(.el-select__wrapper:hover) {
-  box-shadow: 0 0 0 1px var(--el-border-color-darker) inset;
+.buyer-preview p {
+  margin: 4px 0 0;
+  font-size: 11px;
+  color: var(--muted-foreground);
+  overflow-wrap: anywhere;
 }
-.invoice-page :deep(.el-input__wrapper.is-focus),
-.invoice-page :deep(.el-select__wrapper.is-focused),
-.invoice-page :deep(.el-textarea__inner:focus) {
-  box-shadow:
-    0 0 0 1px var(--invoice-accent) inset,
-    0 0 0 3px color-mix(in srgb, var(--invoice-accent) 12%, transparent);
-}
-.invoice-page :deep(.el-input__inner),
-.invoice-page :deep(.el-select__placeholder),
-.invoice-page :deep(.el-select__selected-item) {
-  font-size: 13px;
-}
-.invoice-page :deep(.el-button) {
-  min-height: 38px;
-  border-radius: 10px;
-  font-weight: 700;
-  transition:
-    transform 0.18s ease,
-    box-shadow 0.18s ease;
-}
-.invoice-page :deep(.el-button:not(.is-disabled):hover) {
-  transform: translateY(-1px);
-}
-.invoice-page :deep(.el-button--primary) {
-  box-shadow: 0 5px 13px color-mix(in srgb, var(--invoice-accent) 22%, transparent);
-}
-.toolbar :deep(.el-button) {
-  min-height: 44px;
-  padding-inline: 22px;
-}
-
-/* Product picker */
 .product-adder {
-  padding: 4px;
-}
-.product-adder h3,
-.archive-panel-heading h3 {
-  margin: 0;
-  font-size: 15px;
-  font-weight: 800;
-}
-.add-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 15px;
-  margin-top: 5px;
-  border: 1px dashed var(--el-border-color);
-  border-radius: 14px;
-  background: var(--el-fill-color-lighter);
-}
-.add-row :deep(.el-select) {
-  width: min(100%, 420px) !important;
-}
-.add-row :deep(.el-button) {
-  flex-shrink: 0;
-}
-
-/* Invoice preview / print paper */
-.paper {
-  position: relative;
   display: grid;
-  gap: 20px;
-  min-width: 0;
-  padding: 30px;
-  overflow: hidden;
-  border: 1px solid var(--el-border-color-lighter);
-  border-radius: 20px;
-  background: var(--el-bg-color-overlay, var(--el-bg-color));
-  box-shadow: 0 10px 32px rgb(0 0 0 / 6%);
+  grid-template-columns: 1fr 1.6fr auto;
+  align-items: end;
+  gap: 12px;
 }
-.paper::before {
-  position: absolute;
-  inset: 0 0 auto;
-  height: 5px;
-  background: linear-gradient(
-    90deg,
-    var(--invoice-accent),
-    color-mix(in srgb, var(--invoice-accent) 25%, #fff)
-  );
-  content: '';
+.draft-lines {
+  padding: 0 24px 24px;
 }
-.paper-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 20px;
-  padding: 4px 0 22px;
-  border-bottom: 2px solid var(--el-border-color);
-}
-.brand {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  min-width: 0;
-}
-.brand img,
-.logo-placeholder {
-  display: grid;
-  flex: 0 0 78px;
-  width: 78px;
-  height: 72px;
-  object-fit: contain;
-  border-radius: 13px;
-}
-.brand img {
-  padding: 5px;
-  border: 1px solid var(--el-border-color-lighter);
-}
-.logo-placeholder {
-  place-items: center;
-  border: 1px dashed var(--el-border-color);
-  background: var(--el-fill-color-lighter);
-  color: var(--el-text-color-secondary);
-  font-size: 12px;
-}
-.brand h1 {
-  margin: 0 0 7px;
-  font-size: 22px;
-  font-weight: 900;
-  letter-spacing: -0.4px;
-}
-.brand div div {
-  margin-top: 4px;
-  color: var(--el-text-color-secondary);
-  font-size: 12px;
-  line-height: 1.8;
-}
-.invoice-meta {
-  display: grid;
-  gap: 8px;
-  min-width: 150px;
-  padding: 14px 16px;
-  border: 1px solid color-mix(in srgb, var(--invoice-accent) 22%, var(--el-border-color));
-  border-radius: 13px;
-  background: color-mix(in srgb, var(--invoice-accent) 6%, var(--el-bg-color));
-  text-align: right;
-  font-size: 12px;
-}
-.invoice-meta b {
-  margin-bottom: 2px;
-  color: var(--invoice-accent);
-  font-size: 17px;
-}
-.invoice-meta span {
-  color: var(--el-text-color-regular);
-}
-.buyer {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 11px 20px;
-  padding: 16px 18px;
-  border: 1px solid var(--el-border-color-lighter);
-  border-radius: 13px;
-  background: var(--el-fill-color-lighter);
-  font-size: 12px;
-}
-.buyer b {
-  grid-column: 1 / -1;
-  padding-bottom: 9px;
-  border-bottom: 1px solid var(--el-border-color-lighter);
-  font-size: 13px;
-  font-weight: 800;
-}
-.buyer span {
-  overflow-wrap: anywhere;
-  line-height: 1.8;
-}
-.buyer span::first-letter {
-  color: var(--el-text-color-secondary);
-}
-.invoice-page :deep(.line-items) {
-  width: 100%;
-  overflow: hidden;
+.draft-line {
+  padding: 18px;
+  background: var(--background);
+  border: 1px solid var(--border);
   border-radius: 12px;
-  --el-table-border-color: var(--el-border-color-lighter);
-  --el-table-header-bg-color: var(--el-fill-color-light);
-  --el-table-row-hover-bg-color: var(--el-fill-color-lighter);
+  margin-bottom: 12px;
 }
-.invoice-page :deep(.line-items th.el-table__cell) {
-  height: 46px;
-  color: var(--el-text-color-primary);
-  font-size: 12px;
-  font-weight: 800;
+.draft-line:last-child {
+  margin: 0;
 }
-.invoice-page :deep(.line-items td.el-table__cell) {
-  padding: 11px 0;
-  font-size: 12px;
-}
-.invoice-page :deep(.line-items .cell) {
-  line-height: 1.8;
-}
-.invoice-page :deep(.line-items .el-input__wrapper) {
-  min-height: 34px;
-  padding-inline: 8px;
-}
-.invoice-page :deep(.line-items .el-input-number) {
-  width: 100%;
-}
-.invoice-page :deep(.line-items .el-input-number .el-input__wrapper) {
-  padding-inline: 7px;
-}
-.total {
+.draft-line__head {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 20px;
-  padding: 17px 20px;
-  border: 1px solid color-mix(in srgb, var(--invoice-accent) 25%, var(--el-border-color));
-  border-radius: 13px;
-  background: color-mix(in srgb, var(--invoice-accent) 7%, var(--el-bg-color));
-  font-size: 14px;
-}
-.total b {
-  font-weight: 800;
-}
-.total strong {
-  color: var(--invoice-accent);
-  font-size: 21px;
-  font-weight: 900;
-  white-space: nowrap;
-}
-.notes {
-  min-height: 48px;
-  padding: 13px 15px;
-  border-right: 3px solid var(--el-border-color);
-  border-radius: 7px;
-  background: var(--el-fill-color-lighter);
-  font-size: 12px;
-  line-height: 1.9;
-  overflow-wrap: anywhere;
-}
-.notes b {
-  margin-left: 7px;
-}
-.signatures {
-  display: flex;
-  justify-content: space-around;
-  gap: 28px;
-  margin-top: 22px;
-}
-.signatures div {
-  width: 36%;
-  height: 86px;
-  padding-top: 11px;
-  border-top: 1px solid var(--el-border-color);
-  color: var(--el-text-color-regular);
-  text-align: center;
-  font-size: 12px;
-  font-weight: 700;
-}
-.print-actions {
-  display: flex;
-  justify-content: center;
-  flex-wrap: wrap;
   gap: 10px;
-  padding-top: 6px;
+  margin-bottom: 16px;
 }
-
-/* Saved invoices table */
-.invoice-page :deep(.el-table) {
-  --el-table-border-color: var(--el-border-color-lighter);
+.draft-line__head > div {
+  flex: 1;
 }
-.invoice-page :deep(.el-table th.el-table__cell) {
-  color: var(--el-text-color-primary);
-  font-size: 12px;
-  font-weight: 800;
+.draft-line__head b {
+  font-size: 13px;
 }
-.invoice-page :deep(.el-table td.el-table__cell) {
-  font-size: 12px;
+.draft-line__head small {
+  display: block;
+  font-size: 10px;
+  color: var(--muted-foreground);
+  margin-top: 4px;
 }
-.invoice-page :deep(.el-table__row) {
-  cursor: pointer;
+.line-counter {
+  display: grid;
+  place-items: center;
+  width: 27px;
+  height: 27px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 11px;
 }
-.invoice-page :deep(.el-table__row:hover > td.el-table__cell) {
-  background: var(--el-fill-color-light);
+.draft-line__fields {
+  display: grid;
+  grid-template-columns: 90px minmax(100px, 1fr) minmax(110px, 1fr);
+  align-items: end;
+  gap: 14px;
 }
-
-/* Invoice tabs, buyer selection and dialogs */
-.invoice-tabs {
-  min-width: 0;
+.draft-line__fields .form-field {
+  font-size: 11px;
 }
-.invoice-tabs :deep(.el-tabs__header) {
-  margin-bottom: 18px;
+.line-total {
+  padding-bottom: 10px;
+  text-align: end;
 }
-.invoice-tabs :deep(.el-tabs__nav-wrap::after) {
-  height: 1px;
-  background: var(--el-border-color-lighter);
+.line-total small {
+  display: block;
+  color: var(--muted-foreground);
+  font-size: 10px;
+  margin-bottom: 6px;
 }
-.invoice-tabs :deep(.el-tabs__item) {
-  height: 48px;
-  font-weight: 800;
+.line-total strong {
+  font-size: 13px;
 }
-.toolbar-actions {
+.invoice-summary {
+  position: sticky;
+  top: 24px;
+}
+.summary-row {
   display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-.invoice-form-toolbar {
-  display: flex;
-  align-items: center;
   justify-content: space-between;
   gap: 14px;
-  flex-wrap: wrap;
-}
-.invoice-form-toolbar .el-form-item {
-  margin-bottom: 0;
-}
-.selected-buyer {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px 22px;
-  padding: 13px 15px;
-  margin-top: 10px;
-  border: 1px solid var(--el-border-color-lighter);
-  border-radius: 12px;
-  background: var(--el-fill-color-lighter);
+  margin-bottom: 18px;
   font-size: 12px;
-  line-height: 1.9;
+}
+.summary-row span {
+  color: var(--muted-foreground);
+}
+.summary-row b {
+  text-align: end;
+}
+.summary-total {
+  padding: 22px 0;
+  border-block: 1px dashed var(--border);
+}
+.summary-total span {
+  color: var(--muted-foreground);
+  font-size: 11px;
+}
+.summary-total strong {
+  display: block;
+  font-size: 23px;
+  color: var(--primary);
+  margin-top: 8px;
+  overflow-wrap: anywhere;
+}
+.summary-note {
+  display: flex;
+  align-items: start;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--muted-foreground);
+  margin: 20px 0;
+}
+.invoice-summary .button {
+  width: 100%;
+  margin-top: 10px;
+}
+.summary-help {
+  display: block;
+  text-align: center;
+  font-size: 10px;
+  color: var(--muted-foreground);
+  margin-top: 12px;
 }
 .archive-filters {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
-  gap: 10px;
-  margin-bottom: 18px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  align-items: end;
+  border-bottom: 1px solid var(--border);
 }
-.archive-panel {
-  padding: 6px 4px;
-}
-.archive-panel-heading {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+.archive-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 16px;
-  margin-bottom: 16px;
-}
-.archive-panel-heading p {
-  margin: 5px 0 0;
-  color: var(--el-text-color-secondary);
-  font-size: 12px;
-}
-.invoice-archive-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(225px, 1fr));
-  gap: 14px;
-  min-height: 140px;
-}
-.archive-invoice-card {
-  display: grid;
-  gap: 14px;
-  padding: 16px;
-  border: 1px solid var(--el-border-color-lighter);
-  border-radius: 14px;
-  background: var(--el-bg-color);
-  box-shadow: 0 5px 16px rgb(0 0 0 / 4%);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-.archive-invoice-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 9px 20px rgb(0 0 0 / 8%);
-}
-.archive-card-topline,
-.archive-card-buyer,
-.archive-card-total,
-.archive-card-actions {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-}
-.archive-card-topline {
-  padding-bottom: 11px;
-  border-bottom: 1px solid var(--el-border-color-lighter);
-  color: var(--el-text-color-secondary);
-  font-size: 12px;
-}
-.archive-card-topline span {
-  color: var(--invoice-accent);
-  font-weight: 800;
-}
-.archive-card-buyer,
-.archive-card-total {
-  font-size: 12px;
-}
-.archive-card-buyer span,
-.archive-card-total span {
-  color: var(--el-text-color-secondary);
-}
-.archive-card-buyer strong {
-  overflow: hidden;
-  text-align: left;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.archive-card-total strong {
-  color: var(--invoice-accent);
-  font-size: 13px;
-}
-.archive-card-actions {
-  justify-content: flex-end;
-  padding-top: 2px;
-}
-.dialog-form :deep(.el-form-item) {
-  margin-bottom: 16px;
-}
-.dialog-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0 16px;
-}
-
-@media (max-width: 900px) {
-  .invoice-page :deep(.el-form--inline) {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-  .paper {
-    padding: 22px;
-  }
-  .paper-head {
-    align-items: flex-start;
-  }
-  .brand h1 {
-    font-size: 19px;
-  }
-}
-@media (max-width: 600px) {
-  .invoice-page {
-    gap: 15px;
-  }
-  .toolbar {
-    align-items: flex-start;
-    flex-direction: column;
-    padding: 20px;
-    border-radius: 16px;
-  }
-  .toolbar-actions {
-    width: 100%;
-    flex-direction: column;
-    align-items: stretch;
-  }
-  .toolbar-actions :deep(.el-button) {
-    width: 100%;
-    margin-left: 0;
-  }
-  .invoice-form-toolbar {
-    align-items: stretch;
-    flex-direction: column;
-  }
-  .invoice-form-toolbar :deep(.el-select) {
-    width: 100% !important;
-  }
-  .dialog-grid {
-    grid-template-columns: minmax(0, 1fr);
-  }
-  .invoice-page :deep(.el-card__body) {
-    padding: 15px;
-  }
-  .invoice-page :deep(.el-card__header) {
-    padding: 15px;
-  }
-  .invoice-page :deep(.el-form--inline) {
-    grid-template-columns: minmax(0, 1fr);
-  }
-  .add-row {
-    align-items: stretch;
-    flex-direction: column;
-    padding: 12px;
-  }
-  .add-row :deep(.el-select) {
-    width: 100% !important;
-  }
-  .add-row :deep(.el-button) {
-    width: 100%;
-  }
-  .paper {
-    gap: 15px;
-    padding: 16px;
-    border-radius: 15px;
-  }
-  .paper-head {
-    flex-direction: column;
-  }
-  .brand {
-    align-items: flex-start;
-  }
-  .brand img,
-  .logo-placeholder {
-    flex-basis: 58px;
-    width: 58px;
-    height: 58px;
-  }
-  .brand h1 {
-    font-size: 17px;
-  }
-  .invoice-meta {
-    width: 100%;
-  }
-  .buyer {
-    grid-template-columns: minmax(0, 1fr);
-    padding: 13px;
-  }
-  .buyer b {
-    grid-column: auto;
-  }
-  .total {
-    align-items: flex-start;
-    flex-direction: column;
-    gap: 8px;
-    padding: 14px;
-  }
-  .total strong {
-    font-size: 19px;
-  }
-  .signatures {
-    gap: 18px;
-  }
-  .signatures div {
-    width: 50%;
-  }
-}
-
-@media print {
-  @page {
-    size: A5 portrait;
-    margin: 8mm;
-  }
-  :global(html),
-  :global(body) {
-    width: 100%;
-    margin: 0 !important;
-    padding: 0 !important;
-    background: #fff !important;
-  }
-  .invoice-page {
-    display: block;
-    padding: 0;
-    color: #111;
-    font-family: Arial, Tahoma, sans-serif;
-  }
-  .no-print {
-    display: none !important;
-  }
-  .paper {
-    display: block;
-    overflow: visible;
-    padding: 0;
-    border: 0;
-    border-radius: 0;
-    background: #fff !important;
-    color: #111 !important;
-    box-shadow: none;
-  }
-  .paper::before {
-    display: none;
-  }
-  .paper > * {
-    margin-bottom: 9px;
-  }
-  .paper-head {
-    padding-bottom: 12px;
-    border-color: #333;
-  }
-  .brand h1 {
-    font-size: 17px;
-  }
-  .brand img,
-  .logo-placeholder {
-    width: 58px;
-    height: 54px;
-    flex-basis: 58px;
-  }
-  .brand div div,
-  .invoice-meta,
-  .buyer,
-  .notes,
-  .signatures div {
-    color: #111 !important;
-    font-size: 9px;
-  }
-  .invoice-meta {
-    min-width: 125px;
-    padding: 8px 10px;
-    border-color: #999;
-    background: #fff !important;
-  }
-  .invoice-meta b {
-    color: #111 !important;
-    font-size: 13px;
-  }
-  .buyer {
-    padding: 9px 11px;
-    border-color: #999;
-    background: #fff !important;
-    gap: 5px 12px;
-  }
-  .buyer b {
-    padding-bottom: 5px;
-  }
-  .invoice-page :deep(.el-table),
-  .invoice-page :deep(.el-table__inner-wrapper),
-  .invoice-page :deep(.el-table tr),
-  .invoice-page :deep(.el-table th),
-  .invoice-page :deep(.el-table td) {
-    color: #111 !important;
-    background: #fff !important;
-    border-color: #777 !important;
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
-  }
-  .invoice-page :deep(.line-items th.el-table__cell) {
-    height: 30px;
-    font-size: 9px;
-  }
-  .invoice-page :deep(.line-items td.el-table__cell) {
-    padding: 4px 0;
-    font-size: 9px;
-  }
-  .invoice-page :deep(.line-items .cell) {
-    line-height: 1.5;
-  }
-  .invoice-page :deep(.line-items .el-input),
-  .invoice-page :deep(.line-items .el-input-number) {
-    display: none !important;
-  }
-  .total {
-    margin-top: 8px;
-    padding: 10px 12px;
-    border-color: #777;
-    border-radius: 5px;
-    background: #fff !important;
-  }
-  .total strong {
-    color: #111 !important;
-    font-size: 15px;
-  }
-  .notes {
-    min-height: 28px;
-    padding: 7px 9px;
-    border-color: #777;
-    background: #fff !important;
-  }
-  .signatures {
-    margin-top: 22px;
-  }
-  .signatures div {
-    height: 58px;
-    border-color: #777;
-  }
-  .line-items,
-  .buyer,
-  .total,
-  .notes,
-  .signatures {
-    break-inside: avoid;
-  }
-  .invoice-page :deep(.el-table__header-wrapper),
-  .invoice-page :deep(.el-table__body-wrapper) {
-    overflow: visible !important;
-  }
-}
-
-/* Official invoice layout */
-.paper {
-  width: min(100%, 980px);
-  margin: 0 auto;
   padding: 24px;
-  gap: 0;
-  overflow: visible;
-  border: 1px solid var(--el-text-color-primary);
-  border-radius: 4px;
-  background: var(--el-bg-color);
-  box-shadow: none;
-  color: var(--el-text-color-primary);
-  font-size: 12px;
 }
-.paper::before {
-  display: none;
+.archive-card {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 20px;
 }
-.invoice-header {
-  display: grid;
-  grid-template-columns: 1fr 1.4fr 1fr;
-  align-items: start;
-  gap: 12px;
-  padding-bottom: 10px;
-}
-.invoice-reference,
-.invoice-store-details {
-  display: grid;
-  gap: 5px;
-  font-size: 11px;
-  line-height: 1.7;
-}
-.invoice-reference {
-  text-align: right;
-
-}
-.invoice-store-details {
-  text-align: left;
-}
-.invoice-title {
+.archive-card__top {
   display: flex;
+  justify-content: space-between;
   align-items: center;
-  justify-content: center;
-  gap: 10px;
-  text-align: center;
 }
-.invoice-title h1 {
-  margin: 0 0 5px;
-  font-size: 17px;
-  font-weight: 800;
+.archive-card time {
+  color: var(--muted-foreground);
+  font-size: 11px;
 }
-.invoice-title strong {
-  font-size: 12px;
-}
-.invoice-title img,
-.invoice-logo {
-  width: 42px;
-  height: 42px;
-  object-fit: contain;
-}
-.invoice-logo {
+.invoice-icon {
   display: grid;
   place-items: center;
-  border: 1px dashed currentColor;
-  font-size: 9px;
-}
-.party-details {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0;
-  margin-top: 8px;
-  border: 1px solid currentColor;
-  border-bottom: 0;
-}
-.party-details > * {
-  min-width: 0;
-  padding: 5px 8px;
-  border-bottom: 1px solid currentColor;
-  overflow-wrap: anywhere;
-}
-.party-details > :nth-child(even) {
-  border-left: 1px solid currentColor;
-}
-.party-heading {
-  grid-column: 1 / -1;
-  font-weight: 800;
-  text-align: center;
-}
-.invoice-lines {
-  width: 100%;
-  margin-top: 5px;
-  border-collapse: collapse;
-  table-layout: fixed;
-  text-align: center;
-}
-.invoice-lines th,
-.invoice-lines td {
-  padding: 6px 5px;
-  border: 1px solid currentColor;
-  vertical-align: middle;
-  overflow-wrap: anywhere;
-}
-.invoice-lines th {
-  background: var(--el-fill-color-light);
-  font-weight: 800;
-}
-.invoice-lines tbody tr {
-  break-inside: avoid;
-  page-break-inside: avoid;
-}
-.invoice-lines .line-number {
-  width: 6%;
-}
-.invoice-lines .line-product {
-  width: 31%;
-}
-.invoice-lines .line-unit {
-  width: 10%;
-}
-.invoice-lines .line-quantity {
-  width: 11%;
-}
-.invoice-lines .line-price,
-.invoice-lines .line-total {
-  width: 26%;
-}
-.line-number-cell {
-  white-space: nowrap;
-}
-.line-delete {
-  width: 25px;
-  height: 25px;
-  margin-inline-start: 3px;
-  padding: 0;
-  vertical-align: middle;
-}
-.invoice-lines :deep(.el-input-number),
-.invoice-lines :deep(.el-input) {
-  width: 100%;
-}
-.invoice-lines :deep(.el-input__wrapper) {
-  min-height: 30px;
-  padding-inline: 5px;
-  border-radius: 3px;
-}
-.invoice-lines :deep(.el-input-number .el-input__wrapper) {
-  padding-inline: 4px;
-}
-.print-value {
-  display: none;
-}
-.invoice-lines tfoot td {
-  font-size: 13px;
-  font-weight: 700;
-}
-.invoice-lines tfoot strong {
-  white-space: nowrap;
-}
-.empty-line td {
-  height: 45px;
-  color: var(--el-text-color-secondary);
-}
-.invoice-notes {
-  min-height: 42px;
-  padding: 8px;
-  border: 1px solid currentColor;
-  border-top: 0;
-  line-height: 1.8;
-  overflow-wrap: anywhere;
-}
-.invoice-signatures {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  min-height: 72px;
-  border: 1px solid currentColor;
-  border-top: 0;
-}
-.invoice-signatures div {
-  padding: 10px;
-  text-align: center;
-  font-weight: 700;
-}
-.invoice-signatures div + div {
-  border-right: 1px solid currentColor;
-}
-
-@media (max-width: 640px) {
-  .paper {
-    padding: 14px;
-    overflow-x: auto;
-  }
-  .invoice-header {
-    grid-template-columns: 1fr;
-    text-align: center;
-  }
-  .invoice-reference,
-  .invoice-store-details {
-    text-align: center;
-  }
-  .invoice-lines {
-    min-width: 650px;
-  }
-}
-
-/* Invoice editor workspace */
-.party-heading {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-}
-.party-edit-button { margin: -6px 0 -6px -4px; }
-.party-picker {
-  grid-column: 1 / -1;
-  padding: 7px 8px;
-  border-bottom: 1px solid currentColor;
-}
-.party-picker :deep(.el-select) { width: 100%; }
-.new-buyer-option { width: 100%; justify-content: flex-start; }
-.new-buyer-option :deep(.el-icon) { margin-left: 5px; }
-.party-field { min-height: 34px; }
-.party-field--wide { grid-column: 1 / -1; border-left: 0 !important; }
-.party-details > .party-field:nth-of-type(odd) { border-left: 1px solid currentColor; }
-
-.invoice-tabs :deep(.el-tabs__header) {
-  padding: 5px;
-  border: 1px solid var(--el-border-color-lighter);
-  border-radius: 14px;
-  background: var(--el-fill-color-light);
-}
-.invoice-tabs :deep(.el-tabs__nav-wrap::after) { display: none; }
-.invoice-tabs :deep(.el-tabs__nav) { width: 100%; gap: 4px; }
-.invoice-tabs :deep(.el-tabs__active-bar) { display: none; }
-.invoice-tabs :deep(.el-tabs__item) {
-  flex: 1;
-  height: 42px;
+  width: 38px;
+  height: 38px;
+  background: var(--accent);
+  color: var(--primary);
   border-radius: 10px;
-  color: var(--el-text-color-secondary);
-  text-align: center;
-  transition: 0.2s ease;
 }
-.invoice-tabs :deep(.el-tabs__item.is-active) {
-  background: var(--el-bg-color);
-  color: var(--el-color-primary);
-  box-shadow: 0 3px 10px rgb(0 0 0 / 8%);
+.archive-buyer {
+  display: block;
+  font-size: 14px;
+  margin-top: 18px;
 }
-.invoice-tabs :deep(.el-tabs__content) { padding: 2px; }
-.add-row { align-items: stretch; }
-.add-row :deep(.el-select) { min-width: 0; }
-.add-row .category-picker { width: min(100%, 190px) !important; }
-.add-row .product-picker { flex: 1; }
-
-@media (min-width: 1250px) {
-  .invoice-page {
-    grid-template-columns: minmax(360px, 0.82fr) minmax(600px, 1.35fr);
-    align-items: start;
+.invoice-number {
+  display: block;
+  direction: ltr;
+  text-align: right;
+  color: var(--muted-foreground);
+  font-size: 10px;
+  overflow-wrap: anywhere;
+  margin-top: 6px;
+}
+.archive-amount {
+  display: grid;
+  gap: 5px;
+  margin: 20px 0;
+}
+.archive-amount span {
+  color: var(--muted-foreground);
+  font-size: 11px;
+}
+.archive-amount strong {
+  font-size: 17px;
+}
+.archive-card__actions {
+  display: flex;
+  gap: 8px;
+  border-top: 1px solid var(--border);
+  padding-top: 14px;
+}
+.archive-card__actions .button {
+  flex: 1;
+}
+.invoice-preview {
+  scroll-margin-top: 24px;
+}
+.paper-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+.paper-toolbar > div {
+  display: flex;
+  gap: 10px;
+}
+.full-width {
+  grid-column: 1 / -1;
+}
+form > .notice {
+  margin-top: 16px;
+}
+@media (max-width: 1180px) {
+  .invoice-editor {
+    grid-template-columns: 1fr;
   }
-  .invoice-tabs { grid-column: 1; grid-row: 1; }
-  .paper {
-    grid-column: 2;
-    grid-row: 1;
-    position: sticky;
-    top: 12px;
+  .invoice-summary {
+    position: static;
+  }
+  .archive-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 640px) {
+  .invoice-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .invoice-toolbar > span {
+    display: none;
+  }
+  .invoice-toolbar .segmented-control button {
+    flex: 1;
+  }
+  .product-adder,
+  .archive-filters,
+  .archive-grid {
+    grid-template-columns: 1fr;
+  }
+  .product-adder .button {
     width: 100%;
-    max-width: none;
-    margin: 0;
+  }
+  .draft-lines {
+    padding-inline: 16px;
+  }
+  .draft-line {
+    padding: 14px;
+  }
+  .draft-line__fields {
+    grid-template-columns: 80px minmax(0, 1fr);
+  }
+  .line-total {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 0 0;
+  }
+  .paper-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .paper-toolbar > div {
+    flex-wrap: wrap;
+  }
+  .paper-toolbar .button {
+    flex: 1;
+  }
+  .archive-grid {
+    padding: 16px;
   }
 }
-
 @media print {
-  @page {
-    size: A5 landscape;
-    margin: 6mm;
-  }
-  :global(html),
-  :global(body) {
-    width: 210mm !important;
-    height: auto !important;
-    background: #fff !important;
-  }
   .invoice-page {
-    display: block !important;
-    width: 198mm !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    color: #000 !important;
-    font-family: Vazirmatn, Tahoma, sans-serif !important;
+    display: block;
   }
-  .paper {
-    display: block !important;
-    width: 198mm !important;
-    max-width: 198mm !important;
-    min-height: 0 !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    border: 1px solid #111 !important;
-    border-radius: 0 !important;
-    background: #fff !important;
-    color: #000 !important;
-    font-size: 8.5pt !important;
-    box-shadow: none !important;
-  }
-  .invoice-header {
-    grid-template-columns: 1fr 1.4fr 1fr !important;
-    gap: 6px !important;
-    padding: 6px 8px !important;
-    border-color: #111 !important;
-  }
-  .invoice-reference,
-  .invoice-store-details {
-    gap: 2px !important;
-    font-size: 7.5pt !important;
-  }
-  .invoice-title h1 {
-    margin-bottom: 2px !important;
-    font-size: 12pt !important;
-  }
-  .invoice-title strong {
-    font-size: 8pt !important;
-  }
-  .invoice-title img,
-  .invoice-logo {
-    width: 30px !important;
-    height: 30px !important;
-  }
-  .party-details {
-    margin-top: 4px !important;
-    border-color: #111 !important;
-  }
-  .party-details > * {
-    padding: 3px 6px !important;
-    border-color: #111 !important;
-    font-size: 7.5pt !important;
-    line-height: 1.45 !important;
-  }
-  .invoice-lines {
-    width: 100% !important;
-    font-size: 7.5pt !important;
-  }
-  .invoice-lines thead {
-    display: table-header-group;
-  }
-  .invoice-lines tr {
-    break-inside: avoid !important;
-    page-break-inside: avoid !important;
-  }
-  .invoice-lines th,
-  .invoice-lines td {
-    padding: 3px 4px !important;
-    border-color: #111 !important;
-    background: #fff !important;
-    color: #000 !important;
-    line-height: 1.4 !important;
-  }
-  .invoice-lines th {
-    font-weight: 800 !important;
-  }
-  .invoice-lines :deep(.el-input),
-  .invoice-lines :deep(.el-input-number) {
-    display: none !important;
-  }
-  .print-value {
-    display: inline !important;
-  }
-  .invoice-lines tfoot {
-    display: table-row-group;
-  }
-  .invoice-lines tfoot td {
-    padding: 5px 6px !important;
-    font-size: 8pt !important;
-  }
-  .invoice-notes {
-    min-height: 24px !important;
-    padding: 5px 7px !important;
-    border-color: #111 !important;
-    font-size: 7.5pt !important;
-  }
-  .invoice-signatures {
-    min-height: 48px !important;
-    border-color: #111 !important;
-    break-inside: avoid;
-    page-break-inside: avoid;
-  }
-  .invoice-signatures div {
-    padding: 6px !important;
-    font-size: 8pt !important;
-  }
-  .invoice-signatures div + div {
-    border-color: #111 !important;
+  .invoice-preview {
+    margin: 0;
   }
 }
 </style>

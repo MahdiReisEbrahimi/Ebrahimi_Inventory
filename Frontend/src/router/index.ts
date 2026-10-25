@@ -1,39 +1,52 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import DashboardView from '@/views/InventoryDashboardView.vue'
-import ProductsView from '@/views/ProductsView.vue'
-import ProductFormView from '@/views/ProductFormView.vue'
-import BulkPriceView from '@/views/BulkPriceView.vue'
-import PlaceholderView from '@/views/PlaceholderView.vue'
-import InventoryView from '@/views/InventoryView.vue'
-import InvoicesView from '@/views/InvoicesView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
+  scrollBehavior(_to, _from, saved) {
+    return saved || { top: 0 }
+  },
   routes: [
-    { path: '/', component: DashboardView, meta: { title: 'داشبورد' } },
-    { path: '/products', component: ProductsView, meta: { title: 'محصولات' } },
-    { path: '/products/new', component: ProductFormView, meta: { title: 'محصول جدید' } },
-    { path: '/products/:id/edit', component: ProductFormView, meta: { title: 'ویرایش محصول' } },
+    {
+      path: '/',
+      component: () => import('@/views/InventoryDashboardView.vue'),
+      meta: { title: 'نمای کلی' },
+    },
+    {
+      path: '/products',
+      component: () => import('@/views/ProductsView.vue'),
+      meta: { title: 'کالاها و قیمت‌ها' },
+    },
+    {
+      path: '/products/new',
+      component: () => import('@/views/ProductFormView.vue'),
+      meta: { title: 'ثبت کالای جدید' },
+    },
+    {
+      path: '/products/:id/edit',
+      component: () => import('@/views/ProductFormView.vue'),
+      meta: { title: 'ویرایش کالا' },
+    },
     {
       path: '/inventory',
-      component: InventoryView,
-      meta: {
-        title: 'موجودی و انبار',
-        icon: '▣',
-        description: 'ثبت ورود و خروج، تعدیل موجودی و مشاهده گردش کالا.',
-      },
+      component: () => import('@/views/InventoryView.vue'),
+      meta: { title: 'ورود و مرجوعی کالا' },
     },
     {
       path: '/transactions',
-      component: InventoryView,
-      meta: { title: 'تراکنش‌ها', icon: '↔', description: 'مدیریت خرید، فروش و اسناد مالی.' },
+      component: () => import('@/views/InventoryView.vue'),
+      meta: { title: 'گردش موجودی' },
     },
-    { path: '/invoices', component: InvoicesView, meta: { title: 'فاکتور فروش' } },
+    {
+      path: '/invoices',
+      component: () => import('@/views/InvoicesView.vue'),
+      meta: { title: 'فاکتورهای فروش' },
+    },
     {
       path: '/reports',
-      component: PlaceholderView,
-      meta: { title: 'گزارش‌ها', icon: '◫', description: 'گزارش فروش، موجودی و تحلیل عملکرد.' },
+      component: () => import('@/views/PlaceholderView.vue'),
+      meta: { title: 'گزارش‌ها' },
     },
+    { path: '/:pathMatch(.*)*', redirect: '/' },
   ],
 })
 

@@ -1,344 +1,155 @@
 <template>
-  <div v-if="product" class="product-details">
-    <!-- Header -->
-    <div class="details-header">
-      <div class="product-main">
-        <div class="product-icon">
-          <el-icon>
-            <Box />
-          </el-icon>
-        </div>
-
-        <div>
-          <div class="product-name">
-            <h2>{{ product.name }}</h2>
-
-            <el-tag size="small" :type="product.isActive ? 'success' : 'info'">
-              {{ product.isActive ? 'فعال' : 'غیرفعال' }}
-            </el-tag>
-          </div>
-
-          <span class="sku"> SKU: {{ product.sku }} </span>
-        </div>
+  <EmptyState v-if="error" title="اطلاعات کالا دریافت نشد" :description="error" error
+    ><Button variant="outline" @click="load">تلاش دوباره</Button></EmptyState
+  >
+  <div v-else-if="!product" class="table-loading" role="status">در حال دریافت شناسنامه کالا…</div>
+  <div v-else class="product-details">
+    <div class="details-hero">
+      <span class="details-icon"><Package :size="26" /></span>
+      <div>
+        <h2>{{ product.name }}</h2>
+        <small>{{ product.sku }} · {{ product.category.name }}</small>
       </div>
+      <span class="badge" :class="product.isActive ? 'badge--success' : ''">{{
+        product.isActive ? 'فعال' : 'غیرفعال'
+      }}</span>
     </div>
-
-    <!-- Basic information -->
-    <div class="info-row">
-      <div class="info-item">
-        <span>دسته‌بندی</span>
-        <strong>{{ product.category.name }}</strong>
-      </div>
-
-      <div class="info-item">
-        <span>واحد</span>
-        <strong>{{ product.unit }}</strong>
-      </div>
-
-      <div class="info-item">
-        <span>موجودی</span>
-        <strong
-          :class="{
-            danger: product.stock <= product.minStock,
-          }"
+    <div class="details-stats">
+      <div>
+        <span>موجودی فعلی</span
+        ><strong :class="{ danger: product.stock <= product.minStock }"
+          >{{ number(product.stock) }} <small>{{ product.unit }}</small></strong
         >
-          {{ product.stock }} {{ product.unit }}
-        </strong>
       </div>
-
-      <div class="info-item">
-        <span>حداقل موجودی</span>
-        <strong> {{ product.minStock }} {{ product.unit }} </strong>
+      <div>
+        <span>حداقل موجودی</span
+        ><strong
+          >{{ number(product.minStock) }} <small>{{ product.unit }}</small></strong
+        >
       </div>
-    </div>
-
-    <!-- Prices -->
-    <div class="prices-row">
-      <div class="price-item">
-        <div class="price-label">
-          <span class="dot buy"></span>
-          قیمت خرید
-        </div>
-
-        <strong>
-          {{ money(product.buyPrice) }}
-        </strong>
+      <div>
+        <span>قیمت خرید</span><strong>{{ money(product.buyPrice) }}</strong>
       </div>
-
-      <div class="price-item">
-        <div class="price-label">
-          <span class="dot sell"></span>
-          قیمت فروش
-        </div>
-
-        <strong>
-          {{ money(product.sellPrice) }}
-        </strong>
+      <div>
+        <span>قیمت فروش</span><strong>{{ money(product.sellPrice) }}</strong>
       </div>
     </div>
-
-    <!-- History -->
-    <div class="history">
-      <div class="history-header">
-        <div class="history-title">
-          <el-icon>
-            <TrendCharts />
-          </el-icon>
-
-          <strong>تاریخچه قیمت</strong>
-        </div>
-
-        <span> {{ history.length }} تغییر </span>
-      </div>
-
-      <div class="chart">
-        <PriceHistoryChart :data="history" />
-      </div>
+    <p v-if="product.description" class="product-description">{{ product.description }}</p>
+    <div class="history-heading">
+      <h3><TrendingUp :size="18" />روند تغییر قیمت</h3>
+      <span>{{ number(history.length) }} تغییر اخیر</span>
     </div>
+    <PriceHistoryChart :data="history" />
   </div>
-
-  <el-skeleton v-else :rows="5" animated />
 </template>
-
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
-import { ElMessage } from 'element-plus'
-import { Box, TrendCharts } from '@element-plus/icons-vue'
-
+import { defineAsyncComponent, onMounted, ref } from 'vue'
+import { Package, TrendingUp } from '@lucide/vue'
+import EmptyState from '@/components/ui/EmptyState.vue'
+import Button from '@/components/ui/Button.vue'
+const PriceHistoryChart = defineAsyncComponent(() => import('@/components/PriceHistoryChart.vue'))
 import { productsApi } from '@/services/products'
+import { money, number } from '@/lib/format'
 import type { PriceHistory, Product } from '@/types'
-
-import PriceHistoryChart from '@/components/PriceHistoryChart.vue'
-
-const props = defineProps({
-  selectedRow: {
-    type: Object,
-    required: true,
-  },
-})
-
-const product = ref<Product>()
-const history = ref<PriceHistory[]>([])
-
-const money = (value: number) => {
-  return new Intl.NumberFormat('fa-IR').format(value) + ' تومان'
-}
-
-onMounted(async () => {
+const props = defineProps<{ selectedRow: Product }>()
+const product = ref<Product>(),
+  history = ref<PriceHistory[]>([]),
+  error = ref('')
+async function load() {
+  error.value = ''
   try {
-    ;[product.value, history.value] = await Promise.all([
+    const [p, h] = await Promise.all([
       productsApi.get(props.selectedRow.id),
-
-      productsApi.history(props.selectedRow.id).then((r) => r.data),
+      productsApi.history(props.selectedRow.id),
     ])
-  } catch (e) {
-    ElMessage.error(e instanceof Error ? e.message : 'خطا در دریافت اطلاعات محصول')
+    product.value = p
+    history.value = h.data
+  } catch {
+    error.value = 'اتصال به سرور را بررسی و دوباره تلاش کنید.'
   }
-})
+}
+onMounted(load)
 </script>
-
 <style scoped>
-.product-details {
-  direction: rtl;
-}
-
-/* =========================
-   Header
-========================= */
-
-.details-header {
-  padding-bottom: 14px;
-  border-bottom: 1px solid var(--el-border-color-lighter);
-}
-
-.product-main {
+.details-hero {
   display: flex;
   align-items: center;
+  gap: 14px;
+  padding-bottom: 22px;
+  border-bottom: 1px solid var(--border);
+}
+.details-hero > div {
+  flex: 1;
+}
+.details-hero h2 {
+  font-size: 19px;
+  margin: 0;
+}
+.details-hero small {
+  color: var(--muted-foreground);
+  font-size: 11px;
+}
+.details-icon {
+  display: grid;
+  place-items: center;
+  width: 58px;
+  height: 58px;
+  border-radius: 17px;
+  color: var(--primary);
+  background: var(--accent);
+}
+.details-stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-block: 24px;
+}
+.details-stats > div {
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--background);
+}
+.details-stats span {
+  font-size: 11px;
+  color: var(--muted-foreground);
+}
+.details-stats strong {
+  display: block;
+  margin-top: 8px;
+  font-size: 17px;
+}
+.details-stats small {
+  font-size: 11px;
+  font-weight: 400;
+}
+.product-description {
+  font-size: 12px;
+  color: var(--muted-foreground);
+  white-space: pre-wrap;
+}
+.history-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   gap: 10px;
 }
-
-.product-icon {
-  width: 38px;
-  height: 38px;
-
+.history-heading h3 {
   display: flex;
-  align-items: center;
-  justify-content: center;
-
-  border-radius: 9px;
-
-  background: var(--el-color-primary-light-9);
-  color: var(--el-color-primary);
-}
-
-.product-name {
-  display: flex;
-  align-items: center;
   gap: 8px;
-}
-
-.product-name h2 {
+  align-items: center;
   margin: 0;
-
-  font-size: 17px;
-  font-weight: 700;
-
-  color: var(--el-text-color-primary);
 }
-
-.sku {
-  display: block;
-  margin-top: 3px;
-
+.history-heading span {
   font-size: 11px;
-  color: var(--el-text-color-secondary);
+  color: var(--muted-foreground);
 }
-
-/* =========================
-   Info
-========================= */
-
-.info-row {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-
-  padding: 13px 0;
-
-  border-bottom: 1px solid var(--el-border-color-lighter);
-}
-
-.info-item {
-  padding: 0 15px;
-
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-
-  border-left: 1px solid var(--el-border-color-lighter);
-}
-
-.info-item:first-child {
-  padding-right: 0;
-}
-
-.info-item:last-child {
-  border-left: none;
-}
-
-.info-item span {
-  font-size: 11px;
-  color: var(--el-text-color-secondary);
-}
-
-.info-item strong {
-  font-size: 13px;
-  color: var(--el-text-color-primary);
-}
-
-.info-item strong.danger {
-  color: var(--el-color-danger);
-}
-
-/* =========================
-   Prices
-========================= */
-
-.prices-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-
-  gap: 12px;
-
-  padding: 13px 0;
-
-  border-bottom: 1px solid var(--el-border-color-lighter);
-}
-
-.price-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-
-  padding: 11px 14px;
-
-  border-radius: 8px;
-
-  background: var(--el-fill-color-light);
-}
-
-.price-label {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-
-  font-size: 12px;
-  color: var(--el-text-color-secondary);
-}
-
-.price-item strong {
-  font-size: 14px;
-  color: var(--el-text-color-primary);
-}
-
-.dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-}
-
-.dot.buy {
-  background: var(--el-color-warning);
-}
-
-.dot.sell {
-  background: var(--el-color-success);
-}
-
-/* =========================
-   History
-========================= */
-
-.history {
-  margin-top: 15px;
-}
-
-.history-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-
-  margin-bottom: 6px;
-}
-
-.history-title {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-
-  font-size: 13px;
-}
-
-.history-title .el-icon {
-  color: var(--el-color-primary);
-}
-
-.history-header > span {
-  font-size: 11px;
-  color: var(--el-text-color-secondary);
-}
-
-@media (max-width: 650px) {
-  .info-row {
-    grid-template-columns: repeat(2, 1fr);
-    row-gap: 12px;
+@media (max-width: 440px) {
+  .details-stats strong {
+    font-size: 14px;
   }
-
-  .info-item {
-    border-left: none;
-  }
-
-  .prices-row {
-    grid-template-columns: 1fr;
+  .details-hero {
+    flex-wrap: wrap;
   }
 }
 </style>

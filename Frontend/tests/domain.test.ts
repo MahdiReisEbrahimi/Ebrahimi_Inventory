@@ -67,12 +67,49 @@ function withThemeEnvironment(
   saved: string | null,
   systemDark: boolean,
   storageFails: boolean,
-  run: (state: { darkClass: boolean; stored: string | null }) => void,
+  run: (state: {
+    darkClass: boolean
+    stored: string | null
+    savedPreferences: string | null
+    tokens: Map<string, string>
+    dataset: Record<string, string>
+    changeSystemTheme: (dark: boolean) => void
+  }) => void,
+  savedPreferences: string | null = null,
 ) {
-  const state = { darkClass: false, stored: saved }
+  let onChange: (() => void) | undefined
+  const media = {
+    matches: systemDark,
+    addEventListener(_event: string, listener: () => void) {
+      onChange = listener
+    },
+    removeEventListener() {
+      onChange = undefined
+    },
+  }
+  const state = {
+    darkClass: false,
+    stored: saved,
+    savedPreferences,
+    tokens: new Map<string, string>(),
+    dataset: {} as Record<string, string>,
+    changeSystemTheme(value: boolean) {
+      media.matches = value
+      onChange?.()
+    },
+  }
   const replacements = {
     document: {
       documentElement: {
+        dataset: state.dataset,
+        style: {
+          setProperty(key: string, value: string) {
+            state.tokens.set(key, value)
+          },
+          removeProperty(key: string) {
+            state.tokens.delete(key)
+          },
+        },
         classList: {
           toggle(_name: string, value: boolean) {
             state.darkClass = value
@@ -82,17 +119,18 @@ function withThemeEnvironment(
     },
     window: {
       matchMedia() {
-        return { matches: systemDark }
+        return media
       },
     },
     localStorage: {
-      getItem() {
+      getItem(key: string) {
         if (storageFails) throw new Error('Storage unavailable')
-        return state.stored
+        return key === 'theme' ? state.stored : state.savedPreferences
       },
-      setItem(_key: string, value: string) {
+      setItem(key: string, value: string) {
         if (storageFails) throw new Error('Storage unavailable')
-        state.stored = value
+        if (key === 'theme') state.stored = value
+        else state.savedPreferences = value
       },
     },
   }
@@ -139,4 +177,74 @@ test('theme uses system preference on first visit and works when storage is bloc
     assert.doesNotThrow(() => useTheme().toggleTheme())
     assert.equal(state.darkClass, true)
   })
+})
+
+test('custom colors and display preferences survive reload and reset clears overrides', () => {
+  withThemeEnvironment(null, false, false, (state) => {
+    initializeTheme()
+    const theme = useTheme()
+    theme.updatePreferences({
+      primaryColor: '#ffffff',
+      sidebarColor: '#2563eb',
+      density: 'compact',
+      corners: 'subtle',
+      reduceMotion: true,
+    })
+    assert.equal(state.tokens.get('--primary'), '#ffffff')
+    assert.equal(state.tokens.get('--primary-foreground'), '#000000')
+    assert.equal(state.dataset.density, 'compact')
+    assert.equal(state.dataset.corners, 'subtle')
+    assert.equal(state.dataset.reduceMotion, 'true')
+    initializeTheme()
+    assert.equal(theme.preferences.value.primaryColor, '#ffffff')
+    assert.equal(theme.preferences.value.density, 'compact')
+    theme.updatePreferences({ primaryColor: '#000000' })
+    assert.equal(state.tokens.get('--primary-foreground'), '#ffffff')
+    theme.resetPreferences()
+    assert.equal(theme.themeMode.value, 'system')
+    assert.equal(state.tokens.has('--primary'), false)
+    assert.equal(state.tokens.has('--sidebar'), false)
+    assert.equal(state.dataset.density, 'comfortable')
+    assert.equal(state.dataset.reduceMotion, 'false')
+    initializeTheme()
+    assert.equal(theme.preferences.value.primaryColor, null)
+  })
+})
+
+test('system mode follows device changes while explicit choice remains fixed', () => {
+  withThemeEnvironment(null, false, false, (state) => {
+    initializeTheme()
+    const theme = useTheme()
+    state.changeSystemTheme(true)
+    assert.equal(theme.isDark.value, true)
+    theme.setTheme('light')
+    state.changeSystemTheme(true)
+    assert.equal(theme.isDark.value, false)
+    theme.setTheme('system')
+    assert.equal(theme.isDark.value, true)
+  })
+})
+
+test('malformed or invalid stored UI preferences fall back safely', () => {
+  for (const saved of [
+    '{broken',
+    'null',
+    '[]',
+    '{"primaryColor":"red; color: white", "density":"invalid", "reduceMotion":"true"}',
+  ]) {
+    withThemeEnvironment(
+      'light',
+      false,
+      false,
+      (state) => {
+        assert.doesNotThrow(initializeTheme)
+        assert.equal(useTheme().preferences.value.primaryColor, null)
+        assert.equal(state.dataset.density, 'comfortable')
+        assert.equal(state.dataset.reduceMotion, 'false')
+        useTheme().updatePreferences({ primaryColor: 'invalid' })
+        assert.equal(state.tokens.has('--primary'), false)
+      },
+      saved,
+    )
+  }
 })

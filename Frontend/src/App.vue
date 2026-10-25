@@ -55,6 +55,15 @@
           >
             <Sun v-if="isDark" :size="20" /><Moon v-else :size="20" />
           </button>
+          <RouterLink
+            to="/settings"
+            class="icon-button settings-link"
+            :class="{ 'is-active': route.path === '/settings' }"
+            aria-label="تنظیمات ظاهر برنامه"
+            title="تنظیمات ظاهر برنامه"
+          >
+            <Settings :size="20" />
+          </RouterLink>
           <PopoverRoot v-model:open="alertsOpen">
             <PopoverTrigger
               class="icon-button"
@@ -152,6 +161,7 @@ import {
   Moon,
   Package,
   Receipt,
+  Settings,
   Sprout,
   Store,
   Sun,
@@ -380,6 +390,10 @@ watch(
   font-size: 11px;
   margin-inline-end: 12px;
 }
+.settings-link.is-active {
+  color: var(--accent-foreground);
+  background: var(--accent);
+}
 .theme-toggle {
   border: 1px solid var(--border);
   background: var(--card);
@@ -454,7 +468,7 @@ watch(
 .sidebar-overlay {
   position: fixed;
   inset: 0;
-  background: #0c201b80;
+  background: #00000080;
   backdrop-filter: blur(3px);
   z-index: 90;
 }

@@ -46,6 +46,11 @@ const router = createRouter({
       component: () => import('@/views/PlaceholderView.vue'),
       meta: { title: 'گزارش‌ها' },
     },
+    {
+      path: '/settings',
+      component: () => import('@/views/SettingsView.vue'),
+      meta: { title: 'تنظیمات ظاهر' },
+    },
     { path: '/:pathMatch(.*)*', redirect: '/' },
   ],
 })

@@ -28,7 +28,7 @@ use([LineChart, GridComponent, LegendComponent, TooltipComponent, CanvasRenderer
 const props = defineProps<{
   data: { createdAt: string; newBuyPrice: number | null; newSellPrice: number | null }[]
 }>()
-const { isDark } = useTheme()
+const { isDark, preferences } = useTheme()
 const sorted = computed(() =>
   [...props.data].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()),
 )
@@ -37,7 +37,10 @@ const chartOption = computed(() => {
   const style = getComputedStyle(document.documentElement)
   const token = (name: string) => style.getPropertyValue(name).trim()
   return {
-    color: [dark ? '#e7bf7c' : '#93611b', token('--primary')],
+    animation:
+      !preferences.value.reduceMotion &&
+      !window.matchMedia('(prefers-reduced-motion: reduce)').matches,
+    color: [dark ? '#e7bf7c' : '#93611b', preferences.value.primaryColor || token('--primary')],
     textStyle: { fontFamily: 'Vazirmatn', color: token('--muted-foreground') },
     tooltip: {
       trigger: 'axis',

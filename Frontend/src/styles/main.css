@@ -44,34 +44,34 @@
 }
 :root.dark {
   color-scheme: dark;
-  --background: #111c19;
-  --foreground: #e4ede7;
-  --card: #192722;
-  --card-foreground: #e4ede7;
-  --popover: #203029;
-  --popover-foreground: #e4ede7;
+  --background: #141414;
+  --foreground: #ededed;
+  --card: #1e1e1e;
+  --card-foreground: #ededed;
+  --popover: #262626;
+  --popover-foreground: #ededed;
   --primary: #8bd0b1;
   --primary-foreground: #12382b;
-  --secondary: #263b30;
-  --secondary-foreground: #cee7d8;
-  --muted: #21322a;
-  --muted-foreground: #a1b4a8;
-  --accent: #2b4638;
+  --secondary: #2b2b2b;
+  --secondary-foreground: #dedede;
+  --muted: #262626;
+  --muted-foreground: #b0b0b0;
+  --accent: #303030;
   --accent-foreground: #ace2c7;
   --destructive: #ff9e9e;
   --success: #8bd0b1;
   --warning: #e7bf7c;
-  --border: #304237;
-  --input: #41584a;
+  --border: #383838;
+  --input: #505050;
   --ring: #8bd0b1;
   --shadow-sm: 0 2px 6px #0001;
   --shadow-lg: 0 20px 70px #0005;
-  --sidebar: #14251e;
-  --sidebar-foreground: #e4ede7;
-  --sidebar-muted: #a1b4a8;
-  --sidebar-accent: #2b4638;
-  --sidebar-accent-foreground: #cef3dd;
-  --sidebar-border: #304237;
+  --sidebar: #191919;
+  --sidebar-foreground: #ededed;
+  --sidebar-muted: #b0b0b0;
+  --sidebar-accent: #303030;
+  --sidebar-accent-foreground: #eeeeee;
+  --sidebar-border: #383838;
 }
 *,
 *::before,
@@ -692,6 +692,44 @@ select:disabled {
     inset-inline-start: 16px;
     bottom: 16px;
   }
+}
+/* Shared display preferences. */
+:root[data-density='compact'] .page-stack {
+  gap: 16px;
+}
+:root[data-density='compact'] .panel-body,
+:root[data-density='compact'] .panel-heading,
+:root[data-density='compact'] .stat-card {
+  padding: 16px;
+}
+:root[data-density='compact'] .data-table th,
+:root[data-density='compact'] .data-table td {
+  padding: 9px 14px;
+}
+:root[data-density='compact'] .filter-bar {
+  padding: 12px 14px;
+}
+:root[data-corners='subtle'] {
+  --radius: 6px;
+}
+:root[data-corners='subtle'] .button,
+:root[data-corners='subtle'] .icon-button,
+:root[data-corners='subtle'] .nav-link,
+:root[data-corners='subtle'] .segmented-control,
+:root[data-corners='subtle'] .segmented-control button,
+:root[data-corners='subtle'] .notice,
+:root[data-corners='subtle'] .dialog-content,
+:root[data-corners='subtle'] input:not([type='checkbox']),
+:root[data-corners='subtle'] select,
+:root[data-corners='subtle'] textarea {
+  border-radius: 6px;
+}
+:root[data-reduce-motion='true'] *,
+:root[data-reduce-motion='true'] *::before,
+:root[data-reduce-motion='true'] *::after {
+  scroll-behavior: auto !important;
+  animation-duration: 0.01ms !important;
+  transition-duration: 0.01ms !important;
 }
 @media (prefers-reduced-motion: reduce) {
   *,

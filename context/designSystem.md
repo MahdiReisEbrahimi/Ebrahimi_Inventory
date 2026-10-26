@@ -1,92 +1,87 @@
-# Anbark UI system
+# راهنمای رابط انبارک
 
-The interface is a Persian RTL workspace for daily shop operations. Its visual
-identity uses deep green navigation, quiet neutral surfaces, restrained warm
-accents, Vazirmatn type, and consistent Lucide icons. The design is implemented
-in the existing Vue application; no backend contract or database schema changed.
+آخرین تطبیق: 2026-10-26. رابط فارسی RTL برای کار روزانه مغازه بهداشتی ساختمانی است.
+سادگی ثبت عملیات، خوانایی مبلغ و تعداد و کم بودن کلیک‌های تکراری اولویت دارند.
 
-## Sources of truth
+## منابع و ابزارها
 
-- `Frontend/src/styles/main.css`: theme tokens, typography, spacing patterns,
-  forms, buttons, panels, tables, feedback, and responsive shared styles.
-- `Frontend/src/App.vue`: desktop navigation, accessible Reka mobile drawer,
-  topbar, low-stock popover, skip link, and page container.
-- `Frontend/src/composables/useTheme.ts`: one reactive theme state shared by
-  the shell and charts. Initialize before mounting the app.
-- `Frontend/src/components/ui/`: shared primitives and page patterns.
-- `Frontend/src/components/InvoicePaper.vue`: invoice snapshots and print CSS.
+- `Frontend/src/styles/main.css`: توکن رنگ، تایپوگرافی، فرم، دکمه، پنل، جدول و responsive.
+- `Frontend/src/App.vue`: منو، drawer موبایل، نوار بالا، هشدار موجودی و container صفحه.
+- `Frontend/src/composables/useTheme.ts`: حالت و ترجیحات مشترک؛ پیش از mount مقداردهی می‌شود.
+- `Frontend/src/components/ui/`: Button، AppDialog، PageHeader، EmptyState، StatCard،
+  SearchSelect، MoneyInput، PersianDatePicker و ToastHost.
+- `Frontend/src/components/InvoicePaper.vue`: پیش‌نمایش و قالب چاپ فاکتور.
 
-The UI uses local shadcn-style components and Reka primitives with semantic CSS.
-There is no Tailwind build pipeline or complete generated shadcn-vue registry.
-Use actual component props rather than assuming an external component API.
+رابط با کامپوننت‌های محلی، Reka و CSS معنایی ساخته شده است؛ Tailwind و رجیستری
+کامل shadcn-vue ندارد. API کامپوننت موجود را بخوانید؛ props کتابخانه دیگری را فرض نکنید.
+Element Plus را دوباره وارد نکنید. فونت Vazirmatn و آیکون‌های `@lucide/vue` را حفظ کنید.
 
-## Building another page
+## ساخت صفحه و فرم
 
-1. Wrap the page in `page-stack`.
-2. Use `PageHeader` for the title, description, optional eyebrow, and action slot.
-   Keep one clearly labeled primary task.
-3. Group related content in `panel`, with `panel-heading` and `panel-body`.
-4. Use `form-grid` and label-wrapped `form-field` controls. Mark optional fields,
-   explain units, keep error text near the form, and disable repeated submission.
-5. Reuse `Button`, `AppDialog`, `EmptyState`, and `StatCard`.
-6. Distinguish loading, failed requests, empty data, and empty filtered results.
-   Show a retry action for failed reads. Do not represent failures as zero totals.
+1. از `page-stack` و `PageHeader` استفاده کنید؛ عنوان فارسی و کار اصلی روشن باشد.
+2. بخش‌های مرتبط در `panel` با `panel-heading` و `panel-body` قرار گیرند.
+3. فرم با `form-grid` و labelهای `form-field` ساخته شود؛ اختیاری بودن، واحد پول
+   و واحد شمارش مشخص باشند. خطا نزدیک فرم و حالت ارسال قابل تشخیص باشد.
+4. loading، خطای دریافت و امکان retry، داده خالی و نتیجه فیلتر خالی از هم متمایز باشند.
+5. پس از mutation موفق، داده مرتبط تازه شود؛ درخواست ناموفق به‌صورت موفقیت یا صفر نمایش داده نشود.
 
-Button variants: `default/primary`, `outline`, `ghost`, and `destructive`.
-Sizes: `default`, `sm`, `lg`, and `icon`. The default button type is `button`;
-explicitly use `type="submit"` inside forms.
+`Button`: variantهای `default/primary`، `outline`، `ghost`، `destructive` و
+sizeهای `default`، `sm`، `lg`، `icon`. type پیش‌فرض `button` است؛ ارسال فرم
+به `type="submit"` نیاز دارد.
 
-AppDialog uses `open` / `update:open`, `title`, and optional `width`.
-Reka handles focus containment, Escape, and focus restoration. Render form
-content conditionally when it needs fresh state each time a dialog opens.
+`AppDialog`: قرارداد `open/update:open`، `title` و `width` اختیاری.
+Reka تمرکز، Escape و بازگشت فوکوس را مدیریت می‌کند. محتوای فرم‌هایی که باید
+در هر بازشدن تازه باشند شرطی render شود. برچسب دکمه‌های آیکونی فارسی باشد.
 
-CustomTable accepts typed rows, columns, actions, optional loading/error states,
-and named cell slots. Label icon actions in Persian. Product status changes and
-destructive actions must remain explicit and discoverable.
+## تم و تنظیمات ظاهر
 
-## Theme and responsiveness
+- سبز رنگ پیش‌فرض است؛ رنگ ثابت همه تم‌ها نیست. رنگ اصلی و sidebar قابل انتخاب‌اند.
+- حالت `light/dark/system` زیر کلید `theme` در localStorage ذخیره می‌شود.
+- تنظیمات زیر کلید `anbarak-ui-preferences` هستند: `primaryColor`، `sidebarColor`،
+  `density`، `corners` و `reduceMotion`.
+- ریشه از کلاس `.dark` و data attributeهای `density/corners/reduceMotion` استفاده می‌کند.
+  `useTheme` تغییرات را فوری اعمال می‌کند و خرابی storage نباید برنامه را متوقف کند.
+- از `--background`، `--foreground`، `--card`، `--primary`، `--accent`،
+  `--border`، `--muted-foreground`، `--destructive`، `--success` و `--warning` استفاده کنید.
+- رنگ‌های وضعیت موفق/هشدار/حذف معنای عملیاتی دارند. رنگ بخش‌های وابسته به تم را
+  با hex ثابت سبز ننویسید. کنتراست تم روشن، تاریک و رنگ سفارشی را بررسی کنید.
+- نمودارها از تم مشترک استفاده می‌کنند؛ چاپ palette کاغذ و متن خوانا دارد.
 
-Use semantic CSS variables instead of repeating palette colors:
-`--background`, `--foreground`, `--card`, `--primary`, `--muted-foreground`,
-`--border`, `--destructive`, `--success`, and `--warning`.
-The corresponding values live in `:root` and `:root.dark`.
+## جدول‌ها و عملیات کالا
 
-The localStorage key is `theme`. Explicit light/dark choices override the
-system preference; first visits use the system preference at initialization.
-Charts subscribe to the same state. Print output always uses a paper palette.
+- `CustomTable` جدول HTML با ستون‌ها، row actionها، دسترسی به property تودرتو،
+  slot سلول و حالت loading/error/empty است. کلید ردیف از id و سپس index است؛ SKU نداریم.
+- عنوان و مقدار سلول‌های جدول‌ها وسط‌چین‌اند. استثنا: ستون نام کالا در جدول
+  فاکتور اصلی و `InvoicePaper` راست‌چین باقی می‌ماند.
+- جدول‌های `.data-table` از `--table-header-background`،
+  `--table-header-foreground` و `--table-row-hover` مشتق از `--primary` استفاده می‌کنند.
+  ستون sticky عملیات نیز همین رنگ‌ها را برای سربرگ/هاور مصرف کند.
+- جدول کالا در موبایل به کارت تبدیل نمی‌شود؛ جدول افقی اسکرول می‌شود و ستون
+  عملیات sticky است. خوانایی و دسترسی به دکمه‌ها هنگام اسکرول حفظ شود.
+- عملیات هر کالا شامل خرید، مرجوعی فروش، جزئیات، ویرایش و حذف است؛ از آیکون‌های
+  موجود، title و aria-label فارسی و رنگ‌بندی معنایی استفاده کنید.
+- فرم خرید/مرجوعی در `ProductStockDialog` باز می‌شود؛ کالای انتخابی، موجودی فعلی،
+  تعداد، قیمت اختیاری، تاریخ، توضیح و پیش‌نمایش موجودی پس از ثبت را دارد.
+- هیچ فرم، جست‌وجو یا ستون جدیدی برای کد کالا نسازید؛ نام کالا یکتا است.
 
-- Desktop: sidebar, bounded main content, and columns where space permits.
-- At 820px and below: a modal mobile navigation drawer replaces the sidebar.
-- At 640px and below: form columns stack; product tables become labeled rows;
-  action groups wrap and touch controls remain comfortably sized.
-- Dense movement/invoice documents scroll within their own containers.
-- Prefer logical CSS properties such as `padding-inline` for RTL positioning.
-- Respect `prefers-reduced-motion` and retain visible keyboard focus.
+## پول، تاریخ، فاکتور و چاپ
 
-## Workflow details
+- `MoneyInput` و توابع موجود را برای ارقام فارسی و جداکننده و حفظ caret استفاده کنید.
+  فیلد خالی با صفر یکی نیست. واحد تومان/ریال را در متن ورودی و خروجی روشن بنویسید.
+- تقویم فارسی با مقدار ISO و امروز تهران در `PersianDatePicker/lib/persianDate.ts` است.
+- قواعد مالی و تبدیل تومان/ریال در [businessRules.md](businessRules.md) آمده‌اند.
+- جدول ویرایش فاکتور اسکرول دارد؛ صفحه‌بندی ۱۰ قلمی فقط برای پیش‌نمایش/چاپ است.
+- `InvoicePaper`: A5 افقی؛ سربرگ در همه صفحات، طرفین صفحه اول و بخش جمع،
+  توضیحات، تسویه، شبا و امضا صفحه آخر. پیش‌نمایش draft باید ثبت‌نشده مشخص باشد.
+- صدور و چاپ دو اقدام مجزا هستند. برای چاپ، انتظار font، image و fitting صفحات حفظ شود.
 
-- Products: search/filter, status, details, create/edit, deletion, bulk pricing.
-  The same product form works in a dialog and on its dedicated route.
-- Inventory: separate purchase/return choices, invoice selection for returns,
-  optional price changes, and a stock-after-receipt preview.
-- Invoices: buyer, editable items, and summary/issue sections. Archive browsing
-  is separate. Issued invoice snapshots and draft print previews use InvoicePaper.
-- Dashboard: existing APIs supply statistics and recent activity. Values derived
-  from the product list are bounded by its 10,000-record cap, which is disclosed.
-- Reports: clearly marked unfinished, with links to available inventory/invoice views.
+## واکنش‌گرایی و بررسی
 
-## Verification
-
-Run `npm run build` and `npm run test:unit` from Frontend/. Lint without rewriting
-files using `node node_modules/oxlint/bin/oxlint src` and
-`node node_modules/eslint/bin/eslint.js src --no-fix`.
-
-Before release, inspect every route at 390px, 768px, and desktop widths in both
-themes. Check keyboard navigation and focus restoration, empty/error states,
-product form create/edit, purchase/return validation, invoice drafts and archive,
-unsaved-draft navigation warnings, and a multi-page print preview. Use disposable
-test data for mutations.
-
-Automated build/type/lint and unit checks do not replace those visual checks.
-During the redesign, native browser automation was blocked because the tool
-could not reliably identify the browser URL, so visual acceptance remains open.
+- در عرض ۸۲۰ پیکسل و کمتر، drawer جای sidebar را می‌گیرد.
+- فرم‌ها در عرض کم تک‌ستونی و جدول‌های عریض اسکرول‌پذیر باشند؛ از سرریز کل صفحه جلوگیری کنید.
+- برای RTL تا جای ممکن خواص منطقی مانند `padding-inline` به کار ببرید.
+- فوکوس صفحه‌کلید، labelها، دکمه‌های لمسی و کاهش حرکت حفظ شوند.
+- تغییر رابط را در عرض حدود ۳۹۰، ۷۶۸ و دسکتاپ و در تم روشن/تاریک و رنگ سفارشی بررسی کنید.
+  برای فاکتور، پیش‌نمایش چندصفحه‌ای و در پذیرش نهایی چاپ روی تجهیزات مغازه نیز لازم است.
+- فرمان‌های build و تست در [development.md](development.md) هستند؛ موفقیت آن‌ها
+  به‌تنهایی تأیید بصری نیست. فقط بررسی واقعاً انجام‌شده را گزارش کنید.

@@ -1,361 +1,143 @@
-# Ebrahimi Inventory — Project Context
+# معرفی و نقشه معماری پروژه Ebrahimi Inventory / انبارک
 
-Last reviewed against the repository: 2026-10-26.
-Purpose: a project map for AI assistants and developers. All file paths below are
-relative to the repository root. This document describes the current code, not a
-guarantee that every feature has been tested or completed. When code changes,
-update the relevant section; current source files take precedence over this map.
+آخرین تطبیق با کد: 2026-10-26
+تمام مسیرها نسبت به ریشه مخزن هستند. این فایل نقشه ورود به پروژه است؛
+برای وضعیت جاری context/projectStatus.txt و برای قواعد دامنه context/businessRules.md را بخوانید.
+در اختلاف مستندات و کد، رفتار موجود را از کد بررسی و اختلاف را گزارش کنید؛
+تصمیم کسب‌وکار را خودکار برای تطبیق با یک پیاده‌سازی اشتباه تغییر ندهید.
 
-## 1. Project overview
+## هدف و محل استفاده
 
-Ebrahimi Inventory is a web application being developed for the owner's father's
-shop. It manages product categories, products, purchase and selling prices,
-inventory receipts, sales returns, buyers, and sales invoices.
+این نرم‌افزار برای استفاده روزمره در مغازه بهداشتی ساختمانی خانواده مهدی
+توسعه داده می‌شود. کاربران اصلی کارکنان مغازه هستند و رابط برنامه فارسی و RTL است.
+هدف فعلی، مدیریت کالا و قیمت، موجودی انبار، خرید و ورود کالا، مرجوعی فروش،
+مشتریان و صدور و چاپ فاکتور است. ابزار باید کارهای روزانه مغازه را ساده‌تر کند
+و اتکا به ثبت‌های پراکنده و دفتر کاغذی را کاهش دهد.
 
-- Audience: shop staff managing everyday inventory and sales.
-- Application language: Persian (Farsi), with a right-to-left layout.
-- Product and receipt prices remain integer toman amounts. New invoices use
-  integer rial amounts, explicitly convert product prices by 10, and persist
-  currency = IRR. Legacy invoices/movements retain currency = TOMAN. Invoice
-  previews convert legacy amounts to rial once; movement views convert IRR
-  prices to toman for consistency with inventory screens.
-- Quantities and stock are integers; fractional stock is not currently modeled.
-- Architecture: Vue SPA -> NestJS JSON REST API -> Prisma -> PostgreSQL.
-- Status: active development. The redesigned UI includes a dashboard using the
-  existing product/movement APIs. Reports remain a placeholder; the frontend
-  uses local components and Reka rather than a complete shadcn-vue scaffold.
+هدف آینده، کمک به مدیریت بهتر حساب‌های دفتری است. دفتر حساب، مانده بدهکاری و
+بستانکاری، دریافت و پرداخت و حساب تأمین‌کنندگان هنوز پیاده‌سازی نشده‌اند.
+فیلدهای تسویه فاکتور و مبلغ پرداختی را با سیستم حسابداری کامل اشتباه نگیرید.
+جزئیات حسابداری آینده باید با صاحب پروژه مشخص شود؛ این هدف، مجوز اجرای
+خودکار ماژول‌های جدید در یک کار نامرتبط نیست.
 
-## 2. Quick reading guide
+## راهنمای مطالعه موضوعی
 
-Read only the files needed for the task, then follow their imports:
+| فایل | چه زمانی بخوانید؟ |
+| --- | --- |
+| agent.md | شروع هر کار؛ قواعد همکاری و مسیر مطالعه |
+| context/aboutMe.txt | زبان و سطح توضیح مناسب برای صاحب پروژه |
+| context/projectStatus.txt | قابلیت‌های موجود، تصمیم‌های اخیر، محدودیت‌ها و وضعیت بررسی‌ها |
+| context/aboutProject.txt | هدف، معماری، مسیرها، ابزارها و نقشه فایل‌ها |
+| context/businessRules.md | تغییر موجودی، قیمت، فاکتور، مدل داده یا حساب‌های دفتری |
+| context/development.md | راه‌اندازی، تنظیمات محیط، migration و دستورهای بررسی |
+| context/designSystem.md | تغییر رابط، جدول، تم، فرم، واکنش‌گرایی یا چاپ |
 
-- Overall frontend navigation: Frontend/src/router/index.ts and Frontend/src/App.vue.
-- API connection: Frontend/src/services/api.ts and Backend/src/main.ts.
-- Shared frontend data contracts: Frontend/src/types/index.ts.
-- Database entities and relationships: prisma/schema.prisma.
-- Request validation: Backend/src/products/dto/, Backend/src/categories/dto/,
-  and Backend/src/inventory/inventory.dto.ts.
-- Business rules: the corresponding Backend/src/**/**.service.ts file.
-- Theme and shared controls: Frontend/src/styles/main.css and
-  Frontend/src/components/ui/.
+## معماری و ابزارها
 
-Do not infer implemented features from installed dependencies, menu labels,
-schema enums, or unused imports alone. Check the route, controller, and service.
+مسیر اصلی درخواست:
+Vue View/Component -> services/*.ts (fetch) -> NestJS Controller -> DTO/Service
+-> PrismaService با PrismaPg -> PostgreSQL
 
-## 3. Repository layout and technology
+- Frontend/: Vue 3، TypeScript، Vite 8، Vue Router و Pinia.
+- Backend/: NestJS 12، TypeScript، Prisma ORM 7.10، pg و PostgreSQL.
+- رابط: CSS سفارشی با متغیرهای معنایی، Reka UI، آیکون‌های @lucide/vue و Vazirmatn.
+- نمودار: ECharts و vue-echarts؛ کلاس‌های Button با CVA، clsx و tailwind-merge.
+- وضعیت تجاری عمدتاً داخل viewها با ref/reactive و درخواست API نگهداری می‌شود.
+  Pinia ثبت شده ولی stores/counter.ts نمونه اولیه است؛ فروشگاه مرکزی دامنه نیست.
+- Element Plus در رابط فعلی استفاده نمی‌شود. کامپوننت‌ها محلی و با الگوی shadcn
+  هستند؛ رجیستری کامل shadcn-vue و خط ساخت Tailwind وجود ندارد.
+- Backend از ES modules و NodeNext استفاده می‌کند؛ importهای محلی آن پسوند .js دارند.
+- ابزارهای بررسی: vue-tsc، ESLint، Oxlint، Prettier، Node test runner در فرانت،
+  Vitest و Supertest در بک‌اند. نسخه دقیق و scriptها را از package.json بخوانید.
 
-- package.json / package-lock.json: root dependencies, including Prisma 7,
-  PostgreSQL adapter/driver, and several NestJS support packages. There are no
-  root application scripts or npm workspace orchestration.
-- Backend/: NestJS 12 and TypeScript REST API; its own package.json and lockfile.
-- Frontend/: Vue 3, TypeScript, Vite 8, Vue Router, and Pinia; its own package.json
-  and lockfile. The @ alias resolves to Frontend/src/.
-- prisma/schema.prisma: PostgreSQL schema and generated-client destination.
-- prisma/migrations/: database migration history.
-- prisma7.config.ts: Prisma CLI configuration, schema path, migrations path,
-  and DATABASE_URL loading.
-- Backend/src/generated/prisma/: configured Prisma client output, imported by
-  the API. Regenerate it from the schema rather than hand-editing it. Do not
-  confuse this with any separate root-level generated/ directory.
-- context/aboutProject.txt: this project overview.
-- Postman/: supplementary API materials; controllers and DTOs are authoritative.
+## نقشه مخزن و منابع اصلی
 
-Frontend UI dependencies include Reka UI, @lucide/vue, class-variance-authority,
-clsx, tailwind-merge, ECharts, and vue-echarts. Exact dependency versions and
-available scripts belong in each package.json and lockfile.
+- package.json و package-lock.json ریشه: وابستگی‌های مشترک/Prisma؛ اسکریپت اجرای
+  برنامه و npm workspace orchestration در ریشه تعریف نشده است.
+- Frontend/package.json و Backend/package.json: بسته‌ها و فرمان‌های مستقل.
+- prisma/schema.prisma: منبع مدل داده PostgreSQL.
+- prisma/migrations/: تاریخچه نسخه‌بندی‌شده تغییرات دیتابیس.
+- Backend/prisma.config.ts: پیکربندی معمول CLI؛ schema و migrations در ریشه
+  و بارگذاری .env ریشه. scriptهای db:* بک‌اند از این فایل استفاده می‌کنند.
+- prisma7.config.ts: پیکربندی جایگزین اجرای CLI از ریشه با --config صریح.
+- Backend/src/generated/prisma/: خروجی واقعی client مورد استفاده API.
+  با generate بازتولید شود؛ دستی ویرایش نشود. generated/ در ریشه را با آن اشتباه نگیرید.
+- Backend/src/app.module.ts: اتصال ConfigModule، PrismaModule و controller/serviceها.
+- Backend/src/main.ts: prefix برابر api/v1، CORS و ValidationPipe.
+- Backend/src/prisma/prisma.service.ts: PrismaClient و اتصال PostgreSQL در چرخه عمر Nest.
+- Frontend/src/main.ts: راه‌اندازی Vue و تم؛ alias برابر @ به src اشاره دارد.
+- Frontend/src/App.vue: پوسته، منو، نوار بالا، هشدار کمبود موجودی و RouterView.
+- Frontend/src/router/index.ts: مسیرهای واقعی و بازیابی اسکرول محتوای اصلی.
+- Frontend/src/types/index.ts: قراردادهای TypeScript سمت کلاینت.
+- Frontend/src/services/: پوشش API با fetch؛ api.ts آدرس پایه و خطاها را مدیریت می‌کند.
+- Postman/: مواد کمکی؛ controller و DTO مرجع قرارداد معتبر هستند.
 
-Backend uses ES modules and NodeNext resolution; existing local TypeScript
-imports use .js extensions. PrismaService extends the generated PrismaClient,
-uses PrismaPg, and connects/disconnects through Nest lifecycle hooks.
+## صفحات فعلی
 
-Pinia is registered, but src/stores/counter.ts is a starter example. Most business
-state currently lives in Vue views through refs/reactive objects and API calls.
-
-## 4. Frontend routes and feature entry points
-
-| Route | View under Frontend/src/views/ | Current purpose |
+| مسیر | فایل در Frontend/src/views/ | مسئولیت |
 | --- | --- | --- |
-| / | InventoryDashboardView.vue | Product statistics, low-stock list, category distribution, and recent movements from existing APIs |
-| /products | ProductsView.vue | Product list, filters, pagination, status changes, and dialogs |
-| /products/new | ProductFormView.vue | Create a product |
-| /products/:id/edit | ProductFormView.vue | Edit a product |
-| /inventory | InventoryView.vue | Receive purchases, record returns, and inspect movements |
-| /transactions | InventoryView.vue | Reuses the inventory view; not a separate accounting module |
-| /invoices | InvoicesView.vue | Invoice creation/archive, buyer management, store details, and printing |
-| /reports | PlaceholderView.vue | Placeholder page |
+| / | InventoryDashboardView.vue | خلاصه موجودی، کمبودها، دسته‌ها و گردش‌های اخیر |
+| /products | ProductsView.vue | فهرست و قیمت کالاها، فیلتر، عملیات و دیالوگ‌ها |
+| /products/new | ProductFormView.vue | ساخت کالا |
+| /products/:id/edit | ProductFormView.vue | ویرایش کالا |
+| /categories | CategoriesView.vue | مدیریت دسته‌بندی‌ها |
+| /transactions | TransactionsView.vue | مشاهده و فیلتر گردش موجودی |
+| /invoices | InvoicesView.vue | ویرایشگر و آرشیو فاکتور، مشتری، اطلاعات فروشگاه و چاپ |
+| /settings | SettingsView.vue | تم، رنگ اصلی/منو و ترجیحات ظاهری |
 
-ProductsView also opens ProductFormView, BulkPriceView, and product detail/delete
-components in dialogs. BulkPriceView is used inside the product page; it does
-not currently have a dedicated route.
+صفحه‌های /inventory و /reports حذف شده‌اند و view مستقل ندارند.
+ورود خرید و مرجوعی فروش از آیکون‌های هر ردیف در ProductsView انجام می‌شود؛
+فرم ProductStockDialog کالای انتخاب‌شده را دریافت می‌کند. BulkPriceView نیز
+داخل دیالوگ صفحه کالاها استفاده می‌شود و مسیر مستقل ندارد.
 
-Key reusable frontend components:
+## نقشه فایل برای کارهای رایج
 
-- components/CustomTable.vue: native HTML table with configurable columns and
-  typed rows/actions, nested-property access, loading/error/empty states, and
-  search/refresh events. On small screens, product rows become labeled cards.
-- components/ui/PageHeader.vue, EmptyState.vue, StatCard.vue: shared page
-  hierarchy, empty/error feedback, and summary statistics.
-- components/InvoicePaper.vue: A5 landscape invoice preview and print layout,
-  ten items per page, first-page parties and last-page financial/signature blocks.
-- components/ui/PersianDatePicker.vue: Persian calendar picker backed by Intl,
-  ISO date values, Tehran today, month/year navigation, and keyboard day movement.
-- components/ui/SearchSelect.vue: searchable buyer/product selection and optional
-  inline creation action.
-- components/dialogs/ProductDetailsDialog.vue: product details and price history.
-- components/PriceHistoryChart.vue: buy/sell price history visualization.
-- components/ui/Button.vue: local button variants implemented with CVA and CSS.
-- components/ui/AppDialog.vue: Reka dialog wrapper with open/update:open,
-  title, and width props.
-- components/ui/ToastHost.vue + lib/toast.ts: application toast notifications
-  dispatched through the app:toast browser event. confirmAction uses window.confirm.
-- lib/utils.ts: shared class-name helper.
-- lib/format.ts: Persian number/date/money formatting and numeric input parsing.
-- lib/invoice.ts: draft validation for quantities, stock, prices, and total bounds.
-- composables/useTheme.ts: shared theme initialization, state, and persistence.
-- context/designSystem.md: design tokens, component patterns, and UI checks.
-
-## 5. UI direction, theme, and migration status
-
-The requested direction is to remove Element Plus and move to shadcn-vue.
-Element Plus is absent from the current frontend package manifest and source
-usage. However, the current UI is a mixture of local components, native HTML
-controls, custom CSS, and Reka primitives. It is not a fully scaffolded
-shadcn-vue/Tailwind component system. tailwind-merge alone does not provide
-Tailwind CSS; the current frontend manifest has no Tailwind CSS dependency.
-
-- Preserve Persian labels, RTL behavior, and the bundled Vazirmatn font.
-- Global styles and semantic color tokens live in src/styles/main.css.
-- :root defines light colors; :root.dark defines dark colors.
-- Theme state is stored in localStorage under "theme", with "light"/"dark" values.
-- src/main.ts applies the saved theme to document.documentElement before mount.
-- App.vue provides navigation, a Reka mobile drawer, and a Reka low-stock popover.
-- composables/useTheme.ts initializes the saved theme, falling back to the system
-  preference on first visit, and exposes the shared theme toggle. Storage failure
-  does not prevent the application from rendering or toggling themes.
-- Use existing tokens such as --background, --foreground, --card, --primary,
-  --muted, --border, and --destructive when extending styles. Chart text, grid,
-  and tooltips follow the current theme. Keep both themes visually checked.
-- Invoice printing has dedicated styles in components/InvoicePaper.vue and main.css.
-  Preserve a readable printed invoice when changing screen layouts or themes.
-
-Continue the requested migration without reintroducing Element Plus. Inspect
-the existing local component API before assuming a standard shadcn-vue API.
-
-## 6. Data model
-
-Source of truth: prisma/schema.prisma. IDs are auto-incrementing integers except
-StoreSettings, which is used as a single record with id = 1.
-
-| Model | Meaning and key constraints |
+| موضوع | نقطه شروع |
 | --- | --- |
-| Category | Unique name; one category has many products |
-| Product | Unique name, required category/unit, integer buyPrice/sellPrice, stock/minStock, optional description, isActive |
-| PriceHistory | Per-product old/new buy and sell prices, SINGLE/BULK type, optional change percentage and actor metadata |
-| AuditLog | Per-product action and optional JSON details; selected operations are logged |
-| InventoryTransaction | Product movement, type, positive quantity for implemented flows, optional unit price, description, and invoice relation |
-| Buyer | First/last name, optional unique nationalId, phone, address, notes |
-| Invoice | Short unique number, issue date, buyer/seller snapshots, currency, subtotal/discount/paidAmount/total, settlement, notes, items, and movements |
-| InvoiceItem | Product reference plus name/unit snapshots, quantity, unitPrice, and total |
-| StoreSettings | Store name, address, phone, optional logoUrl, iban, and defaultInvoiceNotes |
+| کالا، نام یکتا، قیمت و فیلتر | views/ProductsView.vue، views/ProductFormView.vue، services/products.ts، Backend/src/products/ |
+| خرید و مرجوعی فروش | components/dialogs/ProductStockDialog.vue، services/inventory.ts، Backend/src/inventory/ |
+| گردش موجودی | views/TransactionsView.vue، Backend/src/inventory/inventory.service.ts |
+| جزئیات و سابقه قیمت | components/dialogs/ProductDetailsDialog.vue، components/PriceHistoryChart.vue، Backend/src/products/products.service.ts |
+| دسته‌بندی | views/CategoriesView.vue، services/categories.ts، Backend/src/categories/ |
+| فاکتور و مشتری | views/InvoicesView.vue، lib/invoice.ts، Backend/src/inventory/ |
+| نمایش مبلغ و چاپ فاکتور | components/InvoicePaper.vue، lib/invoicePresentation.ts، lib/format.ts |
+| ورودی پول و تقویم | components/ui/MoneyInput.vue، lib/moneyInput.ts، components/ui/PersianDatePicker.vue، lib/persianDate.ts |
+| تم و پوسته | composables/useTheme.ts، styles/main.css، App.vue |
+| جدول‌ها | components/CustomTable.vue، styles/main.css، استایل view مربوط |
 
-Product-related history, audit logs, movements, and invoice items use restrictive
-foreign keys. Deleting a category with products is also restricted. Deleting a
-buyer sets Invoice.customerId to null; invoice buyer snapshots remain intact.
+مسیرهای کوتاه جدول، نسبت به Frontend/src/ هستند مگر Backend صریحاً ذکر شده باشد.
+مشتریان، فاکتورها و تنظیمات فروشگاه فعلاً همگی در ماژول inventory بک‌اند هستند؛
+از روی اسم پوشه، وجود ماژول حسابداری مستقل را نتیجه نگیرید.
 
-PriceHistory.changedById/changedByName do not imply an implemented user system.
-There is no User model in the current schema.
+## سطح API
 
-## 7. Business rules and workflows
+آدرس پیش‌فرض: http://localhost:3000/api/v1
+VITE_API_URL در فرانت می‌تواند آن را تغییر دهد.
 
-Products and prices — Backend/src/products/products.service.ts:
-
-- Product creation requires an existing category. Initial stock defaults to zero;
-  product create/update DTOs do not expose stock editing.
-- Low stock means stock <= minStock.
-- Price changes through product editing or price endpoints record price history
-  and an audit entry in a database transaction.
-- Bulk price changes target active products, optionally within a category, and
-  operate on either BUY or SELL prices. Preview does not write data.
-- PERCENTAGE computes round(oldPrice * (1 + value / 100)). FIXED sets the price
-  to round(value); it is not an increment. The redesigned UI labels this as
-  replacing the current price and invalidates the preview when inputs change.
-- Deleting a product with price history deactivates it. Otherwise the service
-  attempts physical deletion, which other restrictive relations may reject.
-
-Inventory — Backend/src/inventory/inventory.service.ts:
-
-- PURCHASE and RETURN both increase stock and create movement records.
-- RETURN requires an invoice and cannot exceed the sold quantity for that
-  product on that invoice minus quantities already returned.
-- An optional unitPrice on receipt updates buyPrice; a changed buyPrice also
-  creates price history. Receipt operations create a STOCK_RECEIVED audit entry.
-- ADJUSTMENT exists in the enum and movement DTO but is rejected by the service.
-- SALE movements are created by invoice issuance, not by the receipt endpoint.
-- Movement quantities are stored as positive values; the movement type determines
-  whether the operation adds to or removes stock.
-
-Invoices and buyers — the same inventory service and InvoicesView.vue:
-
-- The frontend builds an in-memory draft, selects a saved buyer, then posts items.
-  Drafts are not persisted as database records or browser storage. An in-app
-  route-leave dialog warns before discarding a draft; full browser reloads do
-  not persist it.
-- The UI requires a buyer. The API also supports optional customerId and buyer
-  snapshot fields; its contract is broader than the current UI.
-- Invoice creation requires at least one item, active products, positive integer
-  quantities, and nonnegative integer unit prices. The supplied line price is
-  used; it does not have to match the product's current sellPrice.
-- In one database transaction, the API saves the invoice and item snapshots,
-  conditionally decrements stock, and creates SALE movements. Insufficient stock
-  causes rollback rather than a partially saved invoice.
-- Item total = quantity * unitPrice; subtotal = sum of item totals;
-  total = subtotal - fixed discount. paidAmount must be between zero and total.
-  CASH/INSTALLMENT records settlement choice; this is not a payment ledger.
-- Invoice numbers use the database ID padded to at least three digits. Existing
-  numbers were converted by the invoice-editor migration; IDs and relations stay intact.
-- issueDate is independent of createdAt. The editor defaults to today in Tehran
-  and displays a Persian calendar; the API accepts an ISO YYYY-MM-DD date.
-- PATCH /invoices/:id replaces lines and SALE movements and reconciles stock
-  in one Serializable transaction. Invoices with returns cannot be edited.
-- Editor lines scroll in one table. Only preview/print paginate (ten items per
-  A5 landscape sheet). Header/logo/number/date/page repeat; parties only appear
-  on the first sheet and totals/notes/settlement/IBAN/signatures on the last.
-- New invoices snapshot store details and the selected buyer. Store default
-  notes prefill the draft and can be overridden per invoice (600 characters).
-- Archive filters support buyer/customer, product name, and date range.
-  Date filters use the persisted issueDate (a date-only field).
-- Successful issuance shows the saved invoice with an explicit print action.
-  Draft previews are marked as unregistered and do not change stock. The print
-  action is explicit and waits for fonts, images and page fitting. Existing
-  invoices can be reopened, edited when eligible, and printed. No server PDF endpoint.
-- Returns restore stock and record movements; they do not revise the original
-  invoice total or create a financial refund record.
-- Store settings are persisted through the API, using record id = 1.
-
-## 8. API surface and contracts
-
-Default API base: http://localhost:3000/api/v1.
-All endpoint paths below are relative to /api/v1.
-
-| Resource | Endpoints |
+| منبع | مسیرها نسبت به /api/v1 |
 | --- | --- |
-| Categories | GET/POST /categories; GET/PATCH/DELETE /categories/:id; GET /categories/:id/products |
-| Products | GET/POST /products; GET/PATCH/DELETE /products/:id |
-| Product status | PATCH /products/:id/status |
-| Product prices | PATCH /products/:id/price and /products/:id/prices (aliases) |
-| Price history | GET /products/:id/price-history |
-| Bulk prices | POST /products/bulk-price-update/preview; POST /products/bulk-price-update |
-| Inventory movements | GET/POST /transactions |
-| Buyers | GET/POST /buyers; GET/PATCH/DELETE /buyers/:id |
-| Invoices | GET/POST /invoices; GET/PATCH /invoices/:id |
-| Store settings | GET/PUT /store-settings |
+| دسته‌ها | GET/POST /categories؛ GET/PATCH/DELETE /categories/:id؛ GET /categories/:id/products |
+| کالاها | GET/POST /products؛ GET/PATCH/DELETE /products/:id |
+| وضعیت کالا | PATCH /products/:id/status |
+| قیمت کالا | PATCH /products/:id/price و /products/:id/prices |
+| تاریخچه قیمت | GET /products/:id/price-history |
+| قیمت گروهی | POST /products/bulk-price-update/preview و /products/bulk-price-update |
+| گردش | GET/POST /transactions |
+| مشتری | GET/POST /buyers؛ GET/PATCH/DELETE /buyers/:id |
+| فاکتور | GET/POST /invoices؛ GET/PATCH /invoices/:id |
+| فروشگاه | GET/PUT /store-settings |
 
-Controllers define routes, DTOs define accepted payloads, and services enforce
-business rules. Backend/src/main.ts enables a global ValidationPipe with
-transform, whitelist, and forbidNonWhitelisted; unexpected payload fields are
-rejected. Frontend service wrappers live in src/services/{api,categories,
-products,inventory}.ts and use fetch, not Axios.
+ValidationPipe دارای transform، whitelist و forbidNonWhitelisted است؛ فیلدهای
+اضافی payload پذیرفته نمی‌شوند. ابتدا controller، DTO و service را بررسی کنید.
+لیست کالا و تاریخچه قیمت { data, meta } می‌دهند؛ بیشتر لیست‌های دیگر آرایه‌اند.
+لیست کالا تا ۱۰٬۰۰۰ رکورد در فرانت دریافت و محلی صفحه‌بندی می‌شود؛ سرویس نیز
+پیش از slice داده‌ها را در حافظه فیلتر می‌کند. گردش و فاکتور حداکثر ۵۰۰ نتیجه
+دارند. این مسیرها خروجی کامل داده یا صفحه‌بندی مقیاس‌پذیر نیستند.
 
-Products and price history return { data, meta }, with page, limit, total, and
-totalPages in meta. Other list endpoints generally return arrays. Product list
-queries support search, categoryId, isActive, lowStock, minPrice, maxPrice,
-sortBy, sortOrder, page, and limit. Read DTOs for defaults and allowed values.
+## مرزهای فعلی
 
-Current pagination limits matter: product listing loads matching rows before
-filtering/slicing in memory; ProductsView requests up to 10,000 products and
-also paginates locally. Transactions and invoices return at most the newest
-500 matching records, without a pagination response. Do not treat these as
-complete exports or scalable server-side pagination.
-
-No authentication module, authorization guards, login flow, or Swagger setup
-is wired into the current application. JWT/Passport/Swagger dependencies and
-JWT variables in .env.example are not evidence of those features being active.
-
-## 9. Local configuration and development commands
-
-Use each command from its stated directory. The frontend declares Node
-^22.18.0 || >=24.12.0; check package.json if the runtime requirement changes.
-
-Configuration:
-
-- Root .env.example lists PORT, DATABASE_URL, JWT_SECRET, and JWT_EXPIRES_IN.
-  Create/configure the local root .env without copying credentials into docs.
-- Backend/src/app.module.ts loads ../.env relative to the backend working
-  directory. PrismaService requires DATABASE_URL; default API PORT is 3000.
-- Frontend VITE_API_URL overrides the default http://localhost:3000/api/v1.
-- Backend CORS currently allows http://localhost:5173 only. Coordinate API URL,
-  port, and CORS changes when using another frontend origin.
-- PostgreSQL must be available separately; docker-compose.yml does not currently
-  define a usable database service.
-
-Dependency installation: run npm ci in the repository root, Backend/, and
-Frontend/ as separate packages. Consult their manifests/lockfiles if dependency
-resolution fails; these are not a single npm workspace install.
-
-Database preparation, from the repository root:
-
-    npx prisma generate --config prisma7.config.ts
-    npx prisma migrate deploy --config prisma7.config.ts
-
-The explicit --config matters because the config is named prisma7.config.ts.
-The migration command applies existing migrations to DATABASE_URL; point it at
-the intended development database. For schema changes, use the project's
-versioned migration workflow and regenerate the client; do not hand-edit output.
-
-Backend/, in its own terminal:
-
-    npm run start:dev
-
-Frontend/, in another terminal:
-
-    npm run dev
-
-Relevant checks:
-
-- Frontend/: npm run build runs both vue-tsc type checking and the Vite build.
-  npm run type-check checks types; npm run build-only compiles without that check.
-- Frontend/: npm run format:check is read-only. npm run lint includes --fix and
-  can modify files; npm run format also rewrites files.
-- Backend/: npm run build and npm run lint check compilation/linting.
-- Backend/: npm run test and npm run test:e2e are configured through Vitest.
-  The visible e2e test is a starter Hello World test, not domain coverage, and
-  initializes AppModule/Prisma, so it requires database configuration.
-- Frontend/: npm run test:unit runs Node tests for Persian numeric parsing,
-  invoice validation, currency conversion, Persian calendar boundaries,
-  print-page markup, and theme persistence/fallback. UI checks are still needed.
-- Backend/: RUN_INVOICE_DB_TESTS=1 npm run test:e2e opts into invoice integration
-  tests against the configured database. They create tagged fixtures and remove
-  only those fixtures; auto-increment sequences may advance. In PowerShell set
-  $env:RUN_INVOICE_DB_TESTS='1' before invoking the command.
-
-These commands are derived from repository configuration. This document update
-does not certify a clean install, database migration, deployment, or test run.
-
-## 10. Task-to-file lookup and change guidance
-
-- Dark/light mode or shared layout: Frontend/src/main.ts, App.vue,
-  styles/main.css, then affected component styles.
-- Continue shadcn-vue migration: Frontend/package.json, src/components/ui/,
-  src/lib/, and the views consuming those components.
-- Product forms/list/prices: Frontend/src/views/ProductsView.vue,
-  ProductFormView.vue, BulkPriceView.vue, services/products.ts, and
-  Backend/src/products/.
-- Product history: Frontend/src/components/dialogs/ProductDetailsDialog.vue,
-  components/PriceHistoryChart.vue, and Backend/src/products/products.service.ts.
-- Receipts/returns: Frontend/src/views/InventoryView.vue,
-  services/inventory.ts, and Backend/src/inventory/.
-- Invoice archive/printing/buyers/store details: Frontend/src/views/InvoicesView.vue
-  and Backend/src/inventory/; these are not separate backend modules today.
-- Category behavior: Frontend/src/services/categories.ts and Backend/src/categories/.
-- Data model changes: prisma/schema.prisma, prisma/migrations/, backend DTOs and
-  services, then Frontend/src/types/index.ts and affected consumers.
-
-Keep client types, validation, and persistence aligned. Preserve invoice
-snapshots, stock transaction boundaries, price-history semantics, integer money,
-and the Persian UI when making changes. Check actual behavior rather than
-assuming that a UI label or a successful build proves the business workflow.
-
-Known unfinished areas: dedicated aggregate dashboard APIs, reports, stock adjustment,
-complete shadcn-vue migration, authentication/authorization, scalable list
-pagination, and domain test coverage. These are context for future work, not
-features this document claims to implement.
+احراز هویت، نقش/مجوز، login و Swagger فعال در برنامه سیم‌کشی نشده‌اند.
+وجود وابستگی JWT/Passport/Swagger یا متغیر JWT در نمونه env، اثبات پیاده‌سازی نیست.
+محیط هدف، مغازه است؛ شیوه استقرار نهایی، دسترسی شبکه، پشتیبان‌گیری و بازیابی
+باید پیش از بهره‌برداری عملی تعیین و بررسی شوند. پشتیبانی آفلاین یا استقرار
+آماده تولید را از معماری فعلی فرض نکنید.

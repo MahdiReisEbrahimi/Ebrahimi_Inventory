@@ -1,5 +1,5 @@
 ﻿<template>
-  <div class="page-stack">
+  <div class="page-stack table-page products-page">
     <PageHeader title="کالاها و قیمت‌ها">
       <Button variant="outline" @click="bulkOpen = true"
         ><Tags :size="17" />تغییر گروهی قیمت</Button
@@ -23,7 +23,7 @@
         کالا نیازمند تأمین
       </button>
     </div>
-    <section class="panel products-panel">
+    <section class="panel table-panel products-panel">
       <div class="filter-bar">
         <label class="search-field"
           ><Search :size="18" /><input

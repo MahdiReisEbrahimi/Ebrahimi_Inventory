@@ -1,5 +1,5 @@
 <template>
-  <div class="page-stack">
+  <div class="page-stack dashboard-page">
     <section class="welcome-banner">
       <div>
         <span class="welcome-caption">مدیریت ساده، فروش منظم</span>
@@ -130,7 +130,7 @@
           >
         </section>
       </div>
-      <section class="panel">
+      <section class="panel table-panel">
         <div class="panel-heading">
           <div>
             <h2>آخرین گردش‌های موجودی</h2>
@@ -140,7 +140,7 @@
             >مشاهده همه<ArrowLeft :size="15"
           /></RouterLink>
         </div>
-        <div v-if="movements.length" class="table-scroll">
+        <div class="table-scroll" :class="{ 'table-scroll--empty': !movements.length }">
           <table class="data-table">
             <thead>
               <tr>
@@ -151,6 +151,16 @@
               </tr>
             </thead>
             <tbody>
+              <tr v-if="!movements.length" class="table-state-row">
+                <td colspan="4" class="table-state-cell">
+                  <div class="table-state-content">
+                    <EmptyState
+                      title="هنوز گردشی ثبت نشده"
+                      description="با ثبت ورود کالا یا صدور اولین فاکتور، فعالیت‌های فروشگاه اینجا دیده می‌شوند."
+                    />
+                  </div>
+                </td>
+              </tr>
               <tr v-for="item in movements.slice(0, 5)" :key="item.id">
                 <td>
                   <b>{{ item.product.name }}</b>
@@ -168,11 +178,6 @@
             </tbody>
           </table>
         </div>
-        <EmptyState
-          v-else
-          title="هنوز گردشی ثبت نشده"
-          description="با ثبت ورود کالا یا صدور اولین فاکتور، فعالیت‌های فروشگاه اینجا دیده می‌شوند."
-        />
       </section>
     </template>
   </div>
@@ -188,11 +193,9 @@ import {
   CircleAlert,
   CircleCheck,
   Package,
-  Plus,
   TriangleAlert,
   Wallet,
 } from '@lucide/vue'
-import PageHeader from '@/components/ui/PageHeader.vue'
 import EmptyState from '@/components/ui/EmptyState.vue'
 import StatCard from '@/components/ui/StatCard.vue'
 import { productsApi } from '@/services/products'
@@ -242,6 +245,16 @@ async function load() {
 onMounted(load)
 </script>
 <style scoped>
+.dashboard-page {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+}
+.dashboard-page > .table-panel {
+  flex: 1;
+  min-height: 320px;
+}
+
 .welcome-banner {
   position: relative;
   display: flex;

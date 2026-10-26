@@ -61,7 +61,7 @@
           >{{ number(rows.length) }} کالای فعال تحت تأثیر این تغییر قرار می‌گیرد.</span
         >
       </div>
-      <div v-if="rows.length" class="table-scroll">
+      <div class="table-scroll" :class="{ 'table-scroll--empty': !rows.length }">
         <table class="data-table">
           <thead>
             <tr>
@@ -72,6 +72,16 @@
             </tr>
           </thead>
           <tbody>
+            <tr v-if="!rows.length" class="table-state-row">
+              <td :colspan="form.priceType === 'BOTH' ? 4 : 3" class="table-state-cell">
+                <div class="table-state-content">
+                  <EmptyState
+                    title="کالای فعالی وجود ندارد"
+                    description="دسته‌بندی یا وضعیت کالاها را بررسی کنید."
+                  />
+                </div>
+              </td>
+            </tr>
             <tr v-for="row in rows" :key="row.id">
               <td>{{ row.name }}</td>
               <template v-if="form.priceType === 'BOTH'">
@@ -96,11 +106,6 @@
           </tbody>
         </table>
       </div>
-      <EmptyState
-        v-else
-        title="کالای فعالی پیدا نشد"
-        description="دسته‌بندی یا وضعیت کالاها را بررسی کنید."
-      />
       <DialogActions v-if="rows.length">
         <Button variant="outline" :disabled="applying" @click="previewed = false">انصراف</Button
         ><Button :disabled="applying" @click="apply"
@@ -192,6 +197,18 @@ onMounted(async () => {
 })
 </script>
 <style scoped>
+.bulk-price {
+  display: flex;
+  flex-direction: column;
+  height: calc(100dvh - 190px);
+  min-height: 320px;
+}
+.bulk-price > p,
+.bulk-price > form,
+.bulk-preview > .notice {
+  flex-shrink: 0;
+}
+
 .bulk-price .form-grid {
   grid-template-columns: minmax(0, 1fr);
 }
@@ -245,13 +262,19 @@ onMounted(async () => {
   margin-bottom: 24px;
 }
 .bulk-preview {
-  margin-top: 24px;
+  flex: 1;
+  min-height: 180px;
+  display: flex;
+  flex-direction: column;
+  margin-top: 16px;
   border-top: 1px solid var(--border);
-  padding-top: 24px;
+  padding-top: 16px;
 }
 .bulk-preview .table-scroll {
   margin-top: 16px;
-  max-height: 320px;
+  flex: 1;
+  min-height: 0;
+  max-height: none;
   border: 1px solid var(--border);
   border-radius: 10px;
 }

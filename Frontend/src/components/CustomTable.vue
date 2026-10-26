@@ -20,19 +20,9 @@
         ><RefreshCw :size="16"
       /></Button>
     </div>
-    <div v-if="loading" class="table-loading" role="status">در حال دریافت اطلاعات…</div>
-    <EmptyState v-else-if="error" title="اطلاعات دریافت نشد" :description="error" error
-      ><Button variant="outline" @click="emits('refresh')">تلاش دوباره</Button></EmptyState
-    >
-    <EmptyState
-      v-else-if="!tableData?.length"
-      title="موردی برای نمایش نیست"
-      description="اگر فیلتری انتخاب کرده‌اید، آن را تغییر دهید یا یک مورد جدید ثبت کنید."
-      ><slot name="empty"
-    /></EmptyState>
     <div
-      v-else
       class="table-scroll"
+      :class="{ 'table-scroll--empty': loading || error || !tableData?.length }"
       tabindex="0"
       role="region"
       :aria-label="header || 'فهرست کالاها'"
@@ -57,41 +47,62 @@
           </tr>
         </thead>
         <tbody>
-          <tr v-for="(row, index) in tableData" :key="String(row.id ?? index)">
-            <td class="index-column">{{ number(index + 1) }}</td>
+          <tr v-if="loading || error || !tableData?.length" class="table-state-row">
             <td
-              v-for="col in tableColumns"
-              :key="col.prop"
-              :data-label="col.label"
-              :class="{ 'number-cell': col.type === 'price' }"
+              :colspan="(tableColumns?.length || 0) + 1 + (rowActions?.length ? 1 : 0)"
+              class="table-state-cell"
             >
-              <slot :name="col.prop" :item="getCellValue(row, col.prop)" :row="row">{{
-                col.formatter
-                  ? col.formatter(getCellValue(row, col.prop), row)
-                  : col.type === 'price'
-                    ? number(Number(getCellValue(row, col.prop)))
-                    : getCellValue(row, col.prop)
-              }}</slot>
-            </td>
-            <td v-if="rowActions?.length" class="row-actions action-column" data-label="عملیات">
-              <button
-                v-for="action in rowActions"
-                :key="action.name"
-                type="button"
-                class="icon-button"
-                :class="'icon-button--' + action.name"
-                :aria-label="action.label || actionLabel(action.name)"
-                :title="action.label || actionLabel(action.name)"
-                @click="emits('actionClick', { actionName: action.name, row })"
-              >
-                <component
-                  v-if="action.icon && typeof action.icon !== 'string'"
-                  :is="action.icon"
-                  :size="17"
-                /><span v-else>{{ action.label || actionLabel(action.name) }}</span>
-              </button>
+              <div class="table-state-content">
+                <div v-if="loading" class="table-loading" role="status">در حال دریافت اطلاعات…</div>
+                <EmptyState v-else-if="error" title="اطلاعات دریافت نشد" :description="error" error>
+                  <Button variant="outline" @click="emits('refresh')">تلاش دوباره</Button>
+                </EmptyState>
+                <EmptyState
+                  v-else
+                  title="رکوردی وجود ندارد"
+                  description="فیلترها را تغییر دهید یا یک مورد جدید ثبت کنید."
+                  ><slot name="empty"
+                /></EmptyState>
+              </div>
             </td>
           </tr>
+          <template v-else>
+            <tr v-for="(row, index) in tableData" :key="String(row.id ?? index)">
+              <td class="index-column">{{ number(index + 1) }}</td>
+              <td
+                v-for="col in tableColumns"
+                :key="col.prop"
+                :data-label="col.label"
+                :class="{ 'number-cell': col.type === 'price' }"
+              >
+                <slot :name="col.prop" :item="getCellValue(row, col.prop)" :row="row">{{
+                  col.formatter
+                    ? col.formatter(getCellValue(row, col.prop), row)
+                    : col.type === 'price'
+                      ? number(Number(getCellValue(row, col.prop)))
+                      : getCellValue(row, col.prop)
+                }}</slot>
+              </td>
+              <td v-if="rowActions?.length" class="row-actions action-column" data-label="عملیات">
+                <button
+                  v-for="action in rowActions"
+                  :key="action.name"
+                  type="button"
+                  class="icon-button"
+                  :class="'icon-button--' + action.name"
+                  :aria-label="action.label || actionLabel(action.name)"
+                  :title="action.label || actionLabel(action.name)"
+                  @click="emits('actionClick', { actionName: action.name, row })"
+                >
+                  <component
+                    v-if="action.icon && typeof action.icon !== 'string'"
+                    :is="action.icon"
+                    :size="17"
+                  /><span v-else>{{ action.label || actionLabel(action.name) }}</span>
+                </button>
+              </td>
+            </tr>
+          </template>
         </tbody>
       </table>
     </div>
@@ -148,6 +159,18 @@ const actionLabel = (name: string) =>
   ({ view: 'مشاهده جزئیات', edit: 'ویرایش کالا', delete: 'حذف کالا' })[name] || name
 </script>
 <style scoped>
+.list-section {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.list-section > .table-scroll {
+  flex: 1;
+  min-height: 0;
+  max-height: none;
+}
+
 .table-toolbar {
   padding: 12px 20px;
   display: flex;

@@ -1,10 +1,10 @@
 <template>
-  <div class="page-stack">
+  <div class="page-stack table-page">
     <PageHeader title="گردش موجودی" />
     <div v-if="error" class="notice notice--error" role="alert">
       {{ error }}<Button variant="outline" @click="load">تلاش دوباره</Button>
     </div>
-    <section class="panel movement-panel">
+    <section class="panel table-panel movement-panel">
       <div class="panel-heading">
         <div>
           <h2>فهرست گردش‌ها</h2>
@@ -33,13 +33,10 @@
           <option value="RETURN">مرجوعی</option>
         </select>
       </div>
-      <div v-if="loading" class="table-loading" role="status">در حال دریافت اطلاعات…</div>
-      <EmptyState
-        v-else-if="!filteredMovements.length"
-        title="گردشی برای نمایش نیست"
-        description="پس از ثبت ورود کالا یا صدور فاکتور، گردش موجودی در این بخش نمایش داده می‌شود."
-      />
-      <div v-else class="table-scroll">
+      <div
+        class="table-scroll"
+        :class="{ 'table-scroll--empty': loading || !filteredMovements.length }"
+      >
         <table class="data-table">
           <thead>
             <tr>
@@ -52,6 +49,20 @@
             </tr>
           </thead>
           <tbody>
+            <tr v-if="loading || !filteredMovements.length" class="table-state-row">
+              <td colspan="6" class="table-state-cell">
+                <div class="table-state-content">
+                  <div v-if="loading" class="table-loading" role="status">
+                    در حال دریافت اطلاعات…
+                  </div>
+                  <EmptyState
+                    v-else
+                    title="گردشی وجود ندارد"
+                    description="پس از ثبت ورود کالا یا صدور فاکتور، گردش موجودی نمایش داده می‌شود."
+                  />
+                </div>
+              </td>
+            </tr>
             <tr v-for="movement in filteredMovements" :key="movement.id">
               <td>
                 <b>{{ movement.product.name }}</b>

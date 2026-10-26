@@ -434,9 +434,54 @@ select:disabled {
   color: var(--primary);
   background: var(--accent);
 }
+.table-page {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+.table-page > * {
+  flex-shrink: 0;
+}
+.table-panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 280px;
+}
+.table-page > .table-panel {
+  flex: 1;
+}
+.table-panel > .panel-heading,
+.table-panel > .filter-bar,
+.table-panel > .pagination-controls {
+  flex-shrink: 0;
+}
+.table-panel > .table-scroll {
+  flex: 1;
+  min-height: 0;
+  max-height: none;
+}
+.table-scroll--empty > .data-table {
+  height: 100%;
+}
+.table-state-row {
+  height: 100%;
+}
+.data-table .table-state-cell {
+  padding: 0;
+  vertical-align: middle;
+}
+.table-state-content {
+  display: grid;
+  place-items: center;
+  min-height: 200px;
+}
+.table-state-content > * {
+  max-width: 100%;
+}
 .table-scroll {
   overflow: auto;
-  max-height: min(560px, 60dvh);
+  min-height: 240px;
   overscroll-behavior: contain;
   scrollbar-gutter: stable;
   min-width: 0;
@@ -453,6 +498,10 @@ select:disabled {
   border-collapse: collapse;
   text-align: center;
   font-size: 13px;
+}
+.data-table th:not(:last-child),
+.data-table td:not(:last-child) {
+  border-inline-end: 1px solid var(--border);
 }
 .data-table th,
 .data-table td,

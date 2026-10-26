@@ -12,6 +12,11 @@ const router = createRouter({
   },
   routes: [
     {
+      path: '/categories',
+      component: () => import('@/views/CategoriesView.vue'),
+      meta: { title: 'مدیریت دسته‌بندی‌ها' },
+    },
+    {
       path: '/',
       component: () => import('@/views/InventoryDashboardView.vue'),
       meta: { title: 'نمای کلی' },

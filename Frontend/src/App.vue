@@ -161,6 +161,7 @@ import {
   ChartNoAxesColumn,
   ChevronLeft,
   House,
+  Tags,
   Menu,
   Moon,
   Package,
@@ -205,6 +206,7 @@ const lowStock = ref<Product[]>([])
 const navigation = [
   { to: '/', text: 'نمای کلی', icon: House },
   { to: '/products', text: 'کالاها و قیمت‌ها', icon: Package },
+  { to: '/categories', text: 'مدیریت دسته‌بندی‌ها', icon: Tags },
   { to: '/inventory', text: 'ورود و مرجوعی کالا', icon: Boxes },
   { to: '/transactions', text: 'گردش موجودی', icon: ArrowLeftRight },
   { to: '/invoices', text: 'فاکتورهای فروش', icon: Receipt },

@@ -5,6 +5,9 @@
       description="کالاها را پیدا کنید، موجودی را ببینید و قیمت‌ها را به‌روز نگه دارید."
       eyebrow="مدیریت کالا"
     >
+      <RouterLink to="/categories" class="button button--outline"
+        ><Tags :size="17" />مدیریت دسته‌بندی‌ها</RouterLink
+      >
       <Button variant="outline" @click="bulkOpen = true"
         ><Tags :size="17" />تغییر گروهی قیمت</Button
       >

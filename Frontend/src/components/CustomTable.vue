@@ -53,7 +53,7 @@
             >
               {{ col.label }}
             </th>
-            <th v-if="rowActions?.length">عملیات</th>
+            <th v-if="rowActions?.length" class="action-column">عملیات</th>
           </tr>
         </thead>
         <tbody>
@@ -73,7 +73,7 @@
                     : getCellValue(row, col.prop)
               }}</slot>
             </td>
-            <td v-if="rowActions?.length" class="row-actions" data-label="عملیات">
+            <td v-if="rowActions?.length" class="row-actions action-column" data-label="عملیات">
               <button
                 v-for="action in rowActions"
                 :key="action.name"
@@ -165,46 +165,32 @@ const actionLabel = (name: string) =>
 .row-actions {
   white-space: nowrap;
 }
+.responsive-table {
+  min-width: 760px;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+.action-column {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  min-width: 154px;
+  background: var(--card);
+  box-shadow: 4px 0 10px color-mix(in srgb, var(--foreground) 8%, transparent);
+}
+.data-table thead .action-column {
+  z-index: 4;
+  background: var(--muted);
+}
+.data-table tbody tr:hover .action-column {
+  background: color-mix(in srgb, var(--muted) 60%, var(--card));
+}
 @media (max-width: 640px) {
-  .responsive-table,
-  .responsive-table tbody {
-    display: block;
+  .responsive-table {
+    min-width: 720px;
   }
-  .responsive-table thead,
-  .responsive-table .index-column {
-    display: none;
-  }
-  .responsive-table tr {
-    display: block;
-    padding: 12px 16px;
-    border-bottom: 1px solid var(--border);
-  }
-  .responsive-table td {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 16px;
-    border: 0;
-    padding: 7px 0;
-    text-align: end;
-    min-width: 0;
-    overflow-wrap: anywhere;
-  }
-  .responsive-table td::before {
-    content: attr(data-label);
-    color: var(--muted-foreground);
-    font-size: 11px;
-    text-align: start;
-    flex-shrink: 0;
-  }
-  .responsive-table .row-actions {
-    justify-content: flex-end;
-    border-top: 1px dashed var(--border);
-    margin-top: 8px;
-    padding-top: 10px;
-  }
-  .responsive-table .row-actions::before {
-    margin-inline-end: auto;
+  .responsive-table .action-column {
+    min-width: 142px;
   }
 }
 </style>

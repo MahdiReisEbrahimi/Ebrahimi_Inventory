@@ -19,22 +19,12 @@
           <h3><Package :size="18" /> مشخصات کالا</h3>
           <div class="form-grid">
             <label class="form-field"
-              ><span>نام کالا <small>الزامی</small></span
+              ><span>نام کالا <small>الزامی و یکتا</small></span
               ><input
                 v-model="form.name"
                 required
                 maxlength="200"
                 placeholder="مثلاً شیر روشویی"
-                autocomplete="off"
-            /></label>
-            <label class="form-field"
-              ><span>کد کالا <small>الزامی و یکتا</small></span
-              ><input
-                v-model="form.sku"
-                required
-                maxlength="100"
-                placeholder="مثلاً PR-1001"
-                dir="ltr"
                 autocomplete="off"
             /></label>
             <label class="form-field"
@@ -154,7 +144,6 @@ const loadError = ref(''),
   categorySaving = ref(false)
 const form = reactive({
   name: '',
-  sku: '',
   categoryId: undefined as number | undefined,
   unit: 'عدد',
   buyPrice: '0',
@@ -165,7 +154,6 @@ const form = reactive({
 function assignProduct(p: Product) {
   Object.assign(form, {
     name: p.name,
-    sku: p.sku,
     categoryId: p.categoryId,
     unit: p.unit,
     buyPrice: number(p.buyPrice),
@@ -212,8 +200,8 @@ async function submit() {
   formError.value = ''
   const buyPrice = parseNumber(form.buyPrice),
     sellPrice = parseNumber(form.sellPrice)
-  if (!form.categoryId || !form.name.trim() || !form.sku.trim() || !form.unit.trim()) {
-    formError.value = 'نام، کد، واحد و دسته‌بندی کالا را تکمیل کنید.'
+  if (!form.categoryId || !form.name.trim() || !form.unit.trim()) {
+    formError.value = 'نام، واحد و دسته‌بندی کالا را تکمیل کنید.'
     return
   }
   if (
@@ -229,7 +217,6 @@ async function submit() {
     const data = {
       ...form,
       name: form.name.trim(),
-      sku: form.sku.trim(),
       unit: form.unit.trim(),
       buyPrice,
       sellPrice,

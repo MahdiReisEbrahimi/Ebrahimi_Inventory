@@ -1,21 +1,12 @@
 <template>
   <div class="page-stack">
-    <PageHeader
-      title="امروز، با خیال آسوده‌تر"
-      description="وضعیت کالاها و کارهای روزانه فروشگاه را یک‌جا دنبال کنید."
-      eyebrow="نمای کلی فروشگاه"
-    >
-      <RouterLink to="/invoices" class="button button--primary"
-        ><Plus :size="17" />فاکتور جدید</RouterLink
-      >
-    </PageHeader>
     <section class="welcome-banner">
       <div>
         <span class="welcome-caption">مدیریت ساده، فروش منظم</span>
         <h2>از موجودی تا فاکتور،<br />همه چیز سر جای خودش.</h2>
         <p>برای شروع، کالای تازه ثبت کنید یا موجودی انبار را به‌روز کنید.</p>
         <div class="welcome-actions">
-          <RouterLink to="/inventory" class="button welcome-button"
+          <RouterLink to="/products" class="button welcome-button"
             ><ArrowDownToLine :size="17" />ثبت ورود کالا</RouterLink
           ><RouterLink to="/products/new" class="welcome-link"
             >افزودن کالای جدید<ArrowLeft :size="16"
@@ -87,13 +78,13 @@
             <RouterLink
               v-for="product in lowStock.slice(0, 5)"
               :key="product.id"
-              :to="{ path: '/products', query: { search: product.sku } }"
+              :to="{ path: '/products', query: { search: product.name } }"
               class="attention-row"
             >
               <span class="product-glyph"><Package :size="21" /></span>
               <div>
                 <b>{{ product.name }}</b
-                ><small>{{ product.category.name }} · {{ product.sku }}</small>
+                ><small>{{ product.category.name }}</small>
               </div>
               <span class="badge badge--warning"
                 >{{ number(product.stock) }} {{ product.unit }}</span

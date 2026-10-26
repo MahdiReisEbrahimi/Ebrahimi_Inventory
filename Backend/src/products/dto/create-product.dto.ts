@@ -9,7 +9,6 @@ import {
 
 export class CreateProductDto {
   @IsString() @IsNotEmpty() @MaxLength(200) name!: string;
-  @IsString() @IsNotEmpty() @MaxLength(100) sku!: string;
   @IsInt() @Min(1) categoryId!: number;
   @IsString() @IsNotEmpty() @MaxLength(50) unit!: string;
   @IsInt() @Min(0) buyPrice!: number;

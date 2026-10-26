@@ -24,8 +24,7 @@ model Category {
 // later without changing this relationship or migrating existing categories.
 model Product {
   id             Int            @id @default(autoincrement())
-  name           String
-  sku            String         @unique
+  name           String         @unique
   categoryId     Int
   category       Category       @relation(fields: [categoryId], references: [id], onDelete: Restrict)
   unit           String

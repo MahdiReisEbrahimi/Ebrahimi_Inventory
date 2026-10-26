@@ -1,4 +1,9 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { Prisma, PriceChangeType } from '../generated/prisma/client.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { BulkPriceUpdateDto } from './dto/bulk-price-update.dto.js';
@@ -33,10 +38,7 @@ export class ProductsService {
     const where: Prisma.ProductWhereInput = {
       ...(search
         ? {
-            OR: [
-              { name: { contains: search, mode: 'insensitive' } },
-              { sku: { contains: search, mode: 'insensitive' } },
-            ],
+            name: { contains: search, mode: 'insensitive' },
           }
         : {}),
       ...(categoryId ? { categoryId } : {}),
@@ -75,24 +77,38 @@ export class ProductsService {
   }
 
   async create(data: CreateProductDto) {
+    data = { ...data, name: this.productName(data.name) };
     await this.ensureCategory(data.categoryId);
-    return this.prisma.product.create({ data, include: productInclude });
+    try {
+      return await this.prisma.product.create({
+        data,
+        include: productInclude,
+      });
+    } catch (error) {
+      this.handleNameConflict(error);
+    }
   }
 
   async update(id: number, data: UpdateProductDto) {
+    if (data.name !== undefined)
+      data = { ...data, name: this.productName(data.name) };
     const current = await this.findOne(id);
     if (data.categoryId !== undefined)
       await this.ensureCategory(data.categoryId);
     const priceChanged =
       (data.buyPrice !== undefined && data.buyPrice !== current.buyPrice) ||
       (data.sellPrice !== undefined && data.sellPrice !== current.sellPrice);
-    return priceChanged
-      ? this.updatePrices(id, data, PriceChangeType.SINGLE)
-      : this.prisma.product.update({
-          where: { id },
-          data,
-          include: productInclude,
-        });
+    try {
+      return priceChanged
+        ? await this.updatePrices(id, data, PriceChangeType.SINGLE)
+        : await this.prisma.product.update({
+            where: { id },
+            data,
+            include: productInclude,
+          });
+    } catch (error) {
+      this.handleNameConflict(error);
+    }
   }
 
   async updateStatus(id: number, { isActive }: UpdateProductStatusDto) {
@@ -270,6 +286,26 @@ export class ProductsService {
       });
       return product;
     });
+  }
+
+  private productName(value: unknown) {
+    if (typeof value !== 'string')
+      throw new BadRequestException('نام کالا را وارد کنید.');
+    const name = value.trim();
+    if (!name) throw new BadRequestException('نام کالا را وارد کنید.');
+    return name;
+  }
+
+  private handleNameConflict(error: unknown): never {
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === 'P2002'
+    ) {
+      throw new ConflictException(
+        'کالایی با این نام قبلاً ثبت شده است. نام کالا باید یکتا باشد.',
+      );
+    }
+    throw error;
   }
 
   private async ensureCategory(id: number) {

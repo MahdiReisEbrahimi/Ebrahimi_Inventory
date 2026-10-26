@@ -27,7 +27,6 @@ describe.skipIf(process.env.RUN_INVOICE_DB_TESTS !== '1')(
         await prisma.product.create({
           data: {
             name: tag,
-            sku: tag,
             categoryId,
             unit: 'عدد',
             stock: 20,

@@ -9,7 +9,7 @@
           ><small>همراه هر روز فروشگاه شما</small></span
         >
       </RouterLink>
-      <div class="workspace-label">میز کار فروشگاه</div>
+      <div class="workspace-label"></div>
       <nav aria-label="منوی اصلی">
         <RouterLink
           v-for="item in navigation"
@@ -22,14 +22,6 @@
           <span v-if="isActive(item.to)" class="nav-dot" />
         </RouterLink>
       </nav>
-      <div class="sidebar-note">
-        <Sprout :size="24" /><strong>نظم بیشتر، خیال آسوده‌تر</strong>
-        <p>همه چیز برای مدیریت ساده‌تر کالاها و فروش، در یک جا.</p>
-      </div>
-      <div class="sidebar-footer">
-        <span class="store-avatar"><Store :size="20" /></span>
-        <div><b>فروشگاه ابراهیمی</b><small>مدیریت موجودی و فروش</small></div>
-      </div>
     </aside>
 
     <div class="main-container">
@@ -96,13 +88,13 @@
                   <RouterLink
                     v-for="product in lowStock"
                     :key="product.id"
-                    :to="{ path: '/products', query: { search: product.sku } }"
+                    :to="{ path: '/products', query: { search: product.name } }"
                     class="stock-alert"
                     @click="alertsOpen = false"
                   >
                     <span
                       ><b>{{ product.name }}</b
-                      ><small>{{ product.sku }}</small></span
+                      ><small>{{ product.category.name }}</small></span
                     >
                     <span class="badge badge--warning"
                       >{{ number(product.stock) }} {{ product.unit }}</span
@@ -111,7 +103,7 @@
                 </div>
                 <p v-else class="muted stock-empty">کالایی نیازمند تأمین نیست.</p>
                 <RouterLink
-                  to="/inventory"
+                  :to="{ path: '/products', query: { lowStock: 'true' } }"
                   class="button button--outline stock-link"
                   @click="alertsOpen = false"
                   >ثبت ورود کالا<ArrowLeft :size="15"
@@ -158,7 +150,6 @@ import {
   ArrowLeftRight,
   Bell,
   Boxes,
-  ChartNoAxesColumn,
   ChevronLeft,
   House,
   Tags,
@@ -207,10 +198,8 @@ const navigation = [
   { to: '/', text: 'نمای کلی', icon: House },
   { to: '/products', text: 'کالاها و قیمت‌ها', icon: Package },
   { to: '/categories', text: 'مدیریت دسته‌بندی‌ها', icon: Tags },
-  { to: '/inventory', text: 'ورود و مرجوعی کالا', icon: Boxes },
   { to: '/transactions', text: 'گردش موجودی', icon: ArrowLeftRight },
   { to: '/invoices', text: 'فاکتورهای فروش', icon: Receipt },
-  { to: '/reports', text: 'گزارش‌ها', icon: ChartNoAxesColumn },
 ]
 const isActive = (path: string) => (path === '/' ? route.path === '/' : route.path.startsWith(path))
 async function loadAlerts() {

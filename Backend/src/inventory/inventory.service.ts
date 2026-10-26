@@ -21,7 +21,7 @@ export class InventoryService {
   movements() {
     return this.prisma.inventoryTransaction.findMany({
       include: {
-        product: { select: { id: true, name: true, sku: true, unit: true } },
+        product: { select: { id: true, name: true, unit: true } },
         invoice: { select: { number: true } },
       },
       orderBy: { createdAt: 'desc' },
@@ -412,7 +412,7 @@ export class InventoryService {
           OR: [
             { name: { contains: productText, mode: 'insensitive' } },
             {
-              product: { sku: { contains: productText, mode: 'insensitive' } },
+              product: { name: { contains: productText, mode: 'insensitive' } },
             },
           ],
         },

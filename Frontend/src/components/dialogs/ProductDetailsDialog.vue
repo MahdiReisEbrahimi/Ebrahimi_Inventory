@@ -8,7 +8,7 @@
       <span class="details-icon"><Package :size="26" /></span>
       <div>
         <h2>{{ product.name }}</h2>
-        <small>{{ product.sku }} · {{ product.category.name }}</small>
+        <small>{{ product.category.name }}</small>
       </div>
       <span class="badge" :class="product.isActive ? 'badge--success' : ''">{{
         product.isActive ? 'فعال' : 'غیرفعال'

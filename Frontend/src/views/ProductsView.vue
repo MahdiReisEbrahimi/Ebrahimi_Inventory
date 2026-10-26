@@ -1,13 +1,6 @@
 ﻿<template>
   <div class="page-stack">
-    <PageHeader
-      title="کالاها و قیمت‌ها"
-      description="کالاها را پیدا کنید، موجودی را ببینید و قیمت‌ها را به‌روز نگه دارید."
-      eyebrow="مدیریت کالا"
-    >
-      <RouterLink to="/categories" class="button button--outline"
-        ><Tags :size="17" />مدیریت دسته‌بندی‌ها</RouterLink
-      >
+    <PageHeader title="کالاها و قیمت‌ها">
       <Button variant="outline" @click="bulkOpen = true"
         ><Tags :size="17" />تغییر گروهی قیمت</Button
       >
@@ -36,8 +29,8 @@
           ><Search :size="18" /><input
             v-model="query.search"
             type="search"
-            placeholder="نام یا کد کالا را جست‌وجو کنید…"
-            aria-label="جست‌وجوی نام یا کد کالا"
+            placeholder="نام کالا را جست‌وجو کنید…"
+            aria-label="جست‌وجوی نام کالا"
         /></label>
         <select v-model="query.categoryId" aria-label="فیلتر دسته‌بندی">
           <option :value="undefined">همه دسته‌بندی‌ها</option>
@@ -76,7 +69,7 @@
       >
         <template #name="{ row }"
           ><div class="product-cell">
-            <span class="product-mark"><Package :size="19" /></span><b>{{ row.name }}</b>
+            <b>{{ row.name }}</b>
           </div></template
         >
         <template #stock="{ row }"
@@ -151,6 +144,18 @@
     <AppDialog v-model:open="bulkOpen" title="تغییر گروهی قیمت" width="850px"
       ><BulkPriceView v-if="bulkOpen" @close="onBulkClose"
     /></AppDialog>
+    <AppDialog
+      v-model:open="stockOpen"
+      :title="stockType === 'PURCHASE' ? 'ثبت خرید کالا' : 'ثبت مرجوعی فروش'"
+      width="620px"
+    >
+      <ProductStockDialog
+        v-if="stockOpen && selected"
+        :product="selected"
+        :type="stockType"
+        @close="onStockClose"
+      />
+    </AppDialog>
   </div>
 </template>
 <script setup lang="ts">
@@ -165,9 +170,11 @@ import {
   Plus,
   RefreshCw,
   Search,
+  ShoppingCart,
   Tags,
   Trash2,
   TriangleAlert,
+  Undo2,
   X,
 } from '@lucide/vue'
 import PageHeader from '@/components/ui/PageHeader.vue'
@@ -176,6 +183,7 @@ import AppDialog from '@/components/ui/AppDialog.vue'
 import CustomTable, { type TableColumn } from '@/components/CustomTable.vue'
 import ProductDetailsDialog from '@/components/dialogs/ProductDetailsDialog.vue'
 import DeleteProductDialog from '@/components/dialogs/DeleteProductDialog.vue'
+import ProductStockDialog from '@/components/dialogs/ProductStockDialog.vue'
 import ProductFormView from './ProductFormView.vue'
 import BulkPriceView from './BulkPriceView.vue'
 import { productsApi } from '@/services/products'
@@ -195,6 +203,8 @@ const formOpen = ref(false),
   detailsOpen = ref(false),
   deleteOpen = ref(false),
   bulkOpen = ref(false)
+const stockOpen = ref(false)
+const stockType = ref<'PURCHASE' | 'RETURN'>('PURCHASE')
 const query = reactive({
   search: '',
   categoryId: undefined as number | undefined,
@@ -205,22 +215,22 @@ const query = reactive({
 })
 const columns: TableColumn[] = [
   { prop: 'name', label: 'نام کالا' },
-  { prop: 'sku', label: 'کد کالا' },
   { prop: 'category.name', label: 'دسته‌بندی' },
   { prop: 'sellPrice', label: 'قیمت فروش · تومان', type: 'price' },
   { prop: 'stock', label: 'موجودی' },
   { prop: 'isActive', label: 'وضعیت' },
 ]
 const rowActions = [
-  { name: 'view', icon: Eye },
-  { name: 'edit', icon: Pencil },
-  { name: 'delete', icon: Trash2 },
+  { name: 'purchase', icon: ShoppingCart, label: 'ثبت خرید کالا' },
+  { name: 'return', icon: Undo2, label: 'ثبت مرجوعی فروش' },
+  { name: 'view', icon: Eye, label: 'مشاهده جزئیات کالا' },
+  { name: 'edit', icon: Pencil, label: 'ویرایش کالا' },
+  { name: 'delete', icon: Trash2, label: 'حذف کالا' },
 ]
 const filtered = computed(() =>
   items.value.filter(
     (p) =>
-      (!query.search.trim() ||
-        [p.name, p.sku].some((v) => v.toLowerCase().includes(query.search.trim().toLowerCase()))) &&
+      (!query.search.trim() || p.name.toLowerCase().includes(query.search.trim().toLowerCase())) &&
       (query.categoryId === undefined || p.categoryId === query.categoryId) &&
       (query.isActive === undefined || p.isActive === query.isActive) &&
       (!query.lowStock || (p.isActive && p.stock <= p.minStock)),
@@ -273,6 +283,14 @@ function handleAction({ actionName, row }: { actionName: string; row: Product })
   if (actionName === 'view') detailsOpen.value = true
   if (actionName === 'edit') formOpen.value = true
   if (actionName === 'delete') deleteOpen.value = true
+  if (actionName === 'purchase' || actionName === 'return') {
+    stockType.value = actionName === 'purchase' ? 'PURCHASE' : 'RETURN'
+    stockOpen.value = true
+  }
+}
+async function onStockClose(saved: boolean) {
+  stockOpen.value = false
+  if (saved) await load()
 }
 async function onFormClose(saved: boolean) {
   formOpen.value = false
@@ -357,9 +375,47 @@ onMounted(load)
 .products-panel {
   overflow: hidden;
 }
+.products-panel :deep(.action-column) {
+  min-width: 232px;
+}
+.products-panel :deep(.row-actions .icon-button) {
+  width: 34px;
+  height: 34px;
+  margin-inline: 3px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--card);
+  color: var(--muted-foreground);
+  transition:
+    background 0.15s,
+    border-color 0.15s,
+    color 0.15s,
+    transform 0.15s;
+}
+.products-panel :deep(.row-actions .icon-button--purchase),
+.products-panel :deep(.row-actions .icon-button--edit) {
+  color: var(--primary);
+  background: var(--secondary);
+}
+.products-panel :deep(.row-actions .icon-button--return) {
+  color: var(--warning);
+  background: color-mix(in srgb, var(--warning) 8%, var(--card));
+}
+.products-panel :deep(.row-actions .icon-button--delete) {
+  color: var(--destructive);
+  background: color-mix(in srgb, var(--destructive) 6%, var(--card));
+}
+.products-panel :deep(.row-actions .icon-button:hover) {
+  border-color: currentColor;
+  transform: translateY(-2px);
+}
+.products-panel :deep(.row-actions .icon-button:active) {
+  transform: translateY(0);
+}
 .product-cell {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 10px;
   min-width: 150px;
 }

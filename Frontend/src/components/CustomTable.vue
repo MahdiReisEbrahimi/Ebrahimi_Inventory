@@ -57,7 +57,7 @@
           </tr>
         </thead>
         <tbody>
-          <tr v-for="(row, index) in tableData" :key="String(row.id ?? row.sku ?? index)">
+          <tr v-for="(row, index) in tableData" :key="String(row.id ?? index)">
             <td class="index-column">{{ number(index + 1) }}</td>
             <td
               v-for="col in tableColumns"
@@ -97,7 +97,7 @@
     </div>
   </section>
 </template>
-<script setup lang="ts" generic="Row extends { id?: string | number; sku?: string }">
+<script setup lang="ts" generic="Row extends { id?: string | number }">
 import { ref, type Component } from 'vue'
 import { RefreshCw, Search } from '@lucide/vue'
 import Button from '@/components/ui/Button.vue'
@@ -162,6 +162,9 @@ const actionLabel = (name: string) =>
   color: var(--muted-foreground);
   font-size: 11px;
 }
+.data-table thead .index-column {
+  color: var(--table-header-foreground);
+}
 .row-actions {
   white-space: nowrap;
 }
@@ -180,10 +183,10 @@ const actionLabel = (name: string) =>
 }
 .data-table thead .action-column {
   z-index: 4;
-  background: var(--muted);
+  background: var(--table-header-background);
 }
 .data-table tbody tr:hover .action-column {
-  background: color-mix(in srgb, var(--muted) 60%, var(--card));
+  background: var(--table-row-hover);
 }
 @media (max-width: 640px) {
   .responsive-table {

@@ -232,7 +232,7 @@
           ><span>نام یا کد ملی</span><input v-model="archiveFilters.buyer"
         /></label>
         <label class="form-field"
-          ><span>نام یا کد کالا</span><input v-model="archiveFilters.product"
+          ><span>نام کالا</span><input v-model="archiveFilters.product"
         /></label>
         <label class="form-field"
           ><span>از تاریخ صدور</span><input v-model="archiveFilters.from" type="date"
@@ -504,8 +504,7 @@ const productOptions = computed(() =>
       value: product.id,
       label: product.name,
       description:
-        product.sku +
-        ' · موجودی ' +
+        'موجودی ' +
         number(stockOf(product.id)) +
         ' ' +
         product.unit +

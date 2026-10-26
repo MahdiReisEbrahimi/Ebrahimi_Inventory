@@ -6,7 +6,6 @@ export interface Category {
 export interface Product {
   id: number
   name: string
-  sku: string
   categoryId: number
   category: Category
   unit: string
@@ -43,7 +42,7 @@ export interface InventoryMovement {
   unitPrice: number | null
   description: string | null
   createdAt: string
-  product: Pick<Product, 'id' | 'name' | 'sku' | 'unit'>
+  product: Pick<Product, 'id' | 'name' | 'unit'>
   invoice?: { number: string } | null
 }
 export interface InvoiceItem {

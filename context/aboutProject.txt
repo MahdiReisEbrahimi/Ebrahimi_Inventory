@@ -149,7 +149,7 @@ StoreSettings, which is used as a single record with id = 1.
 | Model | Meaning and key constraints |
 | --- | --- |
 | Category | Unique name; one category has many products |
-| Product | Unique SKU, required category, name/unit, integer buyPrice/sellPrice, stock/minStock, optional description, isActive |
+| Product | Unique name, required category/unit, integer buyPrice/sellPrice, stock/minStock, optional description, isActive |
 | PriceHistory | Per-product old/new buy and sell prices, SINGLE/BULK type, optional change percentage and actor metadata |
 | AuditLog | Per-product action and optional JSON details; selected operations are logged |
 | InventoryTransaction | Product movement, type, positive quantity for implemented flows, optional unit price, description, and invoice relation |
@@ -222,7 +222,7 @@ Invoices and buyers — the same inventory service and InvoicesView.vue:
   on the first sheet and totals/notes/settlement/IBAN/signatures on the last.
 - New invoices snapshot store details and the selected buyer. Store default
   notes prefill the draft and can be overridden per invoice (600 characters).
-- Archive filters support buyer/customer, product name/SKU, and date range.
+- Archive filters support buyer/customer, product name, and date range.
   Date filters use the persisted issueDate (a date-only field).
 - Successful issuance shows the saved invoice with an explicit print action.
   Draft previews are marked as unregistered and do not change stock. The print

@@ -2,8 +2,6 @@
   <div class="page-stack">
     <PageHeader
       title="مدیریت دسته‌بندی‌ها"
-      description="دسته‌بندی‌های کالا را مشاهده، ایجاد و ویرایش کنید."
-      eyebrow="مدیریت کالا"
     >
       <RouterLink to="/products" class="button button--outline">
         <Package :size="17" />کالاها و قیمت‌ها

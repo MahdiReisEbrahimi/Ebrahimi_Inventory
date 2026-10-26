@@ -435,18 +435,27 @@ select:disabled {
   max-width: 100%;
 }
 .data-table {
+  --table-header-background: color-mix(in srgb, var(--primary) 10%, var(--card));
+  --table-header-foreground: color-mix(in srgb, var(--primary) 65%, var(--foreground));
+  --table-row-hover: color-mix(in srgb, var(--primary) 6%, var(--card));
   width: 100%;
   border-collapse: collapse;
-  text-align: start;
+  text-align: center;
   font-size: 13px;
+}
+.data-table th,
+.data-table td,
+.data-table td input,
+.data-table td select {
+  text-align: center;
 }
 .data-table th {
   position: sticky;
   top: 0;
   z-index: 1;
   padding: 13px 20px;
-  background: var(--muted);
-  color: var(--muted-foreground);
+  background: var(--table-header-background);
+  color: var(--table-header-foreground);
   font-size: 11px;
   font-weight: 600;
   white-space: nowrap;
@@ -459,7 +468,7 @@ select:disabled {
   border-bottom: 0;
 }
 .data-table tbody tr:hover {
-  background: color-mix(in srgb, var(--muted) 60%, transparent);
+  background: var(--table-row-hover);
 }
 .data-table .number-cell {
   font-variant-numeric: tabular-nums;

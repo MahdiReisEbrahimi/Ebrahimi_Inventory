@@ -37,24 +37,14 @@ const router = createRouter({
       meta: { title: 'ویرایش کالا' },
     },
     {
-      path: '/inventory',
-      component: () => import('@/views/InventoryView.vue'),
-      meta: { title: 'ورود و مرجوعی کالا' },
-    },
-    {
       path: '/transactions',
-      component: () => import('@/views/InventoryView.vue'),
+      component: () => import('@/views/TransactionsView.vue'),
       meta: { title: 'گردش موجودی' },
     },
     {
       path: '/invoices',
       component: () => import('@/views/InvoicesView.vue'),
       meta: { title: 'فاکتورهای فروش' },
-    },
-    {
-      path: '/reports',
-      component: () => import('@/views/PlaceholderView.vue'),
-      meta: { title: 'گزارش‌ها' },
     },
     {
       path: '/settings',

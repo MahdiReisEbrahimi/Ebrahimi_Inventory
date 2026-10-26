@@ -34,16 +34,12 @@ export class InventoryService {
       throw new BadRequestException(
         'اصلاح موجودی از این فرم پشتیبانی نمی‌شود.',
       );
-    if (data.type === 'RETURN' && !data.invoiceId)
-      throw new BadRequestException(
-        'برای ثبت مرجوعی، فاکتور فروش را انتخاب کنید.',
-      );
     return this.prisma.$transaction(async (tx) => {
       const product = await tx.product.findUnique({
         where: { id: data.productId },
       });
       if (!product) throw new NotFoundException('محصول پیدا نشد.');
-      if (data.type === 'RETURN') {
+      if (data.type === 'RETURN' && data.invoiceId) {
         const invoice = await tx.invoice.findUnique({
           where: { id: data.invoiceId },
         });
@@ -77,7 +73,12 @@ export class InventoryService {
         where: { id: product.id },
         data: {
           stock: { increment: data.quantity },
-          ...(data.unitPrice !== undefined ? { buyPrice: data.unitPrice } : {}),
+          ...(data.type === 'PURCHASE' && data.unitPrice !== undefined
+            ? { buyPrice: data.unitPrice }
+            : {}),
+          ...(data.type === 'PURCHASE' && data.sellPrice !== undefined
+            ? { sellPrice: data.sellPrice }
+            : {}),
         },
       });
       const movement = await tx.inventoryTransaction.create({
@@ -92,14 +93,20 @@ export class InventoryService {
         },
         include: { product: true, invoice: { select: { number: true } } },
       });
-      if (data.unitPrice !== undefined && data.unitPrice !== product.buyPrice)
+      if (
+        data.type === 'PURCHASE' &&
+        ((data.unitPrice !== undefined &&
+          data.unitPrice !== product.buyPrice) ||
+          (data.sellPrice !== undefined &&
+            data.sellPrice !== product.sellPrice))
+      )
         await tx.priceHistory.create({
           data: {
             productId: product.id,
             oldBuyPrice: product.buyPrice,
-            newBuyPrice: data.unitPrice,
+            newBuyPrice: data.unitPrice ?? product.buyPrice,
             oldSellPrice: product.sellPrice,
-            newSellPrice: product.sellPrice,
+            newSellPrice: data.sellPrice ?? product.sellPrice,
             type: 'SINGLE',
           },
         });

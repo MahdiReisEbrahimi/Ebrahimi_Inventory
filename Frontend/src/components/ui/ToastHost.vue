@@ -74,6 +74,7 @@ onUnmounted(() => {
   border-radius: 6px;
 }
 .toast-dismiss:hover {
-  background: var(--muted);
+  background: var(--accent);
+  color: var(--accent-foreground);
 }
 </style>

@@ -1,8 +1,6 @@
 <template>
-  <div class="page-stack">
-    <PageHeader
-      title="مدیریت دسته‌بندی‌ها"
-    >
+  <div class="page-stack categories-page">
+    <PageHeader title="مدیریت دسته‌بندی‌ها">
       <RouterLink to="/products" class="button button--outline">
         <Package :size="17" />کالاها و قیمت‌ها
       </RouterLink>
@@ -105,7 +103,7 @@
       width="460px"
       @update:open="setFormOpen"
     >
-      <form class="category-form" :aria-busy="saving" @submit.prevent="save">
+      <form :id="categoryFormId" class="category-form" :aria-busy="saving" @submit.prevent="save">
         <label class="form-field">
           <span>نام دسته‌بندی <small>الزامی</small></span>
           <input
@@ -118,42 +116,44 @@
           />
           <small>حداکثر ۱۰۰ کاراکتر؛ نام دسته‌بندی باید یکتا باشد.</small>
         </label>
-        <p v-if="formError" class="notice notice--error" role="alert">{{ formError }}</p>
-        <div class="form-actions">
+
+        <DialogActions>
           <Button variant="outline" :disabled="saving" @click="setFormOpen(false)">انصراف</Button>
-          <Button type="submit" :disabled="saving || !name.trim()">{{
+          <Button :form="categoryFormId" type="submit" :disabled="saving || !name.trim()">{{
             saving ? 'در حال ذخیره…' : editing ? 'ذخیره تغییرات' : 'ثبت دسته‌بندی'
           }}</Button>
-        </div>
+        </DialogActions>
       </form>
     </AppDialog>
     <AppDialog :open="deleteOpen" title="حذف دسته‌بندی" width="440px" @update:open="setDeleteOpen">
-      <form class="category-form" :aria-busy="deleting" @submit.prevent="remove">
+      <form :id="deleteFormId" class="category-form" :aria-busy="deleting" @submit.prevent="remove">
         <p>دسته‌بندی «{{ deletingCategory?.name }}» حذف شود؟</p>
         <p class="muted">حذف فقط در صورت نداشتن کالا انجام می‌شود.</p>
-        <p v-if="deleteError" class="notice notice--error" role="alert">{{ deleteError }}</p>
-        <div class="form-actions">
+
+        <DialogActions>
           <Button variant="outline" :disabled="deleting" @click="setDeleteOpen(false)"
             >انصراف</Button
           >
           <Button
+            :form="deleteFormId"
             type="submit"
             variant="destructive"
             :disabled="deleting || deletingCategory?._count?.products !== 0"
           >
             {{ deleting ? 'در حال حذف…' : 'تأیید حذف' }}
           </Button>
-        </div>
+        </DialogActions>
       </form>
     </AppDialog>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, useId } from 'vue'
 import { ArrowLeft, Package, Pencil, Plus, RefreshCw, Search, Tags, Trash2 } from '@lucide/vue'
 import PageHeader from '@/components/ui/PageHeader.vue'
 import Button from '@/components/ui/Button.vue'
+import DialogActions from '@/components/ui/DialogActions.vue'
 import AppDialog from '@/components/ui/AppDialog.vue'
 import EmptyState from '@/components/ui/EmptyState.vue'
 import { categoriesApi } from '@/services/categories'
@@ -161,6 +161,8 @@ import { number } from '@/lib/format'
 import { toast } from '@/lib/toast'
 import type { Category } from '@/types'
 
+const categoryFormId = useId()
+const deleteFormId = useId()
 const categories = ref<Category[]>([])
 const loading = ref(true)
 const error = ref('')
@@ -174,11 +176,9 @@ const formOpen = ref(false)
 const editing = ref<Category | null>(null)
 const name = ref('')
 const saving = ref(false)
-const formError = ref('')
 const deleteOpen = ref(false)
 const deletingCategory = ref<Category | null>(null)
 const deleting = ref(false)
-const deleteError = ref('')
 
 async function load() {
   loading.value = true
@@ -194,7 +194,7 @@ async function load() {
 function openForm(category?: Category) {
   editing.value = category ?? null
   name.value = category?.name ?? ''
-  formError.value = ''
+
   formOpen.value = true
 }
 function setFormOpen(open: boolean) {
@@ -203,7 +203,7 @@ function setFormOpen(open: boolean) {
 async function save() {
   if (saving.value || !name.value.trim()) return
   saving.value = true
-  formError.value = ''
+
   try {
     const current = editing.value
     const saved = current
@@ -216,7 +216,7 @@ async function save() {
     formOpen.value = false
     toast.success(current ? 'دسته‌بندی ویرایش شد.' : 'دسته‌بندی جدید ثبت شد.')
   } catch (e) {
-    formError.value = e instanceof Error ? e.message : 'ذخیره دسته‌بندی انجام نشد.'
+    toast.error(e instanceof Error ? e.message : 'ذخیره دسته‌بندی انجام نشد.')
   } finally {
     saving.value = false
   }
@@ -224,7 +224,7 @@ async function save() {
 function openDelete(category: Category) {
   if (category._count?.products !== 0) return
   deletingCategory.value = category
-  deleteError.value = ''
+
   deleteOpen.value = true
 }
 function setDeleteOpen(open: boolean) {
@@ -234,14 +234,14 @@ async function remove() {
   const category = deletingCategory.value
   if (!category || category._count?.products !== 0 || deleting.value) return
   deleting.value = true
-  deleteError.value = ''
+
   try {
     await categoriesApi.remove(category.id)
     categories.value = categories.value.filter((item) => item.id !== category.id)
     deleteOpen.value = false
     toast.success('دسته‌بندی حذف شد.')
   } catch (e) {
-    deleteError.value = e instanceof Error ? e.message : 'حذف دسته‌بندی انجام نشد.'
+    toast.error(e instanceof Error ? e.message : 'حذف دسته‌بندی انجام نشد.')
     await load()
     deletingCategory.value = categories.value.find((item) => item.id === category.id) ?? category
   } finally {
@@ -252,16 +252,30 @@ onMounted(load)
 </script>
 
 <style scoped>
+.categories-page {
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  grid-template-rows: auto auto minmax(0, 1fr);
+}
+.categories-page > .panel {
+  min-height: 0;
+}
+
 .category-grid {
+  min-height: 0;
+  overflow-y: auto;
+  align-content: start;
+  scrollbar-gutter: stable;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
-  gap: 20px;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr));
+  gap: 12px;
 }
 .category-card {
-  padding: 24px;
+  padding: 16px;
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 12px;
 }
 .category-card__heading {
   display: flex;
@@ -270,13 +284,13 @@ onMounted(load)
 }
 .category-card h2 {
   margin: 0;
-  font-size: 17px;
+  font-size: 15px;
 }
 .category-mark {
   display: grid;
   place-items: center;
-  width: 48px;
-  height: 48px;
+  width: 36px;
+  height: 36px;
   flex-shrink: 0;
   border-radius: 14px;
   background: var(--accent);
@@ -289,7 +303,7 @@ onMounted(load)
 }
 .category-count b {
   color: var(--foreground);
-  font-size: 26px;
+  font-size: 22px;
   margin-inline-end: 6px;
 }
 .category-products {
@@ -308,7 +322,7 @@ onMounted(load)
   flex-wrap: wrap;
   gap: 10px;
   border-top: 1px solid var(--border);
-  padding-top: 16px;
+  padding-top: 12px;
   margin-top: auto;
 }
 .category-delete-hint {

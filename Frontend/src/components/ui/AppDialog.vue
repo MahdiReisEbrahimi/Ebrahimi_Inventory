@@ -13,12 +13,15 @@
           <DialogClose class="dialog-close" aria-label="بستن">×</DialogClose>
         </div>
         <div class="dialog-body"><slot /></div>
+        <div ref="footer" class="dialog-footer" />
       </DialogContent>
     </DialogPortal>
   </DialogRoot>
 </template>
 
 <script setup lang="ts">
+import { provide, useTemplateRef } from 'vue'
+import { dialogFooterKey } from '@/lib/dialog'
 import {
   DialogClose,
   DialogContent,
@@ -30,6 +33,7 @@ import {
 
 withDefaults(defineProps<{ open: boolean; title: string; width?: string }>(), { width: '560px' })
 const emit = defineEmits<{ 'update:open': [value: boolean] }>()
+provide(dialogFooterKey, useTemplateRef<HTMLDivElement>('footer'))
 </script>
 
 <style>
@@ -88,6 +92,22 @@ const emit = defineEmits<{ 'update:open': [value: boolean] }>()
   overflow: auto;
   overscroll-behavior: contain;
   padding: 18px 20px;
+}
+.dialog-footer {
+  flex-shrink: 0;
+  display: grid;
+  gap: 12px;
+  padding: 16px 20px;
+  border-top: 1px solid var(--border);
+  background: var(--card);
+}
+.dialog-footer:empty {
+  display: none;
+}
+.dialog-footer .form-actions {
+  padding: 0;
+  margin: 0;
+  border: 0;
 }
 @media (max-width: 600px) {
   .dialog-content {

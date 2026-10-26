@@ -1,14 +1,19 @@
 <template>
   <div class="page-stack invoice-page">
-    <div class="invoice-nav no-print">
-      <div class="segmented-control">
-        <button :aria-pressed="activeTab === 'new'" @click="switchTab('new')">فاکتور فروش</button>
-        <button :aria-pressed="activeTab === 'archive'" @click="switchTab('archive')">
+    <Teleport to="#page-toolbar" defer>
+      <div class="segmented-control invoice-tabs" aria-label="بخش فاکتورهای فروش">
+        <button :aria-pressed="activeTab === 'new'" :disabled="saving" @click="switchTab('new')">
+          فاکتور جدید
+        </button>
+        <button
+          :aria-pressed="activeTab === 'archive'"
+          :disabled="saving"
+          @click="switchTab('archive')"
+        >
           بایگانی فاکتورها
         </button>
       </div>
-      <span class="muted">همه مبالغ فاکتور به ریال</span>
-    </div>
+    </Teleport>
     <div v-if="loadError" class="notice notice--error no-print" role="alert">
       {{ loadError }}<Button variant="outline" @click="load">تلاش دوباره</Button>
     </div>
@@ -28,7 +33,7 @@
           <small class="muted">{{
             editingInvoiceId
               ? 'تغییرات پس از ذخیره اعمال می‌شوند.'
-              : 'شماره فاکتور پس از ثبت تعیین می‌شود.'
+              : 'شماره پس از ثبت · همه مبالغ به ریال'
           }}</small>
         </div>
         <PersianDatePicker v-model="issueDate" :disabled="saving" />
@@ -74,25 +79,13 @@
           >
         </div>
       </div>
-      <div class="product-adder">
-        <SearchSelect
-          v-model="selectedCategoryId"
-          :options="categoryOptions"
-          label="دسته‌بندی کالا"
-          placeholder="۱. انتخاب دسته‌بندی"
-          :disabled="saving"
-        />
-        <SearchSelect
-          :options="productOptions"
-          label="کالا"
-          :placeholder="
-            selectedCategoryId ? '۲. انتخاب یا جست‌وجوی کالا…' : 'ابتدا دسته‌بندی را انتخاب کنید'
-          "
-          :disabled="saving || !selectedCategoryId"
-          @update:model-value="addProduct"
-        />
-      </div>
-      <div class="invoice-lines-scroll" tabindex="0" role="region" aria-label="اقلام فاکتور">
+      <div
+        ref="linesRegion"
+        class="invoice-lines-scroll"
+        tabindex="0"
+        role="region"
+        aria-label="اقلام فاکتور"
+      >
         <table class="invoice-lines">
           <colgroup>
             <col class="index-col" />
@@ -131,6 +124,7 @@
               <td>
                 <input
                   v-model.number="line.quantity"
+                  :data-product-id="line.productId"
                   type="number"
                   min="1"
                   :max="stockOf(line.productId)"
@@ -150,9 +144,29 @@
               </td>
               <td>{{ number(line.quantity * line.unitPrice) }}</td>
             </tr>
-            <tr v-if="!draft.length">
-              <td colspan="6" class="empty-lines">
-                کالایی را از کادر بالا انتخاب کنید تا به فاکتور اضافه شود.
+            <tr class="line-adder-row">
+              <td class="adder-index">{{ number(draft.length + 1) }}</td>
+              <td colspan="5">
+                <div class="line-adder">
+                  <SearchSelect
+                    v-model="selectedCategoryId"
+                    :options="categoryOptions"
+                    label="دسته‌بندی کالا"
+                    placeholder="همه دسته‌بندی‌ها"
+                    :disabled="saving"
+                  />
+                  <SearchSelect
+                    :options="productOptions"
+                    label="افزودن کالا به فاکتور"
+                    placeholder="افزودن کالا؛ نام را جست‌وجو کنید…"
+                    :disabled="saving"
+                    @update:model-value="addProduct"
+                    @close-auto-focus="focusAddedLine"
+                  />
+                </div>
+                <small v-if="!draft.length" class="adder-hint"
+                  >کالا را مستقیم جست‌وجو کنید یا ابتدا دسته‌بندی را انتخاب کنید.</small
+                >
               </td>
             </tr>
           </tbody>
@@ -196,7 +210,6 @@
             @input="notesTouched = true"
           />
         </label>
-        <p v-if="saveError" class="notice notice--error" role="alert">{{ saveError }}</p>
         <div class="editor-actions">
           <Button :disabled="saving || !draft.length || !selectedBuyer || !!loadError" @click="save"
             ><Check :size="17" />{{
@@ -295,17 +308,17 @@
       @update:open="!$event && finishLeaving(false)"
     >
       <p>با خروج از این صفحه، اقلام فاکتور ثبت‌نشده از دست می‌روند.</p>
-      <div class="form-actions">
+      <DialogActions>
         <Button variant="outline" @click="finishLeaving(false)">ادامه ویرایش</Button>
         <Button variant="destructive" @click="finishLeaving(true)">خروج بدون ثبت</Button>
-      </div>
+      </DialogActions>
     </AppDialog>
     <AppDialog
       :open="buyerOpen"
       @update:open="!buyerSaving && (buyerOpen = $event)"
       :title="editingBuyerId ? 'ویرایش خریدار' : 'ثبت خریدار جدید'"
       width="620px"
-      ><form @submit.prevent="saveBuyer">
+      ><form :id="buyerFormId" @submit.prevent="saveBuyer">
         <div class="form-grid">
           <label class="form-field"
             ><span>نام</span><input v-model="buyerForm.firstName" required maxlength="100" /></label
@@ -325,13 +338,13 @@
             ><span>توضیحات</span><textarea v-model="buyerForm.notes" rows="2" maxlength="1000" />
           </label>
         </div>
-        <p v-if="buyerError" class="notice notice--error" role="alert">{{ buyerError }}</p>
-        <div class="form-actions">
+
+        <DialogActions>
           <Button variant="outline" @click="buyerOpen = false">انصراف</Button
-          ><Button type="submit" :disabled="buyerSaving">{{
+          ><Button :form="buyerFormId" type="submit" :disabled="buyerSaving">{{
             buyerSaving ? 'در حال ذخیره…' : 'ذخیره خریدار'
           }}</Button>
-        </div>
+        </DialogActions>
       </form></AppDialog
     >
     <AppDialog
@@ -343,20 +356,20 @@
         خریدار «{{ buyerToDelete?.firstName }} {{ buyerToDelete?.lastName }}» حذف شود؟ اطلاعات
         فاکتورهای قبلی باقی می‌ماند.
       </p>
-      <p v-if="deleteError" class="notice notice--error" role="alert">{{ deleteError }}</p>
-      <div class="form-actions">
+
+      <DialogActions>
         <Button variant="outline" @click="buyerToDelete = null">انصراف</Button
         ><Button variant="destructive" :disabled="buyerSaving" @click="deleteBuyer"
           >تأیید حذف</Button
         >
-      </div></AppDialog
+      </DialogActions></AppDialog
     >
     <AppDialog
       :open="settingsOpen"
       @update:open="!settingsSaving && (settingsOpen = $event)"
       title="اطلاعات فروشگاه"
       width="600px"
-      ><form @submit.prevent="saveSettings">
+      ><form :id="settingsFormId" @submit.prevent="saveSettings">
         <div class="form-grid">
           <label class="form-field"
             ><span>نام فروشگاه</span
@@ -391,23 +404,24 @@
             >در فاکتورهای جدید درج می‌شود و برای هر فاکتور قابل ویرایش است.</small
           ></label
         >
-        <p v-if="settingsError" class="notice notice--error" role="alert">{{ settingsError }}</p>
-        <div class="form-actions">
+
+        <DialogActions>
           <Button variant="outline" @click="settingsOpen = false">انصراف</Button
-          ><Button type="submit" :disabled="settingsSaving">{{
+          ><Button :form="settingsFormId" type="submit" :disabled="settingsSaving">{{
             settingsSaving ? 'در حال ذخیره…' : 'ذخیره اطلاعات'
           }}</Button>
-        </div>
+        </DialogActions>
       </form></AppDialog
     >
   </div>
 </template>
 <script setup lang="ts">
-import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, reactive, ref, useId } from 'vue'
 import { onBeforeRouteLeave } from 'vue-router'
 import { Check, Pencil, Plus, Printer, Search, Trash2 } from '@lucide/vue'
 import EmptyState from '@/components/ui/EmptyState.vue'
 import Button from '@/components/ui/Button.vue'
+import DialogActions from '@/components/ui/DialogActions.vue'
 import AppDialog from '@/components/ui/AppDialog.vue'
 import SearchSelect from '@/components/ui/SearchSelect.vue'
 import PersianDatePicker from '@/components/ui/PersianDatePicker.vue'
@@ -421,6 +435,8 @@ import { todayInTehran } from '@/lib/persianDate'
 import { productsApi } from '@/services/products'
 import { inventoryApi } from '@/services/inventory'
 import type { Buyer, Invoice, InvoiceItem, Product, StoreSettings } from '@/types'
+const buyerFormId = useId()
+const settingsFormId = useId()
 type DraftLine = InvoiceItem & { priceText: string }
 const products = ref<Product[]>([]),
   buyers = ref<Buyer[]>([]),
@@ -431,7 +447,9 @@ const settings = ref<StoreSettings | null>(null),
 const paperRenderer = ref<InstanceType<typeof InvoicePaper>>()
 const activeTab = ref<'new' | 'archive'>('new'),
   selectedBuyerId = ref<number>()
-const selectedCategoryId = ref<number>()
+const selectedCategoryId = ref<number>(0)
+const linesRegion = ref<HTMLDivElement>()
+let pendingProductFocus: number | undefined
 const editingInvoiceId = ref<number>(),
   editingInvoiceNumber = ref('')
 const originalItems = ref<InvoiceItem[]>([])
@@ -442,21 +460,17 @@ const discountText = ref('۰')
 const settlement = ref<'CASH' | 'INSTALLMENT'>('CASH')
 const loading = ref(true),
   saving = ref(false),
-  loadError = ref(''),
-  saveError = ref('')
+  loadError = ref('')
 const archiveLoading = ref(false),
   archiveError = ref(''),
   previewDraft = ref(false),
   paperSection = ref<HTMLElement>()
 const buyerOpen = ref(false),
   buyerSaving = ref(false),
-  buyerError = ref(''),
   editingBuyerId = ref<number | null>(null),
-  buyerToDelete = ref<Buyer | null>(null),
-  deleteError = ref('')
+  buyerToDelete = ref<Buyer | null>(null)
 const settingsOpen = ref(false),
-  settingsSaving = ref(false),
-  settingsError = ref('')
+  settingsSaving = ref(false)
 const buyerForm = reactive({
   firstName: '',
   lastName: '',
@@ -490,16 +504,19 @@ const buyerOptions = computed(() =>
     description: [buyer.nationalId, buyer.phone].filter(Boolean).join(' · '),
   })),
 )
-const categoryOptions = computed(() =>
-  Array.from(
+const categoryOptions = computed(() => [
+  { value: 0, label: 'همه دسته‌بندی‌ها' },
+  ...Array.from(
     new Map(products.value.map((product) => [product.categoryId, product.category])).values(),
   )
     .sort((a, b) => a.name.localeCompare(b.name, 'fa'))
     .map((category) => ({ value: category.id, label: category.name })),
-)
+])
 const productOptions = computed(() =>
   products.value
-    .filter((product) => product.categoryId === selectedCategoryId.value)
+    .filter(
+      (product) => !selectedCategoryId.value || product.categoryId === selectedCategoryId.value,
+    )
     .map((product) => ({
       value: product.id,
       label: product.name,
@@ -557,9 +574,6 @@ function finishLeaving(leave: boolean) {
   resolveLeaving?.(leave)
   resolveLeaving = undefined
 }
-watch(buyerToDelete, () => {
-  deleteError.value = ''
-})
 function switchTab(tab: 'new' | 'archive') {
   if (saving.value) return
   activeTab.value = tab
@@ -568,7 +582,8 @@ function switchTab(tab: 'new' | 'archive') {
 }
 function addProduct(id: number) {
   const product = products.value.find((item) => item.id === id)
-  if (!product || product.categoryId !== selectedCategoryId.value) return
+  if (!product || (selectedCategoryId.value && product.categoryId !== selectedCategoryId.value))
+    return
   const line = draft.value.find((item) => item.productId === id)
   if ((line?.quantity || 0) + 1 > stockOf(id)) return toast.warning('موجودی این کالا کافی نیست.')
   if (line) line.quantity++
@@ -583,6 +598,18 @@ function addProduct(id: number) {
       priceText: number(product.sellPrice * 10),
       total: product.sellPrice * 10,
     })
+  pendingProductFocus = id
+}
+async function focusAddedLine(event: Event) {
+  if (pendingProductFocus === undefined) return
+  event.preventDefault()
+  const id = pendingProductFocus
+  pendingProductFocus = undefined
+  await nextTick()
+  const input = linesRegion.value?.querySelector<HTMLInputElement>(`input[data-product-id="${id}"]`)
+  input?.focus({ preventScroll: true })
+  input?.select()
+  input?.closest('tr')?.scrollIntoView({ block: 'nearest', inline: 'nearest' })
 }
 async function load() {
   loading.value = true
@@ -645,8 +672,11 @@ function validateDraft() {
 }
 async function save() {
   if (saving.value) return
-  saveError.value = validateDraft()
-  if (saveError.value) return
+  const error = validateDraft()
+  if (error) {
+    toast.error(error)
+    return
+  }
   saving.value = true
   try {
     const payload = {
@@ -673,7 +703,7 @@ async function save() {
     await nextTick()
     paperSection.value?.scrollIntoView({ block: 'start' })
   } catch (e) {
-    saveError.value = e instanceof Error ? e.message : 'ذخیره فاکتور انجام نشد.'
+    toast.error(e instanceof Error ? e.message : 'ذخیره فاکتور انجام نشد.')
   } finally {
     saving.value = false
   }
@@ -695,13 +725,12 @@ function resetDraft() {
   editingInvoiceId.value = undefined
   editingInvoiceNumber.value = ''
   selectedBuyerId.value = undefined
-  selectedCategoryId.value = undefined
+  selectedCategoryId.value = 0
   issueDate.value = todayInTehran()
   discountText.value = '۰'
   settlement.value = 'CASH'
   notes.value = settings.value?.defaultInvoiceNotes || ''
   notesTouched.value = false
-  saveError.value = ''
   activeInvoice.value = null
   previewDraft.value = false
   activeTab.value = 'new'
@@ -728,25 +757,25 @@ async function editInvoice() {
   originalItems.value = invoice.items
   draft.value = invoice.items.map((line) => ({ ...line, priceText: number(line.unitPrice) }))
   selectedBuyerId.value = invoice.customerId ?? undefined
-  selectedCategoryId.value = products.value.find(
-    (product) => product.id === invoice.items[0]?.productId,
-  )?.categoryId
+  selectedCategoryId.value =
+    products.value.find((product) => product.id === invoice.items[0]?.productId)?.categoryId ?? 0
   issueDate.value = (invoice.issueDate || invoice.createdAt).slice(0, 10)
   discountText.value = number(invoice.discount || 0)
   settlement.value = invoice.settlement || 'CASH'
   notes.value = invoice.notes || ''
   notesTouched.value = true
-  saveError.value = ''
   activeInvoice.value = null
   activeTab.value = 'new'
 }
 async function printDraft() {
-  saveError.value = validateDraft()
-  if (!saveError.value) {
-    previewDraft.value = true
-    await nextTick()
-    paperSection.value?.scrollIntoView({ block: 'start' })
+  const error = validateDraft()
+  if (error) {
+    toast.error(error)
+    return
   }
+  previewDraft.value = true
+  await nextTick()
+  paperSection.value?.scrollIntoView({ block: 'start' })
 }
 async function printCurrent() {
   await nextTick()
@@ -755,7 +784,7 @@ async function printCurrent() {
 }
 function openBuyer(buyer?: Buyer) {
   editingBuyerId.value = buyer?.id || null
-  buyerError.value = ''
+
   Object.assign(buyerForm, {
     firstName: buyer?.firstName || '',
     lastName: buyer?.lastName || '',
@@ -768,9 +797,9 @@ function openBuyer(buyer?: Buyer) {
 }
 async function saveBuyer() {
   if (buyerSaving.value) return
-  buyerError.value = ''
+
   if (!buyerForm.firstName.trim() || !buyerForm.lastName.trim()) {
-    buyerError.value = 'نام و نام خانوادگی الزامی است.'
+    toast.error('نام و نام خانوادگی الزامی است.')
     return
   }
   buyerSaving.value = true
@@ -785,7 +814,7 @@ async function saveBuyer() {
     buyerOpen.value = false
     toast.success('اطلاعات خریدار ذخیره شد.')
   } catch (e) {
-    buyerError.value = e instanceof Error ? e.message : 'ذخیره خریدار انجام نشد.'
+    toast.error(e instanceof Error ? e.message : 'ذخیره خریدار انجام نشد.')
   } finally {
     buyerSaving.value = false
   }
@@ -793,7 +822,7 @@ async function saveBuyer() {
 async function deleteBuyer() {
   if (!buyerToDelete.value || buyerSaving.value) return
   buyerSaving.value = true
-  deleteError.value = ''
+
   try {
     const id = buyerToDelete.value.id
     await inventoryApi.deleteBuyer(id)
@@ -802,23 +831,23 @@ async function deleteBuyer() {
     buyerToDelete.value = null
     toast.success('خریدار حذف شد.')
   } catch (e) {
-    deleteError.value = e instanceof Error ? e.message : 'حذف خریدار انجام نشد.'
+    toast.error(e instanceof Error ? e.message : 'حذف خریدار انجام نشد.')
   } finally {
     buyerSaving.value = false
   }
 }
 async function saveSettings() {
   if (settingsSaving.value) return
-  settingsError.value = ''
+
   if (!settingsForm.name.trim()) {
-    settingsError.value = 'نام فروشگاه الزامی است.'
+    toast.error('نام فروشگاه الزامی است.')
     return
   }
   settingsSaving.value = true
   try {
     const iban = settingsForm.iban.replace(/\s/g, '').toUpperCase()
     if (iban && !/^IR\d{24}$/.test(iban)) {
-      settingsError.value = 'شماره شبا باید IR و ۲۴ رقم باشد.'
+      toast.error('شماره شبا باید IR و ۲۴ رقم باشد.')
       return
     }
     settings.value = await inventoryApi.saveSettings({ ...settingsForm, iban })
@@ -826,7 +855,7 @@ async function saveSettings() {
     settingsOpen.value = false
     toast.success('اطلاعات فروشگاه ذخیره شد.')
   } catch (e) {
-    settingsError.value = e instanceof Error ? e.message : 'ذخیره اطلاعات انجام نشد.'
+    toast.error(e instanceof Error ? e.message : 'ذخیره اطلاعات انجام نشد.')
   } finally {
     settingsSaving.value = false
   }
@@ -835,24 +864,30 @@ onMounted(load)
 </script>
 <style scoped>
 .invoice-page {
-  gap: 12px;
-}
-.invoice-nav {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
   gap: 12px;
 }
-.invoice-nav > span {
-  font-size: 11px;
+.invoice-tabs {
+  white-space: nowrap;
+}
+.invoice-tabs button {
+  min-height: 34px;
+  padding: 6px 14px;
+  font-size: 12px;
 }
 .invoice-editor {
   overflow: hidden;
   width: 100%;
-  max-width: 1120px;
-  margin-inline: auto;
+  flex: 1 0 480px;
+  min-height: 480px;
+  display: flex;
+  flex-direction: column;
 }
 .editor-heading {
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -876,10 +911,11 @@ onMounted(load)
 .invoice-editor :deep(.search-select-trigger),
 .invoice-editor :deep(.date-picker-trigger) {
   min-height: 32px;
-  padding: 5px 8px;
+  padding: 5px 10px 5px 16px;
   font-size: 12px;
 }
 .editor-parties {
+  flex-shrink: 0;
   display: grid;
   grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
   gap: 12px;
@@ -913,21 +949,43 @@ onMounted(load)
   flex: 1;
   min-width: 160px;
 }
-.product-adder {
-  display: grid;
-  grid-template-columns: minmax(0, 0.7fr) minmax(0, 1.6fr);
-  gap: 8px;
-  padding: 10px 14px;
-}
 .invoice-lines-scroll {
-  max-height: 270px;
+  flex: 1;
+  min-height: 160px;
   overflow: auto;
   overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  scroll-padding-block: 36px 80px;
   border-block: 1px solid var(--border);
+}
+.line-adder-row {
+  --table-adder-background: color-mix(in srgb, var(--primary) 4%, var(--card));
+}
+.invoice-lines .line-adder-row td {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  padding-block: 10px;
+  background: var(--table-adder-background);
+  box-shadow: 0 -3px 6px color-mix(in srgb, var(--foreground) 4%, transparent);
+}
+.adder-index {
+  color: var(--primary);
+}
+.line-adder {
+  display: grid;
+  grid-template-columns: minmax(130px, 0.6fr) minmax(0, 1.4fr);
+  gap: 8px;
+}
+.adder-hint {
+  display: block;
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--muted-foreground);
 }
 .invoice-lines {
   width: 100%;
-  min-width: 660px;
+  min-width: 560px;
   border-collapse: separate;
   border-spacing: 0;
   table-layout: fixed;
@@ -935,28 +993,28 @@ onMounted(load)
   text-align: center;
 }
 .index-col {
-  width: 5%;
+  width: 44px;
 }
 .qty-col {
-  width: 10%;
+  width: 64px;
 }
 .unit-col {
-  width: 11%;
+  width: 50px;
 }
 .price-col {
-  width: 19%;
+  width: 128px;
 }
 .total-col {
-  width: 23%;
+  width: 132px;
 }
 .invoice-lines th {
   position: sticky;
   top: 0;
-  z-index: 1;
+  z-index: 3;
   padding: 6px 8px;
   font-size: 11px;
-  color: var(--muted-foreground);
-  background: var(--muted);
+  color: var(--table-header-foreground);
+  background: var(--table-header-background);
 }
 .invoice-lines td {
   padding: 3px 8px;
@@ -984,7 +1042,7 @@ onMounted(load)
 }
 .invoice-lines tr:focus-within,
 .invoice-lines tbody tr:hover {
-  background: var(--muted);
+  background: var(--table-row-hover);
 }
 .line-index {
   position: relative;
@@ -1019,19 +1077,13 @@ onMounted(load)
     visibility: hidden;
   }
 }
-.empty-lines {
-  height: 72px;
-  text-align: center;
-  color: var(--muted-foreground);
-}
 .editor-bottom {
+  flex-shrink: 0;
   padding: 10px 14px;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 8px 16px;
 }
-.editor-bottom > .financial-fields,
-.editor-bottom > .grand-total,
 .editor-bottom > .notice,
 .editor-bottom > .editor-actions {
   grid-column: 1 / -1;
@@ -1077,6 +1129,7 @@ onMounted(load)
   color: var(--muted-foreground);
 }
 .grand-total {
+  min-width: 0;
   display: flex;
   flex-wrap: wrap;
   justify-content: flex-start;
@@ -1194,22 +1247,20 @@ onMounted(load)
   .editor-bottom {
     padding-inline: 14px;
   }
-  .product-adder {
-    padding-inline: 14px;
-  }
-  .editor-bottom {
-    grid-template-columns: minmax(0, 1fr);
-  }
   .archive-filters {
     grid-template-columns: 1fr;
   }
-  .invoice-nav {
-    flex-wrap: wrap;
-  }
 }
-@media (max-width: 480px) {
-  .product-adder {
+@media (max-width: 600px) {
+  .editor-bottom {
     grid-template-columns: minmax(0, 1fr);
+  }
+  .invoice-editor {
+    flex-basis: 680px;
+    min-height: 680px;
+  }
+  .invoice-tabs button {
+    flex: 1;
   }
 }
 </style>

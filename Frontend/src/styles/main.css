@@ -161,6 +161,14 @@ textarea {
     border-color 0.15s,
     box-shadow 0.15s;
 }
+select:not([multiple]) {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%2384948b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: left 16px center;
+  background-size: 14px;
+  padding-left: 42px;
+}
 input::placeholder,
 textarea::placeholder {
   color: var(--muted-foreground);
@@ -434,10 +442,13 @@ select:disabled {
   min-width: 0;
   max-width: 100%;
 }
-.data-table {
+.data-table,
+.invoice-lines {
   --table-header-background: color-mix(in srgb, var(--primary) 10%, var(--card));
   --table-header-foreground: color-mix(in srgb, var(--primary) 65%, var(--foreground));
   --table-row-hover: color-mix(in srgb, var(--primary) 6%, var(--card));
+}
+.data-table {
   width: 100%;
   border-collapse: collapse;
   text-align: center;
@@ -496,9 +507,10 @@ select:disabled {
   color: var(--muted-foreground);
 }
 .pagination-controls select {
-  width: 75px;
+  width: 90px;
   min-height: 36px;
-  padding: 5px 10px;
+  padding-block: 5px;
+  padding-right: 10px;
 }
 .pagination-buttons {
   display: flex;
@@ -617,7 +629,8 @@ select:disabled {
 }
 .toast-host {
   position: fixed;
-  inset-inline-start: 24px;
+  left: 24px;
+  right: auto;
   bottom: 24px;
   z-index: 120;
   display: grid;
@@ -626,26 +639,29 @@ select:disabled {
   pointer-events: none;
 }
 .toast-item {
+  --toast-accent: var(--primary);
   display: flex;
   align-items: start;
   gap: 10px;
   padding: 16px;
-  background: var(--popover);
-  border: 1px solid var(--border);
-  border-inline-start: 4px solid var(--primary);
+  color: var(--foreground);
+  background: color-mix(in srgb, var(--toast-accent) 6%, var(--popover));
+  border: 1px solid color-mix(in srgb, var(--toast-accent) 25%, var(--border));
+  border-inline-start: 4px solid var(--toast-accent);
   border-radius: 12px;
   box-shadow: var(--shadow-lg);
   pointer-events: auto;
   font-size: 13px;
 }
+.toast-item > svg {
+  flex-shrink: 0;
+  color: var(--toast-accent);
+}
 .toast-item--destructive {
-  border-inline-start-color: var(--destructive);
+  --toast-accent: var(--destructive);
 }
 .toast-item--warning {
-  border-inline-start-color: var(--warning);
-}
-.toast-item--success {
-  border-inline-start-color: var(--success);
+  --toast-accent: var(--warning);
 }
 .toast-enter-active,
 .toast-leave-active {
@@ -707,7 +723,7 @@ select:disabled {
     padding: 14px;
   }
   .toast-host {
-    inset-inline-start: 16px;
+    left: 16px;
     bottom: 16px;
   }
 }

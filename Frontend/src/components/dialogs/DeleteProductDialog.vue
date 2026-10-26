@@ -3,39 +3,38 @@
     <div class="delete-symbol"><Trash2 :size="25" /></div>
     <h3>«{{ selectedRow.name }}» حذف شود؟</h3>
     <p>
-      اگر کالا سابقه تغییر قیمت داشته باشد، غیرفعال می‌شود. حذف کالاهای دارای سابقه انبار یا فاکتور
-      ممکن است مجاز نباشد.
+      کالا حذف می‌شود. اگر سابقه فاکتور، انبار یا تغییرات داشته باشد، برای حفظ سوابق غیرفعال می‌شود.
     </p>
-    <p v-if="error" class="notice notice--error" role="alert">{{ error }}</p>
-    <div class="form-actions">
+
+    <DialogActions>
       <Button variant="outline" :disabled="saving" @click="emit('close', false)">انصراف</Button
       ><Button variant="destructive" :disabled="saving" @click="remove">{{
         saving ? 'در حال انجام…' : 'تأیید حذف'
       }}</Button>
-    </div>
+    </DialogActions>
   </div>
 </template>
 <script setup lang="ts">
 import { ref } from 'vue'
 import { Trash2 } from '@lucide/vue'
 import Button from '@/components/ui/Button.vue'
+import DialogActions from '@/components/ui/DialogActions.vue'
 import { productsApi } from '@/services/products'
 import { toast } from '@/lib/toast'
 import type { Product } from '@/types'
 const props = defineProps<{ selectedRow: Product }>()
 const emit = defineEmits<{ close: [deleted: boolean] }>()
-const saving = ref(false),
-  error = ref('')
+const saving = ref(false)
 async function remove() {
   if (saving.value) return
   saving.value = true
-  error.value = ''
+
   try {
     await productsApi.remove(props.selectedRow.id)
     toast.success('عملیات انجام شد.')
     emit('close', true)
   } catch (e) {
-    error.value = e instanceof Error ? e.message : 'حذف کالا انجام نشد.'
+    toast.error(e instanceof Error ? e.message : 'حذف کالا انجام نشد.')
   } finally {
     saving.value = false
   }

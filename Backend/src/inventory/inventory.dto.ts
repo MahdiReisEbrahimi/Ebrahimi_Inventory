@@ -18,6 +18,7 @@ export class CreateMovementDto {
   @IsIn(['PURCHASE', 'RETURN', 'ADJUSTMENT']) type!:
     'PURCHASE' | 'RETURN' | 'ADJUSTMENT';
   @IsOptional() @IsInt() @Min(0) unitPrice?: number;
+  @IsOptional() @IsInt() @Min(0) sellPrice?: number;
   @IsOptional() @IsString() description?: string;
   @IsOptional() @IsInt() @Min(1) invoiceId?: number;
   @IsOptional() @IsDateString() date?: string;

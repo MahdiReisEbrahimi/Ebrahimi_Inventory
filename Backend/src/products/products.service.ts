@@ -81,7 +81,20 @@ export class ProductsService {
     await this.ensureCategory(data.categoryId);
     try {
       return await this.prisma.product.create({
-        data,
+        data: {
+          ...data,
+          ...(data.stock
+            ? {
+                inventoryTransactions: {
+                  create: {
+                    type: 'ADJUSTMENT',
+                    quantity: data.stock,
+                    description: 'موجودی اولیه کالا',
+                  },
+                },
+              }
+            : {}),
+        },
         include: productInclude,
       });
     } catch (error) {
@@ -99,7 +112,8 @@ export class ProductsService {
       (data.buyPrice !== undefined && data.buyPrice !== current.buyPrice) ||
       (data.sellPrice !== undefined && data.sellPrice !== current.sellPrice);
     try {
-      return priceChanged
+      return priceChanged ||
+        (data.stock !== undefined && data.stock !== current.stock)
         ? await this.updatePrices(id, data, PriceChangeType.SINGLE)
         : await this.prisma.product.update({
             where: { id },
@@ -132,9 +146,18 @@ export class ProductsService {
 
   async delete(id: number) {
     await this.findOne(id);
-    if (await this.prisma.priceHistory.count({ where: { productId: id } }))
-      return this.updateStatus(id, { isActive: false });
-    return this.prisma.product.delete({ where: { id } });
+    try {
+      return await this.prisma.product.delete({ where: { id } });
+    } catch (error) {
+      // Historical records retain their product reference; removing a product
+      // with any history archives it instead of failing a foreign-key check.
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2003'
+      )
+        return this.updateStatus(id, { isActive: false });
+      throw error;
+    }
   }
 
   updatePrice(id: number, data: UpdateProductPriceDto) {
@@ -151,15 +174,25 @@ export class ProductsService {
     });
     return {
       affectedProducts: products.length,
-      items: products.map((p) => {
-        const oldPrice = data.priceType === 'SELL' ? p.sellPrice : p.buyPrice;
-        return {
-          id: p.id,
-          name: p.name,
-          oldPrice,
-          newPrice: this.calculatePrice(oldPrice, data),
-        };
-      }),
+      items: products.map((p) => ({
+        id: p.id,
+        name: p.name,
+        oldPrice: data.priceType === 'BUY' ? p.buyPrice : p.sellPrice,
+        newPrice: this.calculatePrice(
+          data.priceType === 'BUY' ? p.buyPrice : p.sellPrice,
+          data,
+        ),
+        oldBuyPrice: p.buyPrice,
+        newBuyPrice:
+          data.priceType === 'SELL'
+            ? p.buyPrice
+            : this.calculatePrice(p.buyPrice, data),
+        oldSellPrice: p.sellPrice,
+        newSellPrice:
+          data.priceType === 'BUY'
+            ? p.sellPrice
+            : this.calculatePrice(p.sellPrice, data),
+      })),
     };
   }
 
@@ -173,22 +206,28 @@ export class ProductsService {
     });
     await this.prisma.$transaction(async (tx) => {
       for (const p of products) {
-        const oldPrice = data.priceType === 'SELL' ? p.sellPrice : p.buyPrice,
-          newPrice = this.calculatePrice(oldPrice, data);
+        const newBuyPrice =
+          data.priceType === 'SELL'
+            ? p.buyPrice
+            : this.calculatePrice(p.buyPrice, data);
+        const newSellPrice =
+          data.priceType === 'BUY'
+            ? p.sellPrice
+            : this.calculatePrice(p.sellPrice, data);
         await tx.product.update({
           where: { id: p.id },
-          data:
-            data.priceType === 'SELL'
-              ? { sellPrice: newPrice }
-              : { buyPrice: newPrice },
+          data: {
+            ...(data.priceType !== 'SELL' ? { buyPrice: newBuyPrice } : {}),
+            ...(data.priceType !== 'BUY' ? { sellPrice: newSellPrice } : {}),
+          },
         });
         await tx.priceHistory.create({
           data: {
             productId: p.id,
-            oldBuyPrice: data.priceType === 'BUY' ? oldPrice : undefined,
-            newBuyPrice: data.priceType === 'BUY' ? newPrice : undefined,
-            oldSellPrice: data.priceType === 'SELL' ? oldPrice : undefined,
-            newSellPrice: data.priceType === 'SELL' ? newPrice : undefined,
+            oldBuyPrice: data.priceType !== 'SELL' ? p.buyPrice : undefined,
+            newBuyPrice: data.priceType !== 'SELL' ? newBuyPrice : undefined,
+            oldSellPrice: data.priceType !== 'BUY' ? p.sellPrice : undefined,
+            newSellPrice: data.priceType !== 'BUY' ? newSellPrice : undefined,
             changePercent: data.type === 'PERCENTAGE' ? data.value : null,
             type: PriceChangeType.BULK,
           },
@@ -197,7 +236,13 @@ export class ProductsService {
           data: {
             productId: p.id,
             action: 'BULK_PRICE_UPDATED',
-            details: { priceType: data.priceType, oldPrice, newPrice },
+            details: {
+              priceType: data.priceType,
+              oldBuyPrice: p.buyPrice,
+              newBuyPrice,
+              oldSellPrice: p.sellPrice,
+              newSellPrice,
+            },
           },
         });
       }
@@ -262,28 +307,53 @@ export class ProductsService {
         data,
         include: productInclude,
       });
-      await tx.priceHistory.create({
-        data: {
-          productId: id,
-          oldBuyPrice: current.buyPrice,
-          newBuyPrice,
-          oldSellPrice: current.sellPrice,
-          newSellPrice,
-          type,
-        },
-      });
-      await tx.auditLog.create({
-        data: {
-          productId: id,
-          action: 'PRICE_UPDATED',
-          details: {
+      if (
+        newBuyPrice !== current.buyPrice ||
+        newSellPrice !== current.sellPrice
+      )
+        await tx.priceHistory.create({
+          data: {
+            productId: id,
             oldBuyPrice: current.buyPrice,
             newBuyPrice,
             oldSellPrice: current.sellPrice,
             newSellPrice,
+            type,
           },
-        },
-      });
+        });
+      if (
+        newBuyPrice !== current.buyPrice ||
+        newSellPrice !== current.sellPrice
+      )
+        await tx.auditLog.create({
+          data: {
+            productId: id,
+            action: 'PRICE_UPDATED',
+            details: {
+              oldBuyPrice: current.buyPrice,
+              newBuyPrice,
+              oldSellPrice: current.sellPrice,
+              newSellPrice,
+            },
+          },
+        });
+      if (data.stock !== undefined && data.stock !== current.stock) {
+        await tx.inventoryTransaction.create({
+          data: {
+            productId: id,
+            type: 'ADJUSTMENT',
+            quantity: data.stock - current.stock,
+            description: 'اصلاح موجودی از فرم ویرایش کالا',
+          },
+        });
+        await tx.auditLog.create({
+          data: {
+            productId: id,
+            action: 'STOCK_ADJUSTED',
+            details: { oldStock: current.stock, stock: data.stock },
+          },
+        });
+      }
       return product;
     });
   }
@@ -313,8 +383,18 @@ export class ProductsService {
       throw new NotFoundException(`Category ${id} was not found.`);
   }
   private calculatePrice(oldPrice: number, data: BulkPriceUpdateDto) {
-    return data.type === 'PERCENTAGE'
-      ? Math.round(oldPrice * (1 + data.value / 100))
-      : Math.round(data.value);
+    const price =
+      data.type === 'PERCENTAGE'
+        ? Math.round(oldPrice * (1 + data.value / 100))
+        : Math.round(data.value);
+    if (
+      !Number.isFinite(data.value) ||
+      data.value < 0 ||
+      !Number.isSafeInteger(price) ||
+      price < 0 ||
+      price > 2147483647
+    )
+      throw new BadRequestException('مقدار قیمت جدید معتبر نیست.');
+    return price;
   }
 }

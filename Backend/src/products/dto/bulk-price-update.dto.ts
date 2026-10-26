@@ -5,5 +5,5 @@ export class BulkPriceUpdateDto {
   @IsOptional() @Type(() => Number) @IsInt() @Min(1) categoryId?: number;
   @IsIn(['PERCENTAGE', 'FIXED']) type!: 'PERCENTAGE' | 'FIXED';
   @Type(() => Number) @IsNumber() value!: number;
-  @IsIn(['BUY', 'SELL']) priceType!: 'BUY' | 'SELL';
+  @IsIn(['BUY', 'SELL', 'BOTH']) priceType!: 'BUY' | 'SELL' | 'BOTH';
 }

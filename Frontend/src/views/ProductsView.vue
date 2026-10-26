@@ -51,12 +51,17 @@
         >
           <RefreshCw :size="18" />
         </button>
-      </div>
-      <div v-if="hasFilters" class="active-filters">
-        <span>{{ number(filtered.length) }} نتیجه پیدا شد</span
-        ><button class="button button--ghost button--small" @click="clearFilters">
-          <X :size="14" />پاک‌کردن فیلترها
-        </button>
+        <div v-if="hasFilters" class="active-filters">
+          <span role="status">{{ number(filtered.length) }} نتیجه پیدا شد</span>
+          <button
+            class="icon-button"
+            aria-label="پاک‌کردن فیلترها"
+            title="پاک‌کردن فیلترها"
+            @click="clearFilters"
+          >
+            <X :size="15" />
+          </button>
+        </div>
       </div>
       <CustomTable
         :table-data="pageItems"
@@ -125,7 +130,7 @@
     <AppDialog
       v-model:open="formOpen"
       :title="selected ? 'ویرایش کالا' : 'ثبت کالای جدید'"
-      width="720px"
+      width="600px"
       ><ProductFormView
         v-if="formOpen"
         embedded
@@ -336,6 +341,11 @@ async function toggleStatus(product: Product) {
 onMounted(load)
 </script>
 <style scoped>
+.products-panel :deep(.index-column) {
+  width: 80px;
+  min-width: 80px;
+}
+
 .product-summary {
   display: flex;
   flex-wrap: wrap;
@@ -374,6 +384,29 @@ onMounted(load)
 }
 .products-panel {
   overflow: hidden;
+}
+.products-panel .filter-bar {
+  display: grid;
+  grid-template-columns: minmax(140px, 1.5fr) minmax(120px, 1fr) minmax(90px, 0.8fr) 32px 160px;
+  gap: 8px;
+  padding: 9px 12px;
+  overflow-x: auto;
+}
+.products-panel .filter-bar .search-field,
+.products-panel .filter-bar > select {
+  min-width: 0;
+  width: 100%;
+}
+.products-panel .filter-bar input,
+.products-panel .filter-bar select {
+  min-height: 34px;
+  padding-block: 5px;
+  font-size: 12px;
+}
+.products-panel .filter-bar .icon-button {
+  width: 32px;
+  height: 32px;
+  min-height: 32px;
 }
 .products-panel :deep(.action-column) {
   min-width: 232px;
@@ -451,11 +484,11 @@ onMounted(load)
 .active-filters {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 8px 20px;
-  font-size: 12px;
+  justify-content: flex-end;
+  gap: 6px;
+  white-space: nowrap;
+  font-size: 11px;
   color: var(--muted-foreground);
-  border-bottom: 1px solid var(--border);
 }
 @media (max-width: 640px) {
   .product-summary {

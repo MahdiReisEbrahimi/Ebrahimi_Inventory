@@ -21,7 +21,16 @@ export const productsApi = {
   previewBulk: (data: object) =>
     api<{
       affectedProducts: number
-      items: { id: number; name: string; oldPrice: number; newPrice: number }[]
+      items: {
+        id: number
+        name: string
+        oldPrice: number
+        newPrice: number
+        oldBuyPrice: number
+        newBuyPrice: number
+        oldSellPrice: number
+        newSellPrice: number
+      }[]
     }>('/products/bulk-price-update/preview', { method: 'POST', body: JSON.stringify(data) }),
   bulk: (data: object) =>
     api<{ affectedProducts: number }>('/products/bulk-price-update', {

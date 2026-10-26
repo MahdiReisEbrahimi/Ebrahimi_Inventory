@@ -17,6 +17,7 @@
         :side-offset="6"
         :collision-padding="12"
         align="start"
+        @close-auto-focus="emit('closeAutoFocus', $event)"
       >
         <label class="search-field"
           ><Search :size="16" /><input
@@ -63,7 +64,11 @@ const props = defineProps<{
   createLabel?: string
   disabled?: boolean
 }>()
-const emit = defineEmits<{ 'update:modelValue': [value: number]; create: [] }>()
+const emit = defineEmits<{
+  'update:modelValue': [value: number]
+  create: []
+  closeAutoFocus: [event: Event]
+}>()
 const open = ref(false)
 const search = ref('')
 const highlighted = ref(0)
@@ -115,7 +120,7 @@ function navigate(event: KeyboardEvent) {
   gap: 8px;
   width: 100%;
   min-height: 44px;
-  padding: 9px 12px;
+  padding: 9px 12px 9px 16px;
   background: var(--card);
   color: var(--foreground);
   border: 1px solid var(--input);

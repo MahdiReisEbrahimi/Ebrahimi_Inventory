@@ -164,7 +164,8 @@ async function navigate(event: KeyboardEvent, iso: string) {
 }
 .calendar-heading select {
   min-height: 36px;
-  padding: 4px;
+  padding-block: 4px;
+  padding-right: 4px;
 }
 .calendar-heading .icon-button {
   width: 30px;

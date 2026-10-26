@@ -25,7 +25,7 @@
     </aside>
 
     <div class="main-container">
-      <header class="topbar no-print">
+      <header class="topbar no-print" :class="{ 'topbar--invoices': route.path === '/invoices' }">
         <div class="topbar-context">
           <button
             class="icon-button mobile-menu"
@@ -41,6 +41,7 @@
             >{{ title }}</span
           >
         </div>
+        <div id="page-toolbar" class="topbar-page-actions" />
         <div class="topbar-actions">
           <time class="today">{{ today }}</time>
           <button
@@ -113,7 +114,14 @@
           </PopoverRoot>
         </div>
       </header>
-      <main id="main-content" class="page-content" tabindex="-1"><RouterView /></main>
+      <main
+        id="main-content"
+        class="page-content"
+        :class="{ 'page-content--invoices': route.path === '/invoices' }"
+        tabindex="-1"
+      >
+        <RouterView />
+      </main>
     </div>
 
     <DialogRoot v-model:open="mobileOpen">
@@ -158,8 +166,6 @@ import {
   Package,
   Receipt,
   Settings,
-  Sprout,
-  Store,
   Sun,
   X,
 } from '@lucide/vue'
@@ -384,6 +390,13 @@ watch(
   min-width: 0;
   font-size: 12px;
 }
+.topbar-page-actions {
+  flex-shrink: 0;
+  margin-inline-end: auto;
+}
+.topbar-page-actions:empty {
+  display: none;
+}
 .topbar-title {
   min-width: 0;
   overflow: hidden;
@@ -427,6 +440,12 @@ watch(
 .page-content {
   padding: 32px 36px 48px;
   margin: 0 auto;
+}
+.page-content.page-content--invoices {
+  padding: 16px;
+}
+.page-content--invoices > * {
+  max-width: none;
 }
 .skip-link {
   position: fixed;
@@ -533,6 +552,13 @@ watch(
   color: inherit;
 }
 @media (max-width: 1100px) {
+  .topbar--invoices {
+    gap: 10px;
+  }
+  .topbar--invoices .topbar-store,
+  .topbar--invoices .breadcrumb-arrow {
+    display: none;
+  }
   .sidebar {
     width: 220px;
     flex-basis: 220px;
@@ -571,6 +597,24 @@ watch(
   .topbar-context,
   .topbar-actions {
     gap: 6px;
+  }
+}
+@media (max-width: 600px) {
+  .topbar--invoices {
+    flex-wrap: wrap;
+    gap: 8px;
+    padding-block: 10px;
+  }
+  .topbar--invoices .topbar-page-actions {
+    order: 3;
+    width: 100%;
+    margin: 0;
+  }
+  .topbar--invoices .topbar-page-actions > * {
+    width: 100%;
+  }
+  .page-content.page-content--invoices {
+    padding: 10px;
   }
 }
 </style>

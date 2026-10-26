@@ -1,10 +1,10 @@
 <template>
   <div class="bulk-price">
     <p class="muted">
-      قیمت خرید یا فروش کالاهای فعال را تغییر دهید. قبل از ثبت، قیمت‌های جدید را در پیش‌نمایش بررسی
-      کنید.
+      قیمت خرید، فروش یا هر دو قیمت کالاهای فعال را تغییر دهید. قبل از ثبت، قیمت‌های جدید را در
+      پیش‌نمایش بررسی کنید.
     </p>
-    <form @submit.prevent="preview">
+    <form :id="formId" @submit.prevent="preview">
       <div class="form-grid">
         <label class="form-field"
           ><span>دسته‌بندی</span
@@ -18,37 +18,42 @@
           ><select v-model="form.priceType">
             <option value="SELL">قیمت فروش</option>
             <option value="BUY">قیمت خرید</option>
+            <option value="BOTH">قیمت خرید و فروش</option>
           </select></label
         >
-        <label class="form-field"
-          ><span>روش تغییر</span
-          ><select v-model="form.type">
-            <option value="PERCENTAGE">افزایش درصدی</option>
-            <option value="FIXED">جایگزینی با مبلغ ثابت</option>
-          </select></label
-        >
-        <label class="form-field"
-          ><span>{{ form.type === 'PERCENTAGE' ? 'درصد افزایش' : 'قیمت جدید · تومان' }}</span
-          ><input
-            v-if="form.type === 'PERCENTAGE'"
-            v-model.number="form.value"
-            type="number"
-            min="0"
-            step="0.1"
-            required
-          /><MoneyInput v-else v-model="form.value" required /><small>{{
+        <div class="form-field">
+          <label for="bulk-change-value">{{
+            form.type === 'PERCENTAGE' ? 'درصد افزایش' : 'قیمت جدید · تومان'
+          }}</label>
+          <div class="change-input">
+            <input
+              v-if="form.type === 'PERCENTAGE'"
+              id="bulk-change-value"
+              v-model.number="form.value"
+              type="number"
+              min="0"
+              step="0.1"
+              required
+            />
+            <MoneyInput v-else id="bulk-change-value" v-model="form.value" required />
+            <select v-model="form.type" aria-label="روش تغییر">
+              <option value="PERCENTAGE">درصدی</option>
+              <option value="FIXED">مبلغ ثابت</option>
+            </select>
+          </div>
+          <small>{{
             form.type === 'PERCENTAGE'
               ? 'مثلاً ۱۰ یعنی ده درصد افزایش نسبت به قیمت فعلی.'
               : 'این مبلغ جایگزین قیمت فعلی تمام کالاهای انتخابی می‌شود.'
-          }}</small></label
-        >
+          }}</small>
+        </div>
       </div>
-      <p v-if="error" class="notice notice--error" role="alert">{{ error }}</p>
-      <div class="form-actions">
-        <Button type="submit" variant="outline" :disabled="loading || applying"
+
+      <DialogActions>
+        <Button :form="formId" type="submit" variant="outline" :disabled="loading || applying"
           ><Eye :size="17" />{{ loading ? 'در حال محاسبه…' : 'محاسبه و پیش‌نمایش' }}</Button
         >
-      </div>
+      </DialogActions>
     </form>
     <section v-if="previewed" class="bulk-preview">
       <div class="notice">
@@ -61,6 +66,7 @@
           <thead>
             <tr>
               <th>کالا</th>
+              <th v-if="form.priceType === 'BOTH'">نوع قیمت</th>
               <th>قیمت فعلی</th>
               <th>قیمت جدید</th>
             </tr>
@@ -68,8 +74,24 @@
           <tbody>
             <tr v-for="row in rows" :key="row.id">
               <td>{{ row.name }}</td>
-              <td class="muted">{{ money(row.oldPrice) }}</td>
-              <td class="new-price">{{ money(row.newPrice) }}</td>
+              <template v-if="form.priceType === 'BOTH'">
+                <td>
+                  <div>خرید</div>
+                  <div>فروش</div>
+                </td>
+                <td class="muted">
+                  <div>{{ money(row.oldBuyPrice) }}</div>
+                  <div>{{ money(row.oldSellPrice) }}</div>
+                </td>
+                <td class="new-price">
+                  <div>{{ money(row.newBuyPrice) }}</div>
+                  <div>{{ money(row.newSellPrice) }}</div>
+                </td>
+              </template>
+              <template v-else>
+                <td class="muted">{{ money(row.oldPrice) }}</td>
+                <td class="new-price">{{ money(row.newPrice) }}</td>
+              </template>
             </tr>
           </tbody>
         </table>
@@ -79,19 +101,20 @@
         title="کالای فعالی پیدا نشد"
         description="دسته‌بندی یا وضعیت کالاها را بررسی کنید."
       />
-      <div v-if="rows.length" class="form-actions">
+      <DialogActions v-if="rows.length">
         <Button variant="outline" :disabled="applying" @click="previewed = false">انصراف</Button
         ><Button :disabled="applying" @click="apply"
           ><Check :size="17" />{{ applying ? 'در حال اعمال…' : 'تأیید و ثبت قیمت‌ها' }}</Button
         >
-      </div>
+      </DialogActions>
     </section>
   </div>
 </template>
 <script setup lang="ts">
-import { onMounted, reactive, ref, watch } from 'vue'
+import { onMounted, reactive, ref, watch, useId } from 'vue'
 import { Check, Eye, Info } from '@lucide/vue'
 import Button from '@/components/ui/Button.vue'
+import DialogActions from '@/components/ui/DialogActions.vue'
 import MoneyInput from '@/components/ui/MoneyInput.vue'
 import EmptyState from '@/components/ui/EmptyState.vue'
 import { toast } from '@/lib/toast'
@@ -99,6 +122,7 @@ import { money, number, parseNumber } from '@/lib/format'
 import { productsApi } from '@/services/products'
 import { categoriesApi } from '@/services/categories'
 import type { Category } from '@/types'
+const formId = useId()
 const emit = defineEmits<{ close: [saved: boolean] }>()
 const form = reactive({
   categoryId: undefined as number | undefined,
@@ -107,11 +131,10 @@ const form = reactive({
   priceType: 'SELL',
 })
 const categories = ref<Category[]>([])
-const rows = ref<{ id: number; name: string; oldPrice: number; newPrice: number }[]>([])
+const rows = ref<Awaited<ReturnType<typeof productsApi.previewBulk>>['items']>([])
 const loading = ref(false),
   applying = ref(false),
-  previewed = ref(false),
-  error = ref('')
+  previewed = ref(false)
 let previewVersion = 0
 watch(
   () => form.type,
@@ -128,12 +151,12 @@ watch(form, () => {
 async function preview() {
   const value = parseNumber(form.value)
   if (!Number.isFinite(value) || value < 0 || (form.type === 'FIXED' && !Number.isInteger(value))) {
-    error.value = 'مقدار معتبر و غیرمنفی وارد کنید.'
+    toast.error('مقدار معتبر و غیرمنفی وارد کنید.')
     return
   }
   const version = ++previewVersion
   loading.value = true
-  error.value = ''
+
   try {
     const result = await productsApi.previewBulk({ ...form, value })
     if (version === previewVersion) {
@@ -141,7 +164,7 @@ async function preview() {
       previewed.value = true
     }
   } catch (e) {
-    error.value = e instanceof Error ? e.message : 'پیش‌نمایش دریافت نشد.'
+    toast.error(e instanceof Error ? e.message : 'پیش‌نمایش دریافت نشد.')
   } finally {
     loading.value = false
   }
@@ -149,13 +172,13 @@ async function preview() {
 async function apply() {
   if (!previewed.value || !rows.value.length || applying.value) return
   applying.value = true
-  error.value = ''
+
   try {
     const result = await productsApi.bulk({ ...form, value: parseNumber(form.value) })
     toast.success(`قیمت ${number(result.affectedProducts)} کالا به‌روز شد.`)
     emit('close', true)
   } catch (e) {
-    error.value = e instanceof Error ? e.message : 'ثبت قیمت‌ها انجام نشد.'
+    toast.error(e instanceof Error ? e.message : 'ثبت قیمت‌ها انجام نشد.')
   } finally {
     applying.value = false
   }
@@ -164,11 +187,58 @@ onMounted(async () => {
   try {
     categories.value = await categoriesApi.list()
   } catch {
-    error.value = 'دسته‌بندی‌ها دریافت نشدند.'
+    toast.error('دسته‌بندی‌ها دریافت نشدند.')
   }
 })
 </script>
 <style scoped>
+.bulk-price .form-grid {
+  grid-template-columns: minmax(0, 1fr);
+}
+.change-input {
+  display: flex;
+  align-items: stretch;
+  overflow: hidden;
+  border: 1px solid var(--input);
+  border-radius: 8px;
+  background: var(--background);
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
+}
+.change-input:hover,
+.change-input:focus-within {
+  border-color: var(--ring);
+}
+.change-input:focus-within {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--ring) 12%, transparent);
+}
+.change-input input,
+.change-input select {
+  border: 0;
+  border-radius: 0;
+}
+.change-input input:focus,
+.change-input select:focus {
+  outline: none;
+  box-shadow: none;
+}
+.change-input select {
+  width: 110px;
+  flex-shrink: 0;
+  border-inline-start: 1px solid var(--border);
+  background-color: var(--secondary);
+}
+.change-input input {
+  min-width: 0;
+  flex: 1;
+  width: 100%;
+  background: transparent;
+}
+.bulk-preview td > div {
+  padding-block: 4px;
+}
+
 .bulk-price > p {
   font-size: 12px;
   line-height: 2;

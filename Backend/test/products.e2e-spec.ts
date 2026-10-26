@@ -27,6 +27,19 @@ describe.skipIf(process.env.RUN_PRODUCT_DB_TESTS !== '1')(
     afterAll(async () => {
       if (!prisma) return;
       if (categoryId) {
+        const ids = (
+          await prisma.product.findMany({
+            where: { categoryId },
+            select: { id: true },
+          })
+        ).map((p) => p.id);
+        await prisma.inventoryTransaction.deleteMany({
+          where: { productId: { in: ids } },
+        });
+        await prisma.priceHistory.deleteMany({
+          where: { productId: { in: ids } },
+        });
+        await prisma.auditLog.deleteMany({ where: { productId: { in: ids } } });
         await prisma.product.deleteMany({ where: { categoryId } });
         await prisma.category.delete({ where: { id: categoryId } });
       }
@@ -75,6 +88,61 @@ describe.skipIf(process.env.RUN_PRODUCT_DB_TESTS !== '1')(
       expect(
         await prisma.priceHistory.count({ where: { productId: other!.id } }),
       ).toBe(0);
+    });
+    it('saves initial stock and subsequent stock corrections with inventory history', async () => {
+      const product = await service.create({
+        ...productData(`${tag}-stock`),
+        stock: 12,
+      });
+      expect(product?.stock).toBe(12);
+      const id = product!.id;
+      expect(
+        await prisma.inventoryTransaction.findFirstOrThrow({
+          where: { productId: id },
+        }),
+      ).toMatchObject({ type: 'ADJUSTMENT', quantity: 12 });
+      await service.update(id, { stock: 5 });
+      expect((await service.findOne(id)).stock).toBe(5);
+      expect(
+        await prisma.inventoryTransaction.findFirstOrThrow({
+          where: { productId: id },
+          orderBy: { id: 'desc' },
+        }),
+      ).toMatchObject({ type: 'ADJUSTMENT', quantity: -7 });
+      expect(
+        await prisma.priceHistory.count({ where: { productId: id } }),
+      ).toBe(0);
+      await service.update(id, { stock: 8, buyPrice: 15, sellPrice: 25 });
+      expect(await service.findOne(id)).toMatchObject({
+        stock: 8,
+        buyPrice: 15,
+        sellPrice: 25,
+      });
+      expect(
+        await prisma.priceHistory.count({ where: { productId: id } }),
+      ).toBe(1);
+    });
+
+    it('hard-deletes products without history and archives products with inventory or audit history', async () => {
+      const plain = await service.create(productData(`${tag}-plain-delete`));
+      await service.delete(plain!.id);
+      expect(
+        await prisma.product.findUnique({ where: { id: plain!.id } }),
+      ).toBeNull();
+      const stocked = await service.create({
+        ...productData(`${tag}-stock-delete`),
+        stock: 2,
+      });
+      await service.delete(stocked!.id);
+      expect(await service.findOne(stocked!.id)).toMatchObject({
+        isActive: false,
+        stock: 2,
+      });
+      await service.updateStatus(productId, { isActive: false });
+      await service.delete(productId);
+      expect(await service.findOne(productId)).toMatchObject({
+        isActive: false,
+      });
     });
   },
 );

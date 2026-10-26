@@ -13,6 +13,7 @@ export class CreateProductDto {
   @IsString() @IsNotEmpty() @MaxLength(50) unit!: string;
   @IsInt() @Min(0) buyPrice!: number;
   @IsInt() @Min(0) sellPrice!: number;
+  @IsOptional() @IsInt() @Min(0) stock?: number;
   @IsInt() @Min(0) minStock!: number;
   @IsOptional() @IsString() description?: string;
 }

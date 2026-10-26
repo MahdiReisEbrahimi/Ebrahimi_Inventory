@@ -3,10 +3,11 @@
     <PageHeader
       v-if="!embedded"
       :title="editing ? 'ویرایش کالا' : 'ثبت کالای جدید'"
-      description="اطلاعات پایه و قیمت را وارد کنید؛ موجودی از بخش ورود کالا ثبت می‌شود."
+      description="اطلاعات کالا، قیمت‌ها و موجودی انبار را وارد کنید."
       eyebrow="کالاها و قیمت‌ها"
     />
     <form
+      :id="formId"
       :class="embedded ? 'product-form' : 'product-form panel panel-body standalone-form'"
       @submit.prevent="submit"
     >
@@ -74,8 +75,12 @@
               ><span>قیمت فروش <small>تومان</small></span
               ><MoneyInput v-model="form.sellPrice" required dir="ltr"
             /></label>
+            <label class="form-field">
+              <span>موجودی انبار</span>
+              <input v-model.number="form.stock" type="number" min="0" step="1" required />
+            </label>
             <label class="form-field"
-              ><span>حداقل موجودی</span
+              ><span>حداقل موجودی مورد نیاز</span
               ><input
                 v-model.number="form.minStock"
                 type="number"
@@ -84,46 +89,33 @@
                 required
               /><small>در این مقدار یا کمتر، هشدار تأمین نمایش داده می‌شود.</small></label
             >
-            <div class="notice">
-              <Info :size="18" /><span
-                >برای تغییر تعداد موجودی، از بخش «ورود و مرجوعی کالا» استفاده کنید.</span
-              >
-            </div>
           </div>
         </section>
-        <section class="form-section">
-          <label class="form-field"
-            ><span>توضیحات <small>اختیاری</small></span
-            ><textarea
-              v-model="form.description"
-              rows="3"
-              placeholder="اطلاعات تکمیلی درباره کالا…"
-            />
-          </label>
-        </section>
-        <p v-if="formError" class="notice notice--error" role="alert">{{ formError }}</p>
-        <div class="form-actions">
+
+        <DialogActions>
           <Button variant="outline" @click="close(false)">انصراف</Button
-          ><Button type="submit" :disabled="saving">{{
+          ><Button :form="formId" type="submit" :disabled="saving">{{
             saving ? 'در حال ذخیره…' : editing ? 'ذخیره تغییرات' : 'ثبت کالا'
           }}</Button>
-        </div>
+        </DialogActions>
       </template>
     </form>
   </div>
 </template>
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref, useId } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { Info, Package, Plus, Tags } from '@lucide/vue'
+import { Package, Plus, Tags } from '@lucide/vue'
 import PageHeader from '@/components/ui/PageHeader.vue'
 import Button from '@/components/ui/Button.vue'
+import DialogActions from '@/components/ui/DialogActions.vue'
 import MoneyInput from '@/components/ui/MoneyInput.vue'
 import { toast } from '@/lib/toast'
 import { number, parseNumber } from '@/lib/format'
 import { categoriesApi } from '@/services/categories'
 import { productsApi } from '@/services/products'
 import type { Category, Product } from '@/types'
+const formId = useId()
 const props = defineProps<{ editData?: Product; embedded?: boolean }>()
 const emit = defineEmits<{ close: [saved: boolean] }>()
 const route = useRoute(),
@@ -138,7 +130,6 @@ const categories = ref<Category[]>([]),
   loading = ref(true),
   saving = ref(false)
 const loadError = ref(''),
-  formError = ref(''),
   addingCategory = ref(false),
   categoryName = ref(''),
   categorySaving = ref(false)
@@ -148,6 +139,7 @@ const form = reactive({
   unit: 'عدد',
   buyPrice: '0',
   sellPrice: '0',
+  stock: 0,
   minStock: 0,
   description: '',
 })
@@ -158,6 +150,7 @@ function assignProduct(p: Product) {
     unit: p.unit,
     buyPrice: number(p.buyPrice),
     sellPrice: number(p.sellPrice),
+    stock: p.stock,
     minStock: p.minStock,
     description: p.description || '',
   })
@@ -197,19 +190,19 @@ async function createCategory() {
 }
 async function submit() {
   if (saving.value) return
-  formError.value = ''
+
   const buyPrice = parseNumber(form.buyPrice),
     sellPrice = parseNumber(form.sellPrice)
   if (!form.categoryId || !form.name.trim() || !form.unit.trim()) {
-    formError.value = 'نام، واحد و دسته‌بندی کالا را تکمیل کنید.'
+    toast.error('نام، واحد و دسته‌بندی کالا را تکمیل کنید.')
     return
   }
   if (
-    ![buyPrice, sellPrice, form.minStock].every(
+    ![buyPrice, sellPrice, form.stock, form.minStock].every(
       (v) => Number.isInteger(v) && v >= 0 && v <= 2147483647,
     )
   ) {
-    formError.value = 'قیمت‌ها و حداقل موجودی باید عدد صحیح و غیرمنفی باشند.'
+    toast.error('قیمت‌ها و موجودی باید عدد صحیح و غیرمنفی باشند.')
     return
   }
   saving.value = true
@@ -223,14 +216,10 @@ async function submit() {
     }
     if (id.value) await productsApi.update(id.value, data)
     else await productsApi.create(data)
-    toast.success(
-      editing.value
-        ? 'تغییرات کالا ذخیره شد.'
-        : 'کالا ثبت شد. اکنون می‌توانید موجودی آن را وارد کنید.',
-    )
+    toast.success(editing.value ? 'تغییرات کالا ذخیره شد.' : 'کالا و موجودی انبار ثبت شد.')
     close(true)
   } catch (e) {
-    formError.value = e instanceof Error ? e.message : 'ذخیره اطلاعات انجام نشد.'
+    toast.error(e instanceof Error ? e.message : 'ذخیره اطلاعات انجام نشد.')
   } finally {
     saving.value = false
   }
@@ -238,6 +227,30 @@ async function submit() {
 onMounted(load)
 </script>
 <style scoped>
+.product-form .form-grid {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+}
+.product-form .form-field {
+  gap: 5px;
+}
+.product-form input,
+.product-form select {
+  min-height: 38px;
+  padding-block: 7px;
+  padding-right: 11px;
+  font-size: 12px;
+  border-radius: 8px;
+}
+.product-form input {
+  padding-left: 11px;
+}
+.product-form .form-section {
+  gap: 12px;
+}
+.product-form .form-section + .form-section {
+  padding-top: 16px;
+}
 .standalone-form {
   max-width: 860px;
 }

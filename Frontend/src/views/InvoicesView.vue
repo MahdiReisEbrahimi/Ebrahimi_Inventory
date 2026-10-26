@@ -1,213 +1,221 @@
 <template>
   <div class="page-stack invoice-page">
-    <PageHeader
-      class="no-print"
-      title="فاکتورهای فروش"
-      description="از انتخاب کالا تا صدور و چاپ فاکتور، در چند قدم ساده."
-      eyebrow="فروش فروشگاه"
-      ><Button variant="outline" @click="settingsOpen = true"
-        ><Settings2 :size="17" />اطلاعات فروشگاه</Button
-      ></PageHeader
-    >
-    <div class="invoice-toolbar no-print">
+    <div class="invoice-nav no-print">
       <div class="segmented-control">
-        <button :aria-pressed="activeTab === 'new'" @click="switchTab('new')">فاکتور جدید</button
-        ><button :aria-pressed="activeTab === 'archive'" @click="switchTab('archive')">
+        <button :aria-pressed="activeTab === 'new'" @click="switchTab('new')">فاکتور فروش</button>
+        <button :aria-pressed="activeTab === 'archive'" @click="switchTab('archive')">
           بایگانی فاکتورها
         </button>
       </div>
-      <span class="muted">قیمت‌ها به تومان هستند</span>
+      <span class="muted">همه مبالغ فاکتور به ریال</span>
     </div>
     <div v-if="loadError" class="notice notice--error no-print" role="alert">
       {{ loadError }}<Button variant="outline" @click="load">تلاش دوباره</Button>
     </div>
     <div v-if="loading" class="table-loading panel no-print" role="status">
-      در حال دریافت اطلاعات فروش…
+      در حال دریافت اطلاعات…
     </div>
-    <div
-      v-else-if="activeTab === 'new' && !activeInvoice"
-      class="invoice-editor no-print"
+    <section
+      v-else-if="activeTab === 'new' && !activeInvoice && !previewDraft"
+      class="panel invoice-editor no-print"
       :aria-busy="saving"
     >
-      <div class="invoice-steps">
-        <section class="panel">
-          <div class="panel-heading">
-            <div class="step-heading">
-              <span class="step-number">۱</span>
-              <div>
-                <h2>خریدار فاکتور</h2>
-                <p>یک خریدار انتخاب کنید یا خریدار تازه‌ای ثبت کنید.</p>
-              </div>
-            </div>
-            <Button variant="ghost" size="sm" @click="openBuyer()"
-              ><Plus :size="15" />خریدار جدید</Button
-            >
-          </div>
-          <div class="panel-body">
-            <label class="form-field"
-              ><span>نام خریدار</span
-              ><select v-model.number="selectedBuyerId">
-                <option :value="undefined">انتخاب خریدار</option>
-                <option v-for="buyer in buyers" :key="buyer.id" :value="buyer.id">
-                  {{ buyer.firstName }} {{ buyer.lastName
-                  }}{{ buyer.nationalId ? ' · ' + buyer.nationalId : '' }}
-                </option>
-              </select></label
-            >
-            <div v-if="selectedBuyer" class="buyer-preview">
-              <div>
-                <b>{{ selectedBuyer.firstName }} {{ selectedBuyer.lastName }}</b>
-                <p>
-                  {{ selectedBuyer.phone || 'شماره تماس ثبت نشده' }} ·
-                  {{ selectedBuyer.address || 'نشانی ثبت نشده' }}
-                </p>
-              </div>
-              <button
-                class="icon-button"
-                aria-label="ویرایش خریدار"
-                @click="openBuyer(selectedBuyer)"
-              >
-                <Pencil :size="17" /></button
-              ><button
-                class="icon-button icon-button--delete"
-                aria-label="حذف خریدار"
-                @click="buyerToDelete = selectedBuyer"
-              >
-                <Trash2 :size="17" />
-              </button>
-            </div>
-          </div>
-        </section>
-        <section class="panel">
-          <div class="panel-heading">
-            <div class="step-heading">
-              <span class="step-number">۲</span>
-              <div>
-                <h2>کالاهای فاکتور</h2>
-                <p>کالا را اضافه کنید؛ سپس تعداد و قیمت را بررسی کنید.</p>
-              </div>
-            </div>
-            <Package :size="22" class="muted" />
-          </div>
-          <div class="panel-body product-adder">
-            <label class="form-field"
-              ><span>دسته‌بندی</span
-              ><select v-model.number="selectedCategoryId" @change="selectedProductId = undefined">
-                <option :value="undefined">همه دسته‌بندی‌ها</option>
-                <option
-                  v-for="category in productCategories"
-                  :key="category.id"
-                  :value="category.id"
-                >
-                  {{ category.name }}
-                </option>
-              </select></label
-            ><label class="form-field"
-              ><span>کالا</span
-              ><select v-model.number="selectedProductId">
-                <option :value="undefined">انتخاب کالا</option>
-                <option
-                  v-for="product in availableProducts"
-                  :key="product.id"
-                  :value="product.id"
-                  :disabled="product.stock < 1"
-                >
-                  {{ product.name }} · موجودی {{ number(product.stock) }} {{ product.unit }}
-                </option>
-              </select></label
-            ><Button variant="outline" :disabled="!selectedProductId" @click="addProduct"
-              ><Plus :size="16" />افزودن</Button
-            >
-          </div>
-          <EmptyState
-            v-if="!draft.length"
-            title="اولین کالا را اضافه کنید"
-            description="اقلام فاکتور و جمع مبلغ در این قسمت نمایش داده می‌شود."
+      <header class="editor-heading">
+        <div>
+          <h1>
+            {{ editingInvoiceId ? 'ویرایش فاکتور ' + editingInvoiceNumber : 'فاکتور فروش جدید' }}
+          </h1>
+          <small class="muted">{{
+            editingInvoiceId
+              ? 'تغییرات پس از ذخیره اعمال می‌شوند.'
+              : 'شماره فاکتور پس از ثبت تعیین می‌شود.'
+          }}</small>
+        </div>
+        <PersianDatePicker v-model="issueDate" :disabled="saving" />
+      </header>
+      <div class="editor-parties">
+        <div class="seller-inline">
+          <span class="muted">فروشنده</span><b>{{ settings?.name }}</b
+          ><button
+            class="icon-button"
+            aria-label="ویرایش مشخصات فروشگاه"
+            @click="settingsOpen = true"
+          >
+            <Pencil :size="16" /></button
+          ><small class="muted">{{ settings?.phone }} {{ settings?.address }}</small>
+        </div>
+        <div class="buyer-inline">
+          <SearchSelect
+            v-model="selectedBuyerId"
+            :options="buyerOptions"
+            label="خریدار"
+            placeholder="انتخاب خریدار"
+            create-label="طرف حساب جدید"
+            @create="openBuyer()"
           />
-          <div v-else class="draft-lines">
-            <article v-for="(line, index) in draft" :key="line.productId" class="draft-line">
-              <div class="draft-line__head">
-                <span class="line-counter">{{ number(index + 1) }}</span>
-                <div>
-                  <b>{{ line.name }}</b
-                  ><small
-                    >موجودی قابل فروش: {{ number(stockOf(line.productId)) }} {{ line.unit }}</small
-                  >
-                </div>
-                <button
-                  class="icon-button icon-button--delete"
-                  :aria-label="'حذف ' + line.name + ' از فاکتور'"
+          <button
+            v-if="selectedBuyer"
+            class="icon-button"
+            aria-label="ویرایش خریدار"
+            @click="openBuyer(selectedBuyer)"
+          >
+            <Pencil :size="16" />
+          </button>
+          <button
+            v-if="selectedBuyer"
+            class="icon-button icon-button--delete"
+            aria-label="حذف خریدار"
+            @click="buyerToDelete = selectedBuyer"
+          >
+            <Trash2 :size="16" />
+          </button>
+          <small v-if="selectedBuyer" class="muted"
+            >{{ selectedBuyer.phone }} {{ selectedBuyer.address }}</small
+          >
+        </div>
+      </div>
+      <div class="product-adder">
+        <SearchSelect
+          v-model="selectedCategoryId"
+          :options="categoryOptions"
+          label="دسته‌بندی کالا"
+          placeholder="۱. انتخاب دسته‌بندی"
+          :disabled="saving"
+        />
+        <SearchSelect
+          :options="productOptions"
+          label="کالا"
+          :placeholder="
+            selectedCategoryId ? '۲. انتخاب یا جست‌وجوی کالا…' : 'ابتدا دسته‌بندی را انتخاب کنید'
+          "
+          :disabled="saving || !selectedCategoryId"
+          @update:model-value="addProduct"
+        />
+      </div>
+      <div class="invoice-lines-scroll" tabindex="0" role="region" aria-label="اقلام فاکتور">
+        <table class="invoice-lines">
+          <colgroup>
+            <col class="index-col" />
+            <col />
+            <col class="qty-col" />
+            <col class="unit-col" />
+            <col class="price-col" />
+            <col class="total-col" />
+          </colgroup>
+          <thead>
+            <tr>
+              <th>ردیف</th>
+              <th>نام کالا</th>
+              <th>تعداد</th>
+              <th>واحد</th>
+              <th>فی · ریال</th>
+              <th>جمع · ریال</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="(line, index) in draft" :key="line.productId">
+              <td class="line-index">
+                <span>{{ number(index + 1) }}</span
+                ><button
+                  class="line-remove"
+                  :aria-label="'حذف ' + line.name"
+                  :disabled="saving"
                   @click="draft.splice(index, 1)"
                 >
-                  <Trash2 :size="17" />
+                  <Trash2 :size="15" />
                 </button>
-              </div>
-              <div class="draft-line__fields">
-                <label class="form-field"
-                  ><span>تعداد · {{ line.unit }}</span
-                  ><input
-                    v-model.number="line.quantity"
-                    type="number"
-                    min="1"
-                    :max="stockOf(line.productId)"
-                    step="1"
-                    required /></label
-                ><label class="form-field"
-                  ><span>قیمت واحد · تومان</span
-                  ><input
-                    v-model="line.priceText"
-                    inputmode="numeric"
-                    @input="line.unitPrice = parseNumber(line.priceText)"
-                    @blur="formatLinePrice(line)"
-                /></label>
-                <div class="line-total">
-                  <small>جمع این کالا</small
-                  ><strong>{{ money(line.quantity * line.unitPrice) }}</strong>
-                </div>
-              </div>
-            </article>
-          </div>
-        </section>
+              </td>
+              <td>
+                <b :title="line.name">{{ line.name }}</b>
+              </td>
+              <td>
+                <input
+                  v-model.number="line.quantity"
+                  type="number"
+                  min="1"
+                  :max="stockOf(line.productId)"
+                  step="1"
+                  :disabled="saving"
+                  :aria-label="'تعداد ' + line.name"
+                />
+              </td>
+              <td>{{ line.unit }}</td>
+              <td>
+                <MoneyInput
+                  v-model="line.priceText"
+                  :disabled="saving"
+                  :aria-label="'فی ' + line.name + ' به ریال'"
+                  @update:model-value="line.unitPrice = parseNumber($event)"
+                />
+              </td>
+              <td>{{ number(line.quantity * line.unitPrice) }}</td>
+            </tr>
+            <tr v-if="!draft.length">
+              <td colspan="6" class="empty-lines">
+                کالایی را از کادر بالا انتخاب کنید تا به فاکتور اضافه شود.
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </div>
-      <aside class="invoice-summary panel">
-        <div class="panel-heading">
-          <div class="step-heading">
-            <span class="step-number">۳</span>
-            <h2>بررسی و صدور</h2>
+      <div class="editor-bottom">
+        <div class="financial-fields">
+          <div class="subtotal">
+            <span>جمع اقلام</span><b>{{ rial(draftSubtotal) }}</b>
           </div>
+          <label class="form-field"
+            ><span>تخفیف · ریال <small>اختیاری</small></span
+            ><MoneyInput
+              v-model="discountText"
+              :disabled="saving"
+              aria-label="تخفیف فاکتور به ریال"
+              placeholder="۰"
+          /></label>
         </div>
-        <div class="panel-body">
-          <div class="summary-row">
-            <span>خریدار</span
-            ><b>{{
-              selectedBuyer ? selectedBuyer.firstName + ' ' + selectedBuyer.lastName : 'انتخاب نشده'
-            }}</b>
-          </div>
-          <div class="summary-row">
-            <span>تعداد ردیف</span><b>{{ number(draft.length) }}</b>
-          </div>
-          <div class="summary-total">
-            <span>مبلغ نهایی</span><strong>{{ money(draftTotal) }}</strong>
-          </div>
-          <p class="summary-note">
-            <Info :size="16" />با صدور فاکتور، تعداد کالاها از موجودی کم می‌شود.
-          </p>
-          <p v-if="saveError" class="notice notice--error" role="alert">{{ saveError }}</p>
+        <div class="grand-total">
+          <span
+            >جمع کل فاکتور <strong>{{ rial(draftTotal) }}</strong></span
+          ><small>{{ amountInWords(draftTotal) }}</small>
+        </div>
+        <fieldset class="settlement">
+          <legend>شرایط تسویه‌حساب</legend>
+          <label
+            ><input v-model="settlement" type="radio" value="CASH" :disabled="saving" /> نقدی</label
+          ><label
+            ><input v-model="settlement" type="radio" value="INSTALLMENT" :disabled="saving" />
+            اقساطی</label
+          >
+        </fieldset>
+        <label class="form-field invoice-notes"
+          ><span>توضیحات</span
+          ><textarea
+            v-model="notes"
+            rows="1"
+            maxlength="600"
+            :disabled="saving"
+            @input="notesTouched = true"
+          />
+        </label>
+        <p v-if="saveError" class="notice notice--error" role="alert">{{ saveError }}</p>
+        <div class="editor-actions">
           <Button :disabled="saving || !draft.length || !selectedBuyer || !!loadError" @click="save"
-            ><Receipt :size="18" />{{ saving ? 'در حال صدور…' : 'ثبت و صدور فاکتور' }}</Button
-          ><Button variant="outline" :disabled="!draft.length" @click="printDraft"
-            ><Printer :size="17" />پیش‌نمایش چاپ</Button
-          ><small class="summary-help">پیش‌نمایش، موجودی را تغییر نمی‌دهد.</small>
+            ><Check :size="17" />{{
+              saving ? 'در حال ذخیره…' : editingInvoiceId ? 'ذخیره تغییرات' : 'ثبت فاکتور'
+            }}</Button
+          >
+          <Button variant="outline" :disabled="saving || !draft.length" @click="printDraft"
+            ><Printer :size="17" />پیش‌نمایش</Button
+          >
+          <Button v-if="editingInvoiceId" variant="ghost" :disabled="saving" @click="cancelEdit"
+            >انصراف از ویرایش</Button
+          >
+          <small class="muted">با ثبت فاکتور، موجودی کالاها به‌روز می‌شود.</small>
         </div>
-      </aside>
-    </div>
-
-    <section v-if="activeTab === 'archive'" class="panel no-print">
+      </div>
+    </section>
+    <section v-if="activeTab === 'archive' && !activeInvoice" class="panel no-print">
       <div class="panel-heading">
-        <div>
-          <h2>بایگانی فروش</h2>
-          <p>حداکثر ۵۰۰ فاکتور اخیر، مطابق فیلترهای انتخابی</p>
-        </div>
+        <h2>بایگانی فاکتورها</h2>
         <Button variant="ghost" size="sm" @click="clearFilters">پاک‌کردن فیلترها</Button>
       </div>
       <form class="archive-filters panel-body" @submit.prevent="loadInvoices">
@@ -219,33 +227,32 @@
               {{ buyer.firstName }} {{ buyer.lastName }}
             </option>
           </select></label
-        ><label class="form-field"
-          ><span>نام یا کد ملی</span
-          ><input v-model="archiveFilters.buyer" placeholder="جست‌وجوی خریدار" /></label
-        ><label class="form-field"
-          ><span>کالا</span
-          ><input v-model="archiveFilters.product" placeholder="نام یا کد کالا" /></label
-        ><label class="form-field"
-          ><span>از تاریخ</span><input v-model="archiveFilters.from" type="date" /></label
-        ><label class="form-field"
-          ><span>تا تاریخ</span><input v-model="archiveFilters.to" type="date" /></label
-        ><Button type="submit" :disabled="archiveLoading"><Search :size="16" />جست‌وجو</Button>
+        >
+        <label class="form-field"
+          ><span>نام یا کد ملی</span><input v-model="archiveFilters.buyer"
+        /></label>
+        <label class="form-field"
+          ><span>نام یا کد کالا</span><input v-model="archiveFilters.product"
+        /></label>
+        <label class="form-field"
+          ><span>از تاریخ صدور</span><input v-model="archiveFilters.from" type="date"
+        /></label>
+        <label class="form-field"
+          ><span>تا تاریخ صدور</span><input v-model="archiveFilters.to" type="date"
+        /></label>
+        <Button type="submit" :disabled="archiveLoading"><Search :size="16" />جست‌وجو</Button>
       </form>
       <p v-if="archiveError" class="notice notice--error" role="alert">{{ archiveError }}</p>
-      <div v-if="archiveLoading" class="table-loading" role="status">در حال دریافت فاکتورها…</div>
+      <div v-if="archiveLoading" class="table-loading">در حال دریافت…</div>
       <div v-else-if="invoices.length" class="archive-grid">
         <article v-for="invoice in invoices" :key="invoice.id" class="archive-card">
-          <div class="archive-card__top">
-            <span class="invoice-icon"><Receipt :size="21" /></span
-            ><time>{{ date(invoice.createdAt) }}</time>
+          <div>
+            <b>فاکتور {{ invoice.number }}</b
+            ><time>{{ date(invoice.issueDate || invoice.createdAt) }}</time>
           </div>
-          <b class="archive-buyer"
-            >{{ invoice.buyerFirstName || 'خریدار' }} {{ invoice.buyerLastName }}</b
-          ><span class="invoice-number">{{ invoice.number }}</span>
-          <div class="archive-amount">
-            <span>جمع فاکتور</span><strong>{{ money(invoice.total) }}</strong>
-          </div>
-          <div class="archive-card__actions">
+          <p>{{ invoice.buyerFirstName }} {{ invoice.buyerLastName }}</p>
+          <strong>{{ rial(invoiceInRials(invoice).total) }}</strong>
+          <div class="archive-actions">
             <Button variant="outline" size="sm" @click="openInvoice(invoice)">مشاهده</Button
             ><Button variant="ghost" size="sm" @click="openInvoice(invoice, true)"
               ><Printer :size="15" />چاپ</Button
@@ -256,29 +263,31 @@
       <EmptyState
         v-else-if="!archiveError"
         title="فاکتوری پیدا نشد"
-        description="فیلترها را تغییر دهید یا اولین فاکتور فروش را ثبت کنید."
+        description="فیلترها را تغییر دهید یا فاکتور جدیدی ثبت کنید."
       />
     </section>
     <section v-if="activeInvoice || previewDraft" ref="paperSection" class="invoice-preview">
       <div class="paper-toolbar no-print">
+        <span class="badge" :class="activeInvoice ? 'badge--success' : 'badge--warning'">{{
+          activeInvoice ? 'فاکتور ثبت‌شده' : 'پیش‌نویس · ثبت نشده'
+        }}</span>
         <div>
-          <span v-if="activeInvoice" class="badge badge--success"
-            ><Check :size="14" />فاکتور ثبت‌شده</span
-          ><span v-else class="badge badge--warning">پیش‌نویس · ثبت نشده</span>
-        </div>
-        <div>
-          <Button variant="outline" @click="printCurrent"><Printer :size="17" />چاپ فاکتور</Button
-          ><Button v-if="activeInvoice" @click="newDraft"><Plus :size="17" />فاکتور جدید</Button
-          ><Button v-else variant="ghost" @click="previewDraft = false">بستن پیش‌نمایش</Button>
+          <Button variant="outline" @click="printCurrent"><Printer :size="17" />چاپ A5 افقی</Button>
+          <Button v-if="activeInvoice" variant="outline" @click="editInvoice"
+            ><Pencil :size="16" />ویرایش</Button
+          >
+          <Button v-if="activeInvoice" @click="newDraft"><Plus :size="16" />فاکتور جدید</Button>
+          <Button v-if="activeInvoice" variant="ghost" @click="activeInvoice = null">بازگشت</Button>
+          <Button v-else variant="ghost" @click="previewDraft = false">ادامه ویرایش</Button>
         </div>
       </div>
       <InvoicePaper
+        ref="paperRenderer"
         :invoice="activeInvoice || draftInvoice"
         :settings="settings"
         :draft="!activeInvoice"
       />
     </section>
-
     <AppDialog
       v-model:open="leaveOpen"
       title="فاکتور هنوز ثبت نشده است"
@@ -292,7 +301,8 @@
       </div>
     </AppDialog>
     <AppDialog
-      v-model:open="buyerOpen"
+      :open="buyerOpen"
+      @update:open="!buyerSaving && (buyerOpen = $event)"
       :title="editingBuyerId ? 'ویرایش خریدار' : 'ثبت خریدار جدید'"
       width="620px"
       ><form @submit.prevent="saveBuyer">
@@ -341,20 +351,46 @@
         >
       </div></AppDialog
     >
-    <AppDialog v-model:open="settingsOpen" title="اطلاعات فروشگاه" width="600px"
+    <AppDialog
+      :open="settingsOpen"
+      @update:open="!settingsSaving && (settingsOpen = $event)"
+      title="اطلاعات فروشگاه"
+      width="600px"
       ><form @submit.prevent="saveSettings">
         <div class="form-grid">
           <label class="form-field"
-            ><span>نام فروشگاه</span><input v-model="settingsForm.name" required /></label
+            ><span>نام فروشگاه</span
+            ><input v-model="settingsForm.name" required maxlength="100" /></label
           ><label class="form-field"
-            ><span>شماره تماس</span><input v-model="settingsForm.phone" type="tel" /></label
+            ><span>شماره تماس</span
+            ><input v-model="settingsForm.phone" type="tel" maxlength="30" /></label
           ><label class="form-field full-width"
-            ><span>نشانی فروشگاه</span><textarea v-model="settingsForm.address" rows="2" /></label
+            ><span>نشانی فروشگاه</span
+            ><textarea v-model="settingsForm.address" rows="2" maxlength="200" /></label
           ><label class="form-field full-width"
             ><span>نشانی تصویر لوگو <small>اختیاری</small></span
-            ><input v-model="settingsForm.logoUrl" type="url" placeholder="https://…" dir="ltr"
-          /></label>
+            ><input
+              v-model="settingsForm.logoUrl"
+              type="text"
+              placeholder="/logo.png"
+              dir="ltr"
+              maxlength="2000"
+            />
+            <small class="muted"
+              >آدرس کامل یا مسیر فایل در پوشه public، مانند /logo.png</small
+            ></label
+          >
         </div>
+        <label class="form-field settings-extra"
+          ><span>شماره شبای فروشنده</span
+          ><input v-model="settingsForm.iban" dir="ltr" maxlength="26" placeholder="IR…"
+        /></label>
+        <label class="form-field settings-extra"
+          ><span>توضیحات پیش‌فرض فاکتور</span
+          ><textarea v-model="settingsForm.defaultInvoiceNotes" maxlength="600" rows="3" /><small
+            >در فاکتورهای جدید درج می‌شود و برای هر فاکتور قابل ویرایش است.</small
+          ></label
+        >
         <p v-if="settingsError" class="notice notice--error" role="alert">{{ settingsError }}</p>
         <div class="form-actions">
           <Button variant="outline" @click="settingsOpen = false">انصراف</Button
@@ -369,39 +405,41 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue'
 import { onBeforeRouteLeave } from 'vue-router'
-import {
-  Check,
-  Info,
-  Package,
-  Pencil,
-  Plus,
-  Printer,
-  Receipt,
-  Search,
-  Settings2,
-  Trash2,
-} from '@lucide/vue'
-import PageHeader from '@/components/ui/PageHeader.vue'
+import { Check, Pencil, Plus, Printer, Search, Trash2 } from '@lucide/vue'
 import EmptyState from '@/components/ui/EmptyState.vue'
 import Button from '@/components/ui/Button.vue'
 import AppDialog from '@/components/ui/AppDialog.vue'
+import SearchSelect from '@/components/ui/SearchSelect.vue'
+import PersianDatePicker from '@/components/ui/PersianDatePicker.vue'
 import InvoicePaper from '@/components/InvoicePaper.vue'
 import { toast } from '@/lib/toast'
-import { date, money, number, parseNumber } from '@/lib/format'
+import { date, number, parseNumber } from '@/lib/format'
+import MoneyInput from '@/components/ui/MoneyInput.vue'
 import { validateInvoiceLines } from '@/lib/invoice'
+import { amountInWords, invoiceInRials, rial } from '@/lib/invoicePresentation'
+import { todayInTehran } from '@/lib/persianDate'
 import { productsApi } from '@/services/products'
 import { inventoryApi } from '@/services/inventory'
 import type { Buyer, Invoice, InvoiceItem, Product, StoreSettings } from '@/types'
+type DraftLine = InvoiceItem & { priceText: string }
 const products = ref<Product[]>([]),
   buyers = ref<Buyer[]>([]),
   invoices = ref<Invoice[]>([]),
-  draft = ref<Array<InvoiceItem & { priceText: string }>>([])
+  draft = ref<DraftLine[]>([])
 const settings = ref<StoreSettings | null>(null),
   activeInvoice = ref<Invoice | null>(null)
+const paperRenderer = ref<InstanceType<typeof InvoicePaper>>()
 const activeTab = ref<'new' | 'archive'>('new'),
-  selectedBuyerId = ref<number>(),
-  selectedCategoryId = ref<number>(),
-  selectedProductId = ref<number>()
+  selectedBuyerId = ref<number>()
+const selectedCategoryId = ref<number>()
+const editingInvoiceId = ref<number>(),
+  editingInvoiceNumber = ref('')
+const originalItems = ref<InvoiceItem[]>([])
+const issueDate = ref(todayInTehran()),
+  notes = ref(''),
+  notesTouched = ref(false)
+const discountText = ref('۰')
+const settlement = ref<'CASH' | 'INSTALLMENT'>('CASH')
 const loading = ref(true),
   saving = ref(false),
   loadError = ref(''),
@@ -427,7 +465,14 @@ const buyerForm = reactive({
   address: '',
   notes: '',
 })
-const settingsForm = reactive({ name: '', address: '', phone: '', logoUrl: '' })
+const settingsForm = reactive({
+  name: '',
+  address: '',
+  phone: '',
+  logoUrl: '',
+  iban: '',
+  defaultInvoiceNotes: '',
+})
 const archiveFilters = reactive({
   customerId: undefined as number | undefined,
   buyer: '',
@@ -435,31 +480,68 @@ const archiveFilters = reactive({
   from: '',
   to: '',
 })
-const selectedBuyer = computed(() => buyers.value.find((b) => b.id === selectedBuyerId.value))
-const productCategories = computed(() => [
-  ...new Map(products.value.map((p) => [p.categoryId, p.category])).values(),
-])
-const availableProducts = computed(() =>
-  products.value.filter(
-    (p) => selectedCategoryId.value === undefined || p.categoryId === selectedCategoryId.value,
-  ),
+const selectedBuyer = computed(() =>
+  buyers.value.find((buyer) => buyer.id === selectedBuyerId.value),
 )
-const draftTotal = computed(() =>
+const buyerOptions = computed(() =>
+  buyers.value.map((buyer) => ({
+    value: buyer.id,
+    label: buyer.firstName + ' ' + buyer.lastName,
+    description: [buyer.nationalId, buyer.phone].filter(Boolean).join(' · '),
+  })),
+)
+const categoryOptions = computed(() =>
+  Array.from(
+    new Map(products.value.map((product) => [product.categoryId, product.category])).values(),
+  )
+    .sort((a, b) => a.name.localeCompare(b.name, 'fa'))
+    .map((category) => ({ value: category.id, label: category.name })),
+)
+const productOptions = computed(() =>
+  products.value
+    .filter((product) => product.categoryId === selectedCategoryId.value)
+    .map((product) => ({
+      value: product.id,
+      label: product.name,
+      description:
+        product.sku +
+        ' · موجودی ' +
+        number(stockOf(product.id)) +
+        ' ' +
+        product.unit +
+        ' · ' +
+        rial(product.sellPrice * 10),
+      disabled: stockOf(product.id) < 1,
+    })),
+)
+const draftSubtotal = computed(() =>
   draft.value.reduce((sum, line) => sum + Number(line.quantity) * line.unitPrice, 0),
 )
+const discount = computed(() => (discountText.value.trim() ? parseNumber(discountText.value) : 0))
+const draftTotal = computed(() => draftSubtotal.value - discount.value)
 const draftInvoice = computed<Invoice>(() => ({
-  id: 0,
-  number: 'پیش‌نویس',
+  id: editingInvoiceId.value || 0,
+  number: editingInvoiceNumber.value || 'پس از ثبت',
+  currency: 'IRR',
+  issueDate: issueDate.value,
   createdAt: new Date().toISOString(),
   buyerFirstName: selectedBuyer.value?.firstName || '',
   buyerLastName: selectedBuyer.value?.lastName || '',
   buyerNationalId: selectedBuyer.value?.nationalId || null,
   buyerAddress: selectedBuyer.value?.address || null,
-  notes: selectedBuyer.value?.notes || null,
+  buyerPhone: selectedBuyer.value?.phone,
+  notes: notes.value,
   total: draftTotal.value,
+  subtotal: draftSubtotal.value,
+  discount: discount.value,
+  settlement: settlement.value,
   items: draft.value,
 }))
-const stockOf = (id: number) => products.value.find((p) => p.id === id)?.stock || 0
+const stockOf = (id: number) =>
+  (products.value.find((product) => product.id === id)?.stock || 0) +
+  originalItems.value
+    .filter((line) => line.productId === id)
+    .reduce((sum, line) => sum + line.quantity, 0)
 const leaveOpen = ref(false)
 let resolveLeaving: ((leave: boolean) => void) | undefined
 onBeforeRouteLeave(() => {
@@ -476,39 +558,32 @@ function finishLeaving(leave: boolean) {
   resolveLeaving?.(leave)
   resolveLeaving = undefined
 }
-watch(activeTab, () => {
-  previewDraft.value = false
-})
 watch(buyerToDelete, () => {
   deleteError.value = ''
 })
 function switchTab(tab: 'new' | 'archive') {
+  if (saving.value) return
   activeTab.value = tab
   activeInvoice.value = null
+  previewDraft.value = false
 }
-function addProduct() {
-  const product = products.value.find((p) => p.id === selectedProductId.value)
-  if (!product) return
-  const line = draft.value.find((l) => l.productId === product.id)
-  if ((line?.quantity || 0) + 1 > product.stock) return toast.warning('موجودی این کالا کافی نیست.')
+function addProduct(id: number) {
+  const product = products.value.find((item) => item.id === id)
+  if (!product || product.categoryId !== selectedCategoryId.value) return
+  const line = draft.value.find((item) => item.productId === id)
+  if ((line?.quantity || 0) + 1 > stockOf(id)) return toast.warning('موجودی این کالا کافی نیست.')
   if (line) line.quantity++
   else
     draft.value.push({
       id: 0,
-      productId: product.id,
+      productId: id,
       name: product.name,
       unit: product.unit,
       quantity: 1,
-      unitPrice: product.sellPrice,
-      priceText: number(product.sellPrice),
-      total: product.sellPrice,
+      unitPrice: product.sellPrice * 10,
+      priceText: number(product.sellPrice * 10),
+      total: product.sellPrice * 10,
     })
-  selectedProductId.value = undefined
-}
-function formatLinePrice(line: InvoiceItem & { priceText: string }) {
-  if (Number.isInteger(line.unitPrice) && line.unitPrice >= 0) {
-    line.priceText = number(line.unitPrice)
-  }
 }
 async function load() {
   loading.value = true
@@ -527,7 +602,10 @@ async function load() {
       address: s.address,
       phone: s.phone,
       logoUrl: s.logoUrl || '',
+      iban: s.iban || '',
+      defaultInvoiceNotes: s.defaultInvoiceNotes || '',
     })
+    if (!notesTouched.value && !editingInvoiceId.value) notes.value = s.defaultInvoiceNotes || ''
     await loadInvoices()
   } catch {
     loadError.value = 'دریافت اطلاعات فروش ممکن نشد. دوباره تلاش کنید.'
@@ -540,12 +618,12 @@ async function loadInvoices() {
   archiveError.value = ''
   try {
     if (archiveFilters.from && archiveFilters.to && archiveFilters.from > archiveFilters.to) {
-      archiveError.value = 'تاریخ شروع باید قبل از تاریخ پایان باشد.'
+      archiveError.value = 'تاریخ شروع باید قبل از پایان باشد.'
       return
     }
     invoices.value = await inventoryApi.invoices(archiveFilters)
   } catch {
-    archiveError.value = 'دریافت فاکتورها انجام نشد. دوباره جست‌وجو کنید.'
+    archiveError.value = 'دریافت فاکتورها انجام نشد.'
   } finally {
     archiveLoading.value = false
   }
@@ -555,31 +633,48 @@ function clearFilters() {
   void loadInvoices()
 }
 function validateDraft() {
-  return validateInvoiceLines(draft.value, stockOf)
+  const error = validateInvoiceLines(draft.value, stockOf)
+  if (error) return error
+  if (!selectedBuyer.value) return 'خریدار فاکتور را انتخاب کنید.'
+  if (
+    !Number.isInteger(discount.value) ||
+    discount.value < 0 ||
+    discount.value > draftSubtotal.value
+  )
+    return 'تخفیف باید مبلغی بین صفر و جمع اقلام باشد.'
+  return ''
 }
 async function save() {
   if (saving.value) return
   saveError.value = validateDraft()
-  if (!selectedBuyer.value) saveError.value = 'خریدار فاکتور را انتخاب کنید.'
   if (saveError.value) return
   saving.value = true
   try {
-    activeInvoice.value = await inventoryApi.createInvoice({
+    const payload = {
       customerId: selectedBuyerId.value,
+      issueDate: issueDate.value,
+      discount: discount.value,
+      settlement: settlement.value,
+      notes: notes.value,
       items: draft.value.map(({ productId, quantity, unitPrice }) => ({
         productId,
         quantity,
         unitPrice,
       })),
-    })
+    }
+    activeInvoice.value = editingInvoiceId.value
+      ? await inventoryApi.updateInvoice(editingInvoiceId.value, payload)
+      : await inventoryApi.createInvoice(payload)
     draft.value = []
+    originalItems.value = []
+    editingInvoiceId.value = undefined
     previewDraft.value = false
-    toast.success('فاکتور صادر شد و موجودی کالاها به‌روز شد.')
+    toast.success('فاکتور ذخیره شد و موجودی به‌روز شد.')
     await load()
     await nextTick()
     paperSection.value?.scrollIntoView({ block: 'start' })
   } catch (e) {
-    saveError.value = e instanceof Error ? e.message : 'صدور فاکتور انجام نشد.'
+    saveError.value = e instanceof Error ? e.message : 'ذخیره فاکتور انجام نشد.'
   } finally {
     saving.value = false
   }
@@ -595,22 +690,68 @@ async function openInvoice(invoice: Invoice, print = false) {
     toast.error(e instanceof Error ? e.message : 'دریافت فاکتور انجام نشد.')
   }
 }
-function newDraft() {
+function resetDraft() {
+  draft.value = []
+  originalItems.value = []
+  editingInvoiceId.value = undefined
+  editingInvoiceNumber.value = ''
+  selectedBuyerId.value = undefined
+  selectedCategoryId.value = undefined
+  issueDate.value = todayInTehran()
+  discountText.value = '۰'
+  settlement.value = 'CASH'
+  notes.value = settings.value?.defaultInvoiceNotes || ''
+  notesTouched.value = false
+  saveError.value = ''
   activeInvoice.value = null
   previewDraft.value = false
   activeTab.value = 'new'
+}
+async function newDraft() {
+  if (draft.value.length && !(await confirmDiscard())) return
+  resetDraft()
+}
+async function cancelEdit() {
+  if (await confirmDiscard()) resetDraft()
+}
+function confirmDiscard() {
+  return new Promise<boolean>((resolve) => {
+    resolveLeaving = resolve
+    leaveOpen.value = true
+  })
+}
+async function editInvoice() {
+  if (!activeInvoice.value) return
+  if (draft.value.length && !(await confirmDiscard())) return
+  const invoice = invoiceInRials(activeInvoice.value)
+  editingInvoiceId.value = invoice.id
+  editingInvoiceNumber.value = invoice.number
+  originalItems.value = invoice.items
+  draft.value = invoice.items.map((line) => ({ ...line, priceText: number(line.unitPrice) }))
+  selectedBuyerId.value = invoice.customerId ?? undefined
+  selectedCategoryId.value = products.value.find(
+    (product) => product.id === invoice.items[0]?.productId,
+  )?.categoryId
+  issueDate.value = (invoice.issueDate || invoice.createdAt).slice(0, 10)
+  discountText.value = number(invoice.discount || 0)
+  settlement.value = invoice.settlement || 'CASH'
+  notes.value = invoice.notes || ''
+  notesTouched.value = true
   saveError.value = ''
-  selectedBuyerId.value = undefined
+  activeInvoice.value = null
+  activeTab.value = 'new'
 }
 async function printDraft() {
   saveError.value = validateDraft()
-  if (saveError.value) return
-  previewDraft.value = true
-  await printCurrent()
+  if (!saveError.value) {
+    previewDraft.value = true
+    await nextTick()
+    paperSection.value?.scrollIntoView({ block: 'start' })
+  }
 }
 async function printCurrent() {
   await nextTick()
-  await document.fonts.ready
+  await paperRenderer.value?.prepareForPrint()
   window.print()
 }
 function openBuyer(buyer?: Buyer) {
@@ -676,7 +817,13 @@ async function saveSettings() {
   }
   settingsSaving.value = true
   try {
-    settings.value = await inventoryApi.saveSettings({ ...settingsForm })
+    const iban = settingsForm.iban.replace(/\s/g, '').toUpperCase()
+    if (iban && !/^IR\d{24}$/.test(iban)) {
+      settingsError.value = 'شماره شبا باید IR و ۲۴ رقم باشد.'
+      return
+    }
+    settings.value = await inventoryApi.saveSettings({ ...settingsForm, iban })
+    if (!notesTouched.value) notes.value = settings.value.defaultInvoiceNotes || ''
     settingsOpen.value = false
     toast.success('اطلاعات فروشگاه ذخیره شد.')
   } catch (e) {
@@ -688,344 +835,382 @@ async function saveSettings() {
 onMounted(load)
 </script>
 <style scoped>
-.invoice-toolbar {
+.invoice-page {
+  gap: 12px;
+}
+.invoice-nav {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
+  gap: 12px;
 }
-.invoice-toolbar > span {
+.invoice-nav > span {
   font-size: 11px;
 }
 .invoice-editor {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 285px;
-  gap: 24px;
-  align-items: start;
+  overflow: hidden;
+  width: 100%;
+  max-width: 1120px;
+  margin-inline: auto;
 }
-.invoice-steps {
-  display: grid;
-  gap: 24px;
-  min-width: 0;
-}
-.step-heading {
+.editor-heading {
   display: flex;
   align-items: center;
-  gap: 12px;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--border);
 }
-.step-heading h2 {
+.editor-heading h1 {
+  margin: 0;
   font-size: 16px;
 }
-.step-number {
-  display: grid;
-  place-items: center;
-  width: 32px;
-  height: 32px;
-  border-radius: 10px;
-  background: var(--accent);
-  color: var(--primary);
-  font-weight: 700;
-  flex-shrink: 0;
-}
-.buyer-preview {
+.editor-heading > div {
   display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 14px;
-  margin-top: 16px;
-  border-radius: 10px;
-  background: var(--muted);
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 10px;
 }
-.buyer-preview > div {
-  flex: 1;
-  min-width: 0;
+.editor-heading small {
+  font-size: 10px;
 }
-.buyer-preview b {
+.invoice-editor :deep(.search-select-trigger),
+.invoice-editor :deep(.date-picker-trigger) {
+  min-height: 32px;
+  padding: 5px 8px;
   font-size: 12px;
 }
-.buyer-preview p {
-  margin: 4px 0 0;
-  font-size: 11px;
-  color: var(--muted-foreground);
-  overflow-wrap: anywhere;
+.editor-parties {
+  display: grid;
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+  gap: 12px;
+  padding: 6px 14px;
+  border-bottom: 1px solid var(--border);
+}
+.seller-inline,
+.buyer-inline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  font-size: 12px;
+}
+.editor-parties .icon-button {
+  width: 28px;
+  height: 28px;
+  min-height: 28px;
+  padding: 4px;
+}
+.seller-inline > small,
+.buyer-inline > small {
+  width: 100%;
+  font-size: 10px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.buyer-inline > :first-child {
+  flex: 1;
+  min-width: 160px;
 }
 .product-adder {
   display: grid;
-  grid-template-columns: 1fr 1.6fr auto;
-  align-items: end;
-  gap: 12px;
+  grid-template-columns: minmax(0, 0.7fr) minmax(0, 1.6fr);
+  gap: 8px;
+  padding: 10px 14px;
 }
-.draft-lines {
-  padding: 0 24px 24px;
+.invoice-lines-scroll {
+  max-height: 270px;
+  overflow: auto;
+  overscroll-behavior: contain;
+  border-block: 1px solid var(--border);
 }
-.draft-line {
-  padding: 18px;
-  background: var(--background);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  margin-bottom: 12px;
+.invoice-lines {
+  width: 100%;
+  min-width: 660px;
+  border-collapse: separate;
+  border-spacing: 0;
+  table-layout: fixed;
+  font-size: 12px;
+  text-align: center;
 }
-.draft-line:last-child {
-  margin: 0;
+.index-col {
+  width: 5%;
 }
-.draft-line__head {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 16px;
+.qty-col {
+  width: 10%;
 }
-.draft-line__head > div {
-  flex: 1;
+.unit-col {
+  width: 11%;
 }
-.draft-line__head b {
-  font-size: 13px;
+.price-col {
+  width: 19%;
 }
-.draft-line__head small {
-  display: block;
-  font-size: 10px;
+.total-col {
+  width: 23%;
+}
+.invoice-lines th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: 6px 8px;
+  font-size: 11px;
   color: var(--muted-foreground);
-  margin-top: 4px;
+  background: var(--muted);
 }
-.line-counter {
+.invoice-lines td {
+  padding: 3px 8px;
+  border-top: 1px solid var(--border);
+}
+.invoice-lines input {
+  min-height: 28px;
+  padding: 2px 6px;
+  font-size: 12px;
+  text-align: center;
+}
+.invoice-lines th:nth-child(2),
+.invoice-lines td:nth-child(2) {
+  text-align: start;
+}
+.invoice-lines td:nth-child(2) b {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.invoice-lines td:last-child {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.invoice-lines tr:focus-within,
+.invoice-lines tbody tr:hover {
+  background: var(--muted);
+}
+.line-index {
+  position: relative;
+}
+.line-remove {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: 28px;
+  height: 28px;
   display: grid;
   place-items: center;
-  width: 27px;
-  height: 27px;
+  border: 0;
   background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  font-size: 11px;
+  color: var(--destructive);
+  border-radius: 6px;
+  opacity: 0;
 }
-.draft-line__fields {
-  display: grid;
-  grid-template-columns: 90px minmax(100px, 1fr) minmax(110px, 1fr);
-  align-items: end;
-  gap: 14px;
+.invoice-lines tr:hover .line-remove,
+.invoice-lines tr:focus-within .line-remove {
+  opacity: 1;
 }
-.draft-line__fields .form-field {
-  font-size: 11px;
+.invoice-lines tr:hover .line-index > span,
+.invoice-lines tr:focus-within .line-index > span {
+  opacity: 0;
 }
-.line-total {
-  padding-bottom: 10px;
-  text-align: end;
+@media (hover: none) {
+  .line-remove {
+    opacity: 1;
+  }
+  .line-index > span {
+    visibility: hidden;
+  }
 }
-.line-total small {
-  display: block;
+.empty-lines {
+  height: 72px;
+  text-align: center;
   color: var(--muted-foreground);
-  font-size: 10px;
-  margin-bottom: 6px;
 }
-.line-total strong {
-  font-size: 13px;
+.editor-bottom {
+  padding: 10px 14px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr);
+  gap: 8px 16px;
 }
-.invoice-summary {
-  position: sticky;
-  top: 24px;
+.editor-bottom > .financial-fields,
+.editor-bottom > .grand-total,
+.editor-bottom > .notice,
+.editor-bottom > .editor-actions {
+  grid-column: 1 / -1;
 }
-.summary-row {
-  display: flex;
-  justify-content: space-between;
-  gap: 14px;
-  margin-bottom: 18px;
+.editor-bottom .form-field {
+  gap: 3px;
+}
+.editor-bottom .form-field > span {
+  font-size: 11px;
+}
+.editor-bottom input:not([type='radio']),
+.editor-bottom textarea {
+  min-height: 32px;
+  padding: 4px 8px;
   font-size: 12px;
 }
-.summary-row span {
-  color: var(--muted-foreground);
-}
-.summary-row b {
-  text-align: end;
-}
-.summary-total {
-  padding: 22px 0;
-  border-block: 1px dashed var(--border);
-}
-.summary-total span {
-  color: var(--muted-foreground);
-  font-size: 11px;
-}
-.summary-total strong {
-  display: block;
-  font-size: 23px;
-  color: var(--primary);
-  margin-top: 8px;
-  overflow-wrap: anywhere;
-}
-.summary-note {
+.invoice-notes {
   display: flex;
-  align-items: start;
-  gap: 8px;
+  align-items: center;
+}
+.invoice-notes textarea {
+  flex: 1;
+  width: 0;
+}
+.editor-actions :deep(.button) {
+  min-height: 34px;
+  padding: 6px 12px;
+  font-size: 12px;
+}
+.financial-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-items: end;
+  gap: 12px;
   font-size: 11px;
-  color: var(--muted-foreground);
-  margin: 20px 0;
 }
-.invoice-summary .button {
-  width: 100%;
-  margin-top: 10px;
+.subtotal {
+  display: grid;
+  gap: 4px;
+  align-self: center;
 }
-.summary-help {
-  display: block;
-  text-align: center;
-  font-size: 10px;
+.subtotal > span {
   color: var(--muted-foreground);
-  margin-top: 12px;
+}
+.grand-total {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 8px;
+  background: var(--accent);
+  color: var(--accent-foreground);
+  padding: 7px 10px;
+  border-radius: 8px;
+}
+.grand-total strong {
+  margin-inline-start: 8px;
+  font-size: 16px;
+}
+.grand-total small {
+  font-size: 11px;
+}
+.settlement {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  font-size: 11px;
+}
+.settlement legend {
+  float: right;
+  margin-inline-end: 8px;
+}
+.settlement label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.settlement input {
+  accent-color: var(--primary);
+  width: 16px;
+  min-height: 16px;
+  padding: 0;
+  border: 0;
+  box-shadow: none;
+  flex: 0 0 16px;
+}
+.editor-actions,
+.paper-toolbar,
+.paper-toolbar > div {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.editor-actions > small {
+  margin-inline-start: auto;
+  font-size: 11px;
+}
+.paper-toolbar {
+  justify-content: space-between;
+  margin-bottom: 20px;
 }
 .archive-filters {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 14px;
+  gap: 16px;
   align-items: end;
-  border-bottom: 1px solid var(--border);
 }
 .archive-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
   gap: 16px;
   padding: 24px;
 }
 .archive-card {
   border: 1px solid var(--border);
-  border-radius: 14px;
-  padding: 20px;
+  border-radius: 12px;
+  padding: 18px;
 }
-.archive-card__top {
+.archive-card > div:first-child {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  gap: 8px;
 }
 .archive-card time {
   color: var(--muted-foreground);
   font-size: 11px;
 }
-.invoice-icon {
-  display: grid;
-  place-items: center;
-  width: 38px;
-  height: 38px;
-  background: var(--accent);
-  color: var(--primary);
-  border-radius: 10px;
-}
-.archive-buyer {
-  display: block;
-  font-size: 14px;
-  margin-top: 18px;
-}
-.invoice-number {
-  display: block;
-  direction: ltr;
-  text-align: right;
-  color: var(--muted-foreground);
-  font-size: 10px;
-  overflow-wrap: anywhere;
-  margin-top: 6px;
-}
-.archive-amount {
-  display: grid;
-  gap: 5px;
-  margin: 20px 0;
-}
-.archive-amount span {
-  color: var(--muted-foreground);
-  font-size: 11px;
-}
-.archive-amount strong {
-  font-size: 17px;
-}
-.archive-card__actions {
+.archive-actions {
   display: flex;
   gap: 8px;
-  border-top: 1px solid var(--border);
-  padding-top: 14px;
+  margin-top: 16px;
 }
-.archive-card__actions .button {
-  flex: 1;
-}
-.invoice-preview {
-  scroll-margin-top: 24px;
-}
-.paper-toolbar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 18px;
-}
-.paper-toolbar > div {
-  display: flex;
-  gap: 10px;
+.archive-card p {
+  margin: 10px 0;
 }
 .full-width {
   grid-column: 1 / -1;
 }
-form > .notice {
-  margin-top: 16px;
+.settings-extra {
+  margin-top: 18px;
 }
-@media (max-width: 1180px) {
-  .invoice-editor {
+@media (max-width: 740px) {
+  .editor-parties {
     grid-template-columns: 1fr;
+    gap: 12px;
   }
-  .invoice-summary {
-    position: static;
+  .financial-fields {
+    grid-template-columns: 1fr 1fr;
   }
-  .archive-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-@media (max-width: 640px) {
-  .invoice-toolbar {
-    align-items: stretch;
-    flex-direction: column;
-  }
-  .invoice-toolbar > span {
-    display: none;
-  }
-  .invoice-toolbar .segmented-control button {
-    flex: 1;
-  }
-  .product-adder,
-  .archive-filters,
-  .archive-grid {
-    grid-template-columns: 1fr;
-  }
-  .product-adder .button {
-    width: 100%;
-  }
-  .draft-lines {
-    padding-inline: 16px;
-  }
-  .draft-line {
-    padding: 14px;
-  }
-  .draft-line__fields {
-    grid-template-columns: 80px minmax(0, 1fr);
-  }
-  .line-total {
-    grid-column: 1 / -1;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 8px 0 0;
-  }
-  .paper-toolbar {
-    flex-direction: column;
-    align-items: stretch;
-  }
-  .paper-toolbar > div {
+  .editor-heading {
     flex-wrap: wrap;
   }
-  .paper-toolbar .button {
-    flex: 1;
+  .editor-heading,
+  .editor-parties,
+  .editor-bottom {
+    padding-inline: 14px;
   }
-  .archive-grid {
-    padding: 16px;
+  .product-adder {
+    padding-inline: 14px;
+  }
+  .editor-bottom {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .archive-filters {
+    grid-template-columns: 1fr;
+  }
+  .invoice-nav {
+    flex-wrap: wrap;
   }
 }
-@media print {
-  .invoice-page {
-    display: block;
-  }
-  .invoice-preview {
-    margin: 0;
+@media (max-width: 480px) {
+  .product-adder {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 </style>

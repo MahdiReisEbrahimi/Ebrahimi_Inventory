@@ -1,6 +1,6 @@
 # Ebrahimi Inventory — Project Context
 
-Last reviewed against the repository: 2026-10-25.
+Last reviewed against the repository: 2026-10-26.
 Purpose: a project map for AI assistants and developers. All file paths below are
 relative to the repository root. This document describes the current code, not a
 guarantee that every feature has been tested or completed. When code changes,
@@ -14,8 +14,11 @@ inventory receipts, sales returns, buyers, and sales invoices.
 
 - Audience: shop staff managing everyday inventory and sales.
 - Application language: Persian (Farsi), with a right-to-left layout.
-- Currency displayed in the UI: toman. Prices and totals are stored as integers;
-  there is no currency field or automatic rial/toman conversion.
+- Product and receipt prices remain integer toman amounts. New invoices use
+  integer rial amounts, explicitly convert product prices by 10, and persist
+  currency = IRR. Legacy invoices/movements retain currency = TOMAN. Invoice
+  previews convert legacy amounts to rial once; movement views convert IRR
+  prices to toman for consistency with inventory screens.
 - Quantities and stock are integers; fractional stock is not currently modeled.
 - Architecture: Vue SPA -> NestJS JSON REST API -> Prisma -> PostgreSQL.
 - Status: active development. The redesigned UI includes a dashboard using the
@@ -92,7 +95,12 @@ Key reusable frontend components:
   search/refresh events. On small screens, product rows become labeled cards.
 - components/ui/PageHeader.vue, EmptyState.vue, StatCard.vue: shared page
   hierarchy, empty/error feedback, and summary statistics.
-- components/InvoicePaper.vue: reusable invoice document and print layout.
+- components/InvoicePaper.vue: A5 landscape invoice preview and print layout,
+  ten items per page, first-page parties and last-page financial/signature blocks.
+- components/ui/PersianDatePicker.vue: Persian calendar picker backed by Intl,
+  ISO date values, Tehran today, month/year navigation, and keyboard day movement.
+- components/ui/SearchSelect.vue: searchable buyer/product selection and optional
+  inline creation action.
 - components/dialogs/ProductDetailsDialog.vue: product details and price history.
 - components/PriceHistoryChart.vue: buy/sell price history visualization.
 - components/ui/Button.vue: local button variants implemented with CVA and CSS.
@@ -146,9 +154,9 @@ StoreSettings, which is used as a single record with id = 1.
 | AuditLog | Per-product action and optional JSON details; selected operations are logged |
 | InventoryTransaction | Product movement, type, positive quantity for implemented flows, optional unit price, description, and invoice relation |
 | Buyer | First/last name, optional unique nationalId, phone, address, notes |
-| Invoice | Unique number, optional Buyer relation via customerId, buyer detail snapshots, total, items, and movements |
+| Invoice | Short unique number, issue date, buyer/seller snapshots, currency, subtotal/discount/paidAmount/total, settlement, notes, items, and movements |
 | InvoiceItem | Product reference plus name/unit snapshots, quantity, unitPrice, and total |
-| StoreSettings | Store name, address, phone, and optional logoUrl |
+| StoreSettings | Store name, address, phone, optional logoUrl, iban, and defaultInvoiceNotes |
 
 Product-related history, audit logs, movements, and invoice items use restrictive
 foreign keys. Deleting a category with products is also restricted. Deleting a
@@ -200,14 +208,26 @@ Invoices and buyers — the same inventory service and InvoicesView.vue:
 - In one database transaction, the API saves the invoice and item snapshots,
   conditionally decrements stock, and creates SALE movements. Insufficient stock
   causes rollback rather than a partially saved invoice.
-- Item total = quantity * unitPrice; invoice total = sum of item totals. There
-  are no modeled taxes, discounts, payment status, or payment ledger.
-- Invoice numbers use INV-YYYYMMDD- plus an uppercase UUID fragment.
+- Item total = quantity * unitPrice; subtotal = sum of item totals;
+  total = subtotal - fixed discount. paidAmount must be between zero and total.
+  CASH/INSTALLMENT records settlement choice; this is not a payment ledger.
+- Invoice numbers use the database ID padded to at least three digits. Existing
+  numbers were converted by the invoice-editor migration; IDs and relations stay intact.
+- issueDate is independent of createdAt. The editor defaults to today in Tehran
+  and displays a Persian calendar; the API accepts an ISO YYYY-MM-DD date.
+- PATCH /invoices/:id replaces lines and SALE movements and reconciles stock
+  in one Serializable transaction. Invoices with returns cannot be edited.
+- Editor lines scroll in one table. Only preview/print paginate (ten items per
+  A5 landscape sheet). Header/logo/number/date/page repeat; parties only appear
+  on the first sheet and totals/notes/settlement/IBAN/signatures on the last.
+- New invoices snapshot store details and the selected buyer. Store default
+  notes prefill the draft and can be overridden per invoice (600 characters).
 - Archive filters support buyer/customer, product name/SKU, and date range.
-  Date boundaries in this service are UTC; do not assume local-day boundaries.
+  Date filters use the persisted issueDate (a date-only field).
 - Successful issuance shows the saved invoice with an explicit print action.
-  Draft print previews are marked as unregistered and do not change stock.
-  Existing invoices can be reopened and printed. There is no server PDF endpoint.
+  Draft previews are marked as unregistered and do not change stock. The print
+  action is explicit and waits for fonts, images and page fitting. Existing
+  invoices can be reopened, edited when eligible, and printed. No server PDF endpoint.
 - Returns restore stock and record movements; they do not revise the original
   invoice total or create a financial refund record.
 - Store settings are persisted through the API, using record id = 1.
@@ -227,7 +247,7 @@ All endpoint paths below are relative to /api/v1.
 | Bulk prices | POST /products/bulk-price-update/preview; POST /products/bulk-price-update |
 | Inventory movements | GET/POST /transactions |
 | Buyers | GET/POST /buyers; GET/PATCH/DELETE /buyers/:id |
-| Invoices | GET/POST /invoices; GET /invoices/:id |
+| Invoices | GET/POST /invoices; GET/PATCH /invoices/:id |
 | Store settings | GET/PUT /store-settings |
 
 Controllers define routes, DTOs define accepted payloads, and services enforce
@@ -301,7 +321,12 @@ Relevant checks:
   The visible e2e test is a starter Hello World test, not domain coverage, and
   initializes AppModule/Prisma, so it requires database configuration.
 - Frontend/: npm run test:unit runs Node tests for Persian numeric parsing,
-  invoice validation, and theme persistence/fallback. UI checks are still needed.
+  invoice validation, currency conversion, Persian calendar boundaries,
+  print-page markup, and theme persistence/fallback. UI checks are still needed.
+- Backend/: RUN_INVOICE_DB_TESTS=1 npm run test:e2e opts into invoice integration
+  tests against the configured database. They create tagged fixtures and remove
+  only those fixtures; auto-increment sequences may advance. In PowerShell set
+  $env:RUN_INVOICE_DB_TESTS='1' before invoking the command.
 
 These commands are derived from repository configuration. This document update
 does not certify a clean install, database migration, deployment, or test run.

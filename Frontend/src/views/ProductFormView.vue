@@ -78,21 +78,11 @@
           <div class="form-grid">
             <label class="form-field"
               ><span>قیمت خرید <small>تومان</small></span
-              ><input
-                v-model="form.buyPrice"
-                inputmode="numeric"
-                required
-                dir="ltr"
-                @blur="formatPrice('buyPrice')"
+              ><MoneyInput v-model="form.buyPrice" required dir="ltr"
             /></label>
             <label class="form-field"
               ><span>قیمت فروش <small>تومان</small></span
-              ><input
-                v-model="form.sellPrice"
-                inputmode="numeric"
-                required
-                dir="ltr"
-                @blur="formatPrice('sellPrice')"
+              ><MoneyInput v-model="form.sellPrice" required dir="ltr"
             /></label>
             <label class="form-field"
               ><span>حداقل موجودی</span
@@ -138,6 +128,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { Info, Package, Plus, Tags } from '@lucide/vue'
 import PageHeader from '@/components/ui/PageHeader.vue'
 import Button from '@/components/ui/Button.vue'
+import MoneyInput from '@/components/ui/MoneyInput.vue'
 import { toast } from '@/lib/toast'
 import { number, parseNumber } from '@/lib/format'
 import { categoriesApi } from '@/services/categories'
@@ -195,10 +186,6 @@ async function load() {
   } finally {
     loading.value = false
   }
-}
-function formatPrice(key: 'buyPrice' | 'sellPrice') {
-  const value = parseNumber(form[key])
-  if (Number.isFinite(value) && value >= 0) form[key] = number(value)
 }
 function close(saved: boolean) {
   emit('close', saved)

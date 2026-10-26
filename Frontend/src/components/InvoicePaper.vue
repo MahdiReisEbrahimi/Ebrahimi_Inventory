@@ -1,267 +1,360 @@
 <template>
-  <article class="invoice-paper" dir="rtl">
-    <header class="invoice-paper__header">
-      <div class="paper-brand">
-        <img v-if="settings?.logoUrl" :src="settings.logoUrl" alt="نشان فروشگاه" /><span
-          v-else
-          class="paper-brand-icon"
-          ><Store :size="30"
-        /></span>
-        <div>
-          <span>صورتحساب فروش کالا</span>
-          <h2>{{ settings?.name || 'فروشگاه' }}</h2>
+  <div ref="sheets" class="invoice-sheets" dir="rtl">
+    <article v-for="(page, pageIndex) in pages" :key="pageIndex" class="invoice-paper">
+      <div class="paper-content" :style="{ transform: `scale(${scales[pageIndex] || 1})` }">
+        <header class="paper-header">
+          <div class="paper-logo">
+            <img v-if="seller.logoUrl" :src="seller.logoUrl" alt="لوگوی فروشگاه" />
+          </div>
+          <div class="paper-brand">
+            <h2>{{ seller.name }}</h2>
+            <span>فاکتور فروش کالا</span>
+          </div>
+          <div class="paper-reference">
+            <b>{{ draft ? 'پیش‌نویس · ثبت نشده' : 'شماره فاکتور: ' + invoice.number }}</b>
+            <span
+              >تاریخ صدور:
+              {{ persianDateLabel((invoice.issueDate || invoice.createdAt).slice(0, 10)) }}</span
+            >
+          </div>
+        </header>
+        <div v-if="pageIndex === 0" class="paper-parties">
+          <section>
+            <b>فروشنده: {{ seller.name }}</b>
+            <p>{{ seller.address || '—' }}</p>
+            <p>تلفن: {{ seller.phone || '—' }}</p>
+          </section>
+          <section>
+            <b>خریدار: {{ invoice.buyerFirstName }} {{ invoice.buyerLastName }}</b>
+            <p>{{ invoice.buyerAddress || '—' }}</p>
+            <p>
+              کد ملی: {{ invoice.buyerNationalId || '—' }} · تلفن: {{ invoice.buyerPhone || '—' }}
+            </p>
+          </section>
         </div>
+        <table>
+          <colgroup>
+            <col class="row-col" />
+            <col />
+            <col class="quantity-col" />
+            <col class="unit-col" />
+            <col class="price-col" />
+            <col class="total-col" />
+          </colgroup>
+          <thead>
+            <tr>
+              <th>ردیف</th>
+              <th>نام کالا</th>
+              <th>تعداد</th>
+              <th>واحد</th>
+              <th>فی · ریال</th>
+              <th>جمع · ریال</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="(line, index) in page.items" :key="index">
+              <td>{{ number(page.offset + index + 1) }}</td>
+              <td>{{ line.name }}</td>
+              <td>{{ number(line.quantity) }}</td>
+              <td>{{ line.unit }}</td>
+              <td>{{ number(line.unitPrice) }}</td>
+              <td>{{ number(line.quantity * line.unitPrice) }}</td>
+            </tr>
+          </tbody>
+        </table>
+        <div v-if="pageIndex === pages.length - 1" class="paper-bottom">
+          <div v-if="(normalized.discount || 0) > 0" class="paper-totals">
+            <span
+              >جمع اقلام: <b>{{ rial(normalized.subtotal || 0) }}</b></span
+            >
+            <span
+              >تخفیف: <b>{{ rial(normalized.discount || 0) }}</b></span
+            >
+          </div>
+          <div class="paper-grand-total">
+            <b>جمع کل فاکتور: {{ rial(normalized.total) }}</b
+            ><span>({{ amountInWords(normalized.total) }})</span>
+          </div>
+          <div class="paper-settlement">
+            <span
+              >شرایط تسویه‌حساب:
+              {{
+                invoice.settlement === 'INSTALLMENT' ? '☐ نقدی   ☑ اقساطی' : '☑ نقدی   ☐ اقساطی'
+              }}</span
+            >
+            <span
+              >شماره شبای فروشنده: <bdi>{{ seller.iban || '—' }}</bdi></span
+            >
+          </div>
+          <p v-if="invoice.notes" class="paper-notes"><b>توضیحات: </b>{{ invoice.notes }}</p>
+        </div>
+        <div v-else class="paper-continued">ادامه اقلام در صفحه بعد</div>
+        <footer class="paper-signatures">
+          <span><template v-if="pageIndex === pages.length - 1">امضای فروشنده</template></span>
+          <span class="paper-pagination"
+            >صفحه <bdi>{{ number(pageIndex + 1) }}/{{ number(pages.length) }}</bdi></span
+          >
+          <span><template v-if="pageIndex === pages.length - 1">امضای خریدار</template></span>
+        </footer>
       </div>
-      <div class="paper-reference">
-        <b>{{ draft ? 'پیش‌نویس · ثبت نشده' : invoice.number }}</b
-        ><span>{{ date(invoice.createdAt) }}</span>
-      </div>
-    </header>
-    <div class="paper-parties">
-      <section>
-        <h3>فروشنده</h3>
-        <b>{{ settings?.name || 'فروشگاه' }}</b>
-        <p>{{ settings?.address || 'نشانی ثبت نشده' }}</p>
-        <p>تلفن: {{ settings?.phone || '—' }}</p>
-      </section>
-      <section>
-        <h3>خریدار</h3>
-        <b>{{ invoice.buyerFirstName }} {{ invoice.buyerLastName }}</b>
-        <p>{{ invoice.buyerAddress || 'نشانی ثبت نشده' }}</p>
-        <p>کد ملی: {{ invoice.buyerNationalId || '—' }}</p>
-      </section>
-    </div>
-    <div class="paper-table-scroll">
-      <table>
-        <thead>
-          <tr>
-            <th>ردیف</th>
-            <th>شرح کالا</th>
-            <th>واحد</th>
-            <th>تعداد</th>
-            <th>قیمت واحد · تومان</th>
-            <th>جمع · تومان</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="(line, index) in invoice.items" :key="line.id || line.productId">
-            <td>{{ number(index + 1) }}</td>
-            <td>{{ line.name }}</td>
-            <td>{{ line.unit }}</td>
-            <td>{{ number(line.quantity) }}</td>
-            <td>{{ number(line.unitPrice) }}</td>
-            <td>{{ number(line.quantity * line.unitPrice) }}</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-    <div class="paper-total">
-      <span>جمع کل مبلغ قابل پرداخت</span><strong>{{ money(invoice.total) }}</strong>
-    </div>
-    <p v-if="invoice.notes" class="paper-notes"><b>توضیحات: </b>{{ invoice.notes }}</p>
-    <footer class="paper-signatures">
-      <span>مهر و امضای فروشنده</span><span>امضا و تأیید خریدار</span>
-    </footer>
-    <div class="paper-thanks">از اعتماد و همراهی شما سپاسگزاریم.</div>
-  </article>
+    </article>
+  </div>
 </template>
 <script setup lang="ts">
-import { Store } from '@lucide/vue'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import type { Invoice, StoreSettings } from '@/types'
-import { date, money, number } from '@/lib/format'
-defineProps<{ invoice: Invoice; settings: StoreSettings | null; draft?: boolean }>()
+import { number } from '@/lib/format'
+import { persianDateLabel } from '@/lib/persianDate'
+import { amountInWords, invoiceInRials, invoicePages, rial } from '@/lib/invoicePresentation'
+const props = defineProps<{ invoice: Invoice; settings: StoreSettings | null; draft?: boolean }>()
+const normalized = computed(() => invoiceInRials(props.invoice))
+const pages = computed(() => invoicePages(normalized.value.items))
+const sheets = ref<HTMLElement>()
+const scales = ref<number[]>([])
+async function prepareForPrint() {
+  await nextTick()
+  await document.fonts.ready
+  await Promise.all(
+    Array.from(sheets.value?.querySelectorAll('img') || []).map((img) =>
+      img.decode().catch(() => undefined),
+    ),
+  )
+  scales.value = Array.from(
+    sheets.value?.querySelectorAll<HTMLElement>('.invoice-paper') || [],
+  ).map((sheet) => {
+    const content = sheet.querySelector<HTMLElement>('.paper-content')!
+    return Math.min(
+      1,
+      sheet.clientHeight / content.scrollHeight,
+      sheet.clientWidth / content.scrollWidth,
+    )
+  })
+  await nextTick()
+}
+watch(
+  () => [props.invoice, props.settings],
+  () => {
+    void prepareForPrint()
+  },
+  { deep: true },
+)
+onMounted(prepareForPrint)
+defineExpose({ prepareForPrint })
+const seller = computed(() => ({
+  name: props.invoice.sellerName ?? props.settings?.name ?? 'فروشگاه',
+  address: props.invoice.sellerAddress ?? props.settings?.address,
+  phone: props.invoice.sellerPhone ?? props.settings?.phone,
+  logoUrl: props.invoice.sellerLogoUrl ?? props.settings?.logoUrl,
+  iban: props.invoice.sellerIban ?? props.settings?.iban,
+}))
 </script>
 <style scoped>
-.invoice-paper {
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 34px;
-  color: var(--foreground);
+.invoice-sheets {
+  display: grid;
+  gap: 24px;
+  overflow-x: auto;
+  padding: 4px;
 }
-.invoice-paper__header {
+.invoice-paper {
+  --foreground: #111;
+  --muted-foreground: #444;
+  --border: #c9c9c9;
+  background: #fff;
+  color: #111;
+  width: 198mm;
+  height: 135mm;
+  margin-inline: auto;
+  outline: 1px solid #ddd;
+  overflow: hidden;
+  font-size: 9px;
+  line-height: 1.5;
+  font-family: 'Vazirmatn', Tahoma, sans-serif;
+}
+.paper-content {
+  width: 198mm;
+  min-height: 135mm;
+  padding: 3mm;
   display: flex;
+  flex-direction: column;
+  transform-origin: top right;
+}
+.paper-header {
+  display: grid;
+  grid-template-columns: 1fr 1.4fr 1fr;
   align-items: center;
-  justify-content: space-between;
-  gap: 20px;
-  border-bottom: 2px solid var(--primary);
-  padding-bottom: 26px;
-  margin-bottom: 26px;
+  border-bottom: 1.5px solid #333;
+  padding-bottom: 2mm;
+  margin-bottom: 2mm;
+  gap: 3mm;
 }
 .paper-brand {
-  display: flex;
-  align-items: center;
-  gap: 15px;
+  text-align: center;
 }
-.paper-brand img {
-  max-width: 90px;
-  max-height: 70px;
+.paper-logo img {
+  width: 14mm;
+  height: 11mm;
   object-fit: contain;
 }
-.paper-brand-icon {
-  display: grid;
-  place-items: center;
-  width: 58px;
-  height: 58px;
-  background: var(--accent);
-  color: var(--primary);
-  border-radius: 15px;
+.paper-brand h2 {
+  font-size: 14px;
+  margin: 0;
 }
 .paper-brand span {
-  font-size: 11px;
-  color: var(--muted-foreground);
-}
-.paper-brand h2 {
-  margin: 5px 0 0;
-  font-size: 22px;
+  font-size: 8px;
 }
 .paper-reference {
   display: grid;
-  gap: 8px;
-  text-align: end;
-  font-size: 11px;
+  text-align: left;
+  gap: 1mm 5mm;
+  font-size: 8px;
 }
 .paper-reference b {
-  direction: ltr;
-  overflow-wrap: anywhere;
-}
-.paper-reference span {
-  color: var(--muted-foreground);
+  grid-column: 1 / -1;
+  font-size: 10px;
 }
 .paper-parties {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 30px;
-  margin-bottom: 28px;
-  font-size: 12px;
+  grid-template-columns: 1fr;
+  gap: 1mm;
+  margin-bottom: 2mm;
+  border: 1px solid #ccc;
+  padding: 1.5mm 2mm;
 }
-.paper-parties h3 {
-  font-size: 10px;
-  font-weight: 400;
-  color: var(--muted-foreground);
-  margin: 0 0 10px;
-}
-.paper-parties p {
-  margin: 6px 0 0;
-  color: var(--muted-foreground);
+.paper-parties section {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 3mm;
   overflow-wrap: anywhere;
 }
-.paper-table-scroll {
-  overflow-x: auto;
+.paper-parties section + section {
+  border-top: 1px solid #ddd;
+  padding-top: 1mm;
+}
+.paper-parties p {
+  margin: 0;
 }
 table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 12px;
-  text-align: start;
+  table-layout: fixed;
+  font-size: 9px;
+  text-align: center;
+}
+.row-col {
+  width: 8mm;
+}
+.quantity-col {
+  width: 13mm;
+}
+.unit-col {
+  width: 20mm;
+}
+.price-col {
+  width: 32mm;
+}
+.total-col {
+  width: 40mm;
+}
+th,
+td {
+  border: 1px solid #bbb;
+  padding: 0.7mm 1.5mm;
+  height: 4.5mm;
 }
 th {
-  padding: 12px 10px;
-  background: var(--muted);
-  font-size: 10px;
+  background: #f0f0f0;
+  font-size: 8px;
+}
+th:nth-child(2),
+td:nth-child(2) {
+  text-align: start;
+}
+td:nth-child(n + 5) {
   white-space: nowrap;
+  font-variant-numeric: tabular-nums;
 }
-td {
-  padding: 15px 10px;
-  border-bottom: 1px solid var(--border);
+.paper-bottom {
+  margin-top: auto;
+  padding-top: 2mm;
 }
-td:nth-child(n + 4) {
-  white-space: nowrap;
-}
-.paper-total {
+.paper-totals {
   display: flex;
   justify-content: space-between;
-  gap: 15px;
-  background: var(--accent);
-  color: var(--accent-foreground);
-  padding: 18px;
-  border-radius: 10px;
-  margin-top: 22px;
-  font-size: 12px;
+  gap: 2mm;
+  font-size: 8px;
 }
-.paper-total strong {
-  font-size: 18px;
+.paper-grand-total {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 3mm;
+  padding: 1.5mm 2mm;
+  margin-top: 1.5mm;
+  border: 1px solid #aaa;
+  background: #f5f5f5;
+}
+.paper-grand-total span {
+  font-size: 8px;
+}
+.paper-settlement {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1mm 6mm;
+  padding-top: 1mm;
+  font-size: 8px;
 }
 .paper-notes {
-  margin: 24px 0;
-  font-size: 12px;
+  font-size: 8px;
+  margin: 1mm 0 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 .paper-signatures {
-  display: flex;
-  justify-content: space-between;
-  padding: 35px 24px 55px;
-  font-size: 12px;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: start;
+  gap: 3mm;
+  margin-top: 2mm;
+  min-height: 10mm;
+  padding: 1mm 12mm 0;
+  border-top: 1px solid #ccc;
+  font-size: 8px;
 }
-.paper-thanks {
+.paper-signatures > :last-child {
+  text-align: end;
+}
+.paper-pagination {
   text-align: center;
-  border-top: 1px solid var(--border);
-  padding-top: 15px;
-  color: var(--muted-foreground);
-  font-size: 10px;
 }
-@media (max-width: 640px) {
-  .invoice-paper {
-    padding: 18px;
-  }
-  .paper-brand-icon {
-    display: none;
-  }
-  .paper-parties {
-    gap: 18px;
-  }
-  .paper-total {
-    flex-direction: column;
-  }
-  .paper-signatures {
-    padding-inline: 0;
-  }
-  .paper-brand h2 {
-    font-size: 17px;
-  }
+.paper-continued {
+  text-align: center;
+  margin-top: auto;
+  padding-top: 5mm;
+  color: #555;
 }
 @media print {
-  .invoice-paper {
-    --card: #fff;
-    --foreground: #111;
-    --primary: #222;
-    --muted: #f4f4f4;
-    --muted-foreground: #444;
-    --border: #ccc;
-    --accent: #f4f4f4;
-    --accent-foreground: #111;
-    padding: 0;
-    border: 0;
-    border-radius: 0;
-    box-shadow: none;
-    font-size: 11px;
-  }
-  .paper-table-scroll {
+  .invoice-sheets {
+    display: block;
     overflow: visible;
+    padding: 0;
   }
-  table {
-    table-layout: auto;
-    width: 100%;
-  }
-  tr {
+  .invoice-paper {
+    outline: 0;
+    margin: 0;
+    break-after: page;
     break-inside: avoid;
+    box-shadow: none;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
   }
-  thead {
-    display: table-header-group;
+  .invoice-paper:last-child {
+    break-after: auto;
   }
-  .paper-total,
-  .paper-signatures {
-    break-inside: avoid;
-  }
-  .paper-total {
-    flex-direction: row;
-  }
-  .paper-brand-icon {
-    display: grid;
-  }
+  tr,
+  .paper-bottom,
+  .paper-header,
+  .paper-signatures,
   .paper-parties {
-    grid-template-columns: 1fr 1fr;
-  }
-  .invoice-paper__header {
     break-inside: avoid;
   }
 }

@@ -112,6 +112,7 @@ model InventoryTransaction {
   invoiceId   Int?
   invoice     Invoice?                 @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
   createdAt   DateTime                 @default(now())
+  currency    String                   @default("TOMAN")
 
   @@index([productId, createdAt])
   @@index([type, createdAt])
@@ -119,15 +120,27 @@ model InventoryTransaction {
 
 model Invoice {
   id             Int                      @id @default(autoincrement())
-  number         String                   @unique
+  number         String                   @unique @default(uuid())
   buyerFirstName String?
   buyerLastName  String?
   buyerNationalId String?
   buyerAddress   String?
+  buyerPhone     String?
   customerId     Int?
   customer       Buyer?                   @relation(fields: [customerId], references: [id], onDelete: SetNull)
   notes          String?
   total          Int
+  subtotal       Int                      @default(0)
+  discount       Int                      @default(0)
+  paidAmount     Int                      @default(0)
+  settlement     String                   @default("CASH")
+  currency       String                   @default("IRR")
+  issueDate      DateTime                 @default(now()) @db.Date
+  sellerName     String?
+  sellerAddress  String?
+  sellerPhone    String?
+  sellerLogoUrl  String?
+  sellerIban     String?
   items          InvoiceItem[]
   transactions   InventoryTransaction[]
   createdAt      DateTime                 @default(now())
@@ -154,5 +167,7 @@ model StoreSettings {
   address   String   @default("")
   phone     String   @default("")
   logoUrl   String?
+  iban      String   @default("")
+  defaultInvoiceNotes String @default("")
   updatedAt DateTime @updatedAt
 }

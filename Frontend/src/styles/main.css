@@ -751,8 +751,15 @@ select:disabled {
 }
 @media print {
   @page {
-    size: A4;
-    margin: 12mm;
+    size: A5 landscape;
+    margin: 6mm;
+  }
+  .invoice-page,
+  .invoice-preview {
+    display: block !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
   }
   .dialog-content,
   .dialog-overlay,

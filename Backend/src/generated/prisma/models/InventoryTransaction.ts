@@ -51,6 +51,7 @@ export type InventoryTransactionMinAggregateOutputType = {
   description: string | null
   invoiceId: number | null
   createdAt: Date | null
+  currency: string | null
 }
 
 export type InventoryTransactionMaxAggregateOutputType = {
@@ -62,6 +63,7 @@ export type InventoryTransactionMaxAggregateOutputType = {
   description: string | null
   invoiceId: number | null
   createdAt: Date | null
+  currency: string | null
 }
 
 export type InventoryTransactionCountAggregateOutputType = {
@@ -73,6 +75,7 @@ export type InventoryTransactionCountAggregateOutputType = {
   description: number
   invoiceId: number
   createdAt: number
+  currency: number
   _all: number
 }
 
@@ -102,6 +105,7 @@ export type InventoryTransactionMinAggregateInputType = {
   description?: true
   invoiceId?: true
   createdAt?: true
+  currency?: true
 }
 
 export type InventoryTransactionMaxAggregateInputType = {
@@ -113,6 +117,7 @@ export type InventoryTransactionMaxAggregateInputType = {
   description?: true
   invoiceId?: true
   createdAt?: true
+  currency?: true
 }
 
 export type InventoryTransactionCountAggregateInputType = {
@@ -124,6 +129,7 @@ export type InventoryTransactionCountAggregateInputType = {
   description?: true
   invoiceId?: true
   createdAt?: true
+  currency?: true
   _all?: true
 }
 
@@ -222,6 +228,7 @@ export type InventoryTransactionGroupByOutputType = {
   description: string | null
   invoiceId: number | null
   createdAt: Date
+  currency: string
   _count: InventoryTransactionCountAggregateOutputType | null
   _avg: InventoryTransactionAvgAggregateOutputType | null
   _sum: InventoryTransactionSumAggregateOutputType | null
@@ -256,6 +263,7 @@ export type InventoryTransactionWhereInput = {
   description?: Prisma.StringNullableFilter<"InventoryTransaction"> | string | null
   invoiceId?: Prisma.IntNullableFilter<"InventoryTransaction"> | number | null
   createdAt?: Prisma.DateTimeFilter<"InventoryTransaction"> | Date | string
+  currency?: Prisma.StringFilter<"InventoryTransaction"> | string
   product?: Prisma.XOR<Prisma.ProductScalarRelationFilter, Prisma.ProductWhereInput>
   invoice?: Prisma.XOR<Prisma.InvoiceNullableScalarRelationFilter, Prisma.InvoiceWhereInput> | null
 }
@@ -269,6 +277,7 @@ export type InventoryTransactionOrderByWithRelationInput = {
   description?: Prisma.SortOrderInput | Prisma.SortOrder
   invoiceId?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
+  currency?: Prisma.SortOrder
   product?: Prisma.ProductOrderByWithRelationInput
   invoice?: Prisma.InvoiceOrderByWithRelationInput
 }
@@ -285,6 +294,7 @@ export type InventoryTransactionWhereUniqueInput = Prisma.AtLeast<{
   description?: Prisma.StringNullableFilter<"InventoryTransaction"> | string | null
   invoiceId?: Prisma.IntNullableFilter<"InventoryTransaction"> | number | null
   createdAt?: Prisma.DateTimeFilter<"InventoryTransaction"> | Date | string
+  currency?: Prisma.StringFilter<"InventoryTransaction"> | string
   product?: Prisma.XOR<Prisma.ProductScalarRelationFilter, Prisma.ProductWhereInput>
   invoice?: Prisma.XOR<Prisma.InvoiceNullableScalarRelationFilter, Prisma.InvoiceWhereInput> | null
 }, "id">
@@ -298,6 +308,7 @@ export type InventoryTransactionOrderByWithAggregationInput = {
   description?: Prisma.SortOrderInput | Prisma.SortOrder
   invoiceId?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
+  currency?: Prisma.SortOrder
   _count?: Prisma.InventoryTransactionCountOrderByAggregateInput
   _avg?: Prisma.InventoryTransactionAvgOrderByAggregateInput
   _max?: Prisma.InventoryTransactionMaxOrderByAggregateInput
@@ -317,6 +328,7 @@ export type InventoryTransactionScalarWhereWithAggregatesInput = {
   description?: Prisma.StringNullableWithAggregatesFilter<"InventoryTransaction"> | string | null
   invoiceId?: Prisma.IntNullableWithAggregatesFilter<"InventoryTransaction"> | number | null
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"InventoryTransaction"> | Date | string
+  currency?: Prisma.StringWithAggregatesFilter<"InventoryTransaction"> | string
 }
 
 export type InventoryTransactionCreateInput = {
@@ -325,6 +337,7 @@ export type InventoryTransactionCreateInput = {
   unitPrice?: number | null
   description?: string | null
   createdAt?: Date | string
+  currency?: string
   product: Prisma.ProductCreateNestedOneWithoutInventoryTransactionsInput
   invoice?: Prisma.InvoiceCreateNestedOneWithoutTransactionsInput
 }
@@ -338,6 +351,7 @@ export type InventoryTransactionUncheckedCreateInput = {
   description?: string | null
   invoiceId?: number | null
   createdAt?: Date | string
+  currency?: string
 }
 
 export type InventoryTransactionUpdateInput = {
@@ -346,6 +360,7 @@ export type InventoryTransactionUpdateInput = {
   unitPrice?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  currency?: Prisma.StringFieldUpdateOperationsInput | string
   product?: Prisma.ProductUpdateOneRequiredWithoutInventoryTransactionsNestedInput
   invoice?: Prisma.InvoiceUpdateOneWithoutTransactionsNestedInput
 }
@@ -359,6 +374,7 @@ export type InventoryTransactionUncheckedUpdateInput = {
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   invoiceId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  currency?: Prisma.StringFieldUpdateOperationsInput | string
 }
 
 export type InventoryTransactionCreateManyInput = {
@@ -370,6 +386,7 @@ export type InventoryTransactionCreateManyInput = {
   description?: string | null
   invoiceId?: number | null
   createdAt?: Date | string
+  currency?: string
 }
 
 export type InventoryTransactionUpdateManyMutationInput = {
@@ -378,6 +395,7 @@ export type InventoryTransactionUpdateManyMutationInput = {
   unitPrice?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  currency?: Prisma.StringFieldUpdateOperationsInput | string
 }
 
 export type InventoryTransactionUncheckedUpdateManyInput = {
@@ -389,6 +407,7 @@ export type InventoryTransactionUncheckedUpdateManyInput = {
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   invoiceId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  currency?: Prisma.StringFieldUpdateOperationsInput | string
 }
 
 export type InventoryTransactionListRelationFilter = {
@@ -410,6 +429,7 @@ export type InventoryTransactionCountOrderByAggregateInput = {
   description?: Prisma.SortOrder
   invoiceId?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
+  currency?: Prisma.SortOrder
 }
 
 export type InventoryTransactionAvgOrderByAggregateInput = {
@@ -429,6 +449,7 @@ export type InventoryTransactionMaxOrderByAggregateInput = {
   description?: Prisma.SortOrder
   invoiceId?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
+  currency?: Prisma.SortOrder
 }
 
 export type InventoryTransactionMinOrderByAggregateInput = {
@@ -440,6 +461,7 @@ export type InventoryTransactionMinOrderByAggregateInput = {
   description?: Prisma.SortOrder
   invoiceId?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
+  currency?: Prisma.SortOrder
 }
 
 export type InventoryTransactionSumOrderByAggregateInput = {
@@ -544,6 +566,7 @@ export type InventoryTransactionCreateWithoutProductInput = {
   unitPrice?: number | null
   description?: string | null
   createdAt?: Date | string
+  currency?: string
   invoice?: Prisma.InvoiceCreateNestedOneWithoutTransactionsInput
 }
 
@@ -555,6 +578,7 @@ export type InventoryTransactionUncheckedCreateWithoutProductInput = {
   description?: string | null
   invoiceId?: number | null
   createdAt?: Date | string
+  currency?: string
 }
 
 export type InventoryTransactionCreateOrConnectWithoutProductInput = {
@@ -595,6 +619,7 @@ export type InventoryTransactionScalarWhereInput = {
   description?: Prisma.StringNullableFilter<"InventoryTransaction"> | string | null
   invoiceId?: Prisma.IntNullableFilter<"InventoryTransaction"> | number | null
   createdAt?: Prisma.DateTimeFilter<"InventoryTransaction"> | Date | string
+  currency?: Prisma.StringFilter<"InventoryTransaction"> | string
 }
 
 export type InventoryTransactionCreateWithoutInvoiceInput = {
@@ -603,6 +628,7 @@ export type InventoryTransactionCreateWithoutInvoiceInput = {
   unitPrice?: number | null
   description?: string | null
   createdAt?: Date | string
+  currency?: string
   product: Prisma.ProductCreateNestedOneWithoutInventoryTransactionsInput
 }
 
@@ -614,6 +640,7 @@ export type InventoryTransactionUncheckedCreateWithoutInvoiceInput = {
   unitPrice?: number | null
   description?: string | null
   createdAt?: Date | string
+  currency?: string
 }
 
 export type InventoryTransactionCreateOrConnectWithoutInvoiceInput = {
@@ -650,6 +677,7 @@ export type InventoryTransactionCreateManyProductInput = {
   description?: string | null
   invoiceId?: number | null
   createdAt?: Date | string
+  currency?: string
 }
 
 export type InventoryTransactionUpdateWithoutProductInput = {
@@ -658,6 +686,7 @@ export type InventoryTransactionUpdateWithoutProductInput = {
   unitPrice?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  currency?: Prisma.StringFieldUpdateOperationsInput | string
   invoice?: Prisma.InvoiceUpdateOneWithoutTransactionsNestedInput
 }
 
@@ -669,6 +698,7 @@ export type InventoryTransactionUncheckedUpdateWithoutProductInput = {
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   invoiceId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  currency?: Prisma.StringFieldUpdateOperationsInput | string
 }
 
 export type InventoryTransactionUncheckedUpdateManyWithoutProductInput = {
@@ -679,6 +709,7 @@ export type InventoryTransactionUncheckedUpdateManyWithoutProductInput = {
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   invoiceId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  currency?: Prisma.StringFieldUpdateOperationsInput | string
 }
 
 export type InventoryTransactionCreateManyInvoiceInput = {
@@ -689,6 +720,7 @@ export type InventoryTransactionCreateManyInvoiceInput = {
   unitPrice?: number | null
   description?: string | null
   createdAt?: Date | string
+  currency?: string
 }
 
 export type InventoryTransactionUpdateWithoutInvoiceInput = {
@@ -697,6 +729,7 @@ export type InventoryTransactionUpdateWithoutInvoiceInput = {
   unitPrice?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  currency?: Prisma.StringFieldUpdateOperationsInput | string
   product?: Prisma.ProductUpdateOneRequiredWithoutInventoryTransactionsNestedInput
 }
 
@@ -708,6 +741,7 @@ export type InventoryTransactionUncheckedUpdateWithoutInvoiceInput = {
   unitPrice?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  currency?: Prisma.StringFieldUpdateOperationsInput | string
 }
 
 export type InventoryTransactionUncheckedUpdateManyWithoutInvoiceInput = {
@@ -718,6 +752,7 @@ export type InventoryTransactionUncheckedUpdateManyWithoutInvoiceInput = {
   unitPrice?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  currency?: Prisma.StringFieldUpdateOperationsInput | string
 }
 
 
@@ -731,6 +766,7 @@ export type InventoryTransactionSelect<ExtArgs extends runtime.Types.Extensions.
   description?: boolean
   invoiceId?: boolean
   createdAt?: boolean
+  currency?: boolean
   product?: boolean | Prisma.ProductDefaultArgs<ExtArgs>
   invoice?: boolean | Prisma.InventoryTransaction$invoiceArgs<ExtArgs>
 }, ExtArgs["result"]["inventoryTransaction"]>
@@ -744,6 +780,7 @@ export type InventoryTransactionSelectCreateManyAndReturn<ExtArgs extends runtim
   description?: boolean
   invoiceId?: boolean
   createdAt?: boolean
+  currency?: boolean
   product?: boolean | Prisma.ProductDefaultArgs<ExtArgs>
   invoice?: boolean | Prisma.InventoryTransaction$invoiceArgs<ExtArgs>
 }, ExtArgs["result"]["inventoryTransaction"]>
@@ -757,6 +794,7 @@ export type InventoryTransactionSelectUpdateManyAndReturn<ExtArgs extends runtim
   description?: boolean
   invoiceId?: boolean
   createdAt?: boolean
+  currency?: boolean
   product?: boolean | Prisma.ProductDefaultArgs<ExtArgs>
   invoice?: boolean | Prisma.InventoryTransaction$invoiceArgs<ExtArgs>
 }, ExtArgs["result"]["inventoryTransaction"]>
@@ -770,9 +808,10 @@ export type InventoryTransactionSelectScalar = {
   description?: boolean
   invoiceId?: boolean
   createdAt?: boolean
+  currency?: boolean
 }
 
-export type InventoryTransactionOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "productId" | "type" | "quantity" | "unitPrice" | "description" | "invoiceId" | "createdAt", ExtArgs["result"]["inventoryTransaction"]>
+export type InventoryTransactionOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "productId" | "type" | "quantity" | "unitPrice" | "description" | "invoiceId" | "createdAt" | "currency", ExtArgs["result"]["inventoryTransaction"]>
 export type InventoryTransactionInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   product?: boolean | Prisma.ProductDefaultArgs<ExtArgs>
   invoice?: boolean | Prisma.InventoryTransaction$invoiceArgs<ExtArgs>
@@ -801,6 +840,7 @@ export type $InventoryTransactionPayload<ExtArgs extends runtime.Types.Extension
     description: string | null
     invoiceId: number | null
     createdAt: Date
+    currency: string
   }, ExtArgs["result"]["inventoryTransaction"]>
   composites: {}
 }
@@ -1234,6 +1274,7 @@ export interface InventoryTransactionFieldRefs {
   readonly description: Prisma.FieldRef<"InventoryTransaction", 'String'>
   readonly invoiceId: Prisma.FieldRef<"InventoryTransaction", 'Int'>
   readonly createdAt: Prisma.FieldRef<"InventoryTransaction", 'DateTime'>
+  readonly currency: Prisma.FieldRef<"InventoryTransaction", 'String'>
 }
     
 

@@ -36,10 +36,67 @@ export interface PriceHistory {
   createdAt: string
 }
 export interface InventoryMovement {
-  id: number; type: 'PURCHASE' | 'SALE' | 'RETURN' | 'ADJUSTMENT'; quantity: number; unitPrice: number | null; description: string | null; createdAt: string;
-  product: Pick<Product, 'id' | 'name' | 'sku' | 'unit'>; invoice?: { number: string } | null
+  currency?: 'IRR' | 'TOMAN'
+  id: number
+  type: 'PURCHASE' | 'SALE' | 'RETURN' | 'ADJUSTMENT'
+  quantity: number
+  unitPrice: number | null
+  description: string | null
+  createdAt: string
+  product: Pick<Product, 'id' | 'name' | 'sku' | 'unit'>
+  invoice?: { number: string } | null
 }
-export interface InvoiceItem { id: number; productId: number; name: string; unit: string; quantity: number; unitPrice: number; total: number }
-export interface Invoice { id: number; number: string; buyerFirstName: string | null; buyerLastName: string | null; buyerNationalId: string | null; buyerAddress: string | null; notes: string | null; total: number; createdAt: string; items: InvoiceItem[] }
-export interface StoreSettings { id: number; name: string; address: string; phone: string; logoUrl: string | null }
-export interface Buyer { id: number; firstName: string; lastName: string; nationalId: string | null; phone: string | null; address: string | null; notes: string | null; createdAt: string; updatedAt: string }
+export interface InvoiceItem {
+  id: number
+  productId: number
+  name: string
+  unit: string
+  quantity: number
+  unitPrice: number
+  total: number
+}
+export interface Invoice {
+  id: number
+  number: string
+  customerId?: number | null
+  buyerFirstName: string | null
+  buyerLastName: string | null
+  buyerNationalId: string | null
+  buyerAddress: string | null
+  buyerPhone?: string | null
+  notes: string | null
+  total: number
+  subtotal?: number
+  discount?: number
+  paidAmount?: number
+  settlement?: 'CASH' | 'INSTALLMENT'
+  currency?: 'IRR' | 'TOMAN'
+  issueDate?: string
+  sellerName?: string | null
+  sellerAddress?: string | null
+  sellerPhone?: string | null
+  sellerLogoUrl?: string | null
+  sellerIban?: string | null
+  createdAt: string
+  items: InvoiceItem[]
+}
+export interface StoreSettings {
+  id: number
+  name: string
+  address: string
+  phone: string
+  logoUrl: string | null
+  iban?: string
+  defaultInvoiceNotes?: string
+}
+export interface Buyer {
+  id: number
+  firstName: string
+  lastName: string
+  nationalId: string | null
+  phone: string | null
+  address: string | null
+  notes: string | null
+  createdAt: string
+  updatedAt: string
+}

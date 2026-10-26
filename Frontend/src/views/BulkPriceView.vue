@@ -30,12 +30,13 @@
         <label class="form-field"
           ><span>{{ form.type === 'PERCENTAGE' ? 'درصد افزایش' : 'قیمت جدید · تومان' }}</span
           ><input
+            v-if="form.type === 'PERCENTAGE'"
             v-model.number="form.value"
             type="number"
             min="0"
-            :step="form.type === 'PERCENTAGE' ? '0.1' : '1'"
+            step="0.1"
             required
-          /><small>{{
+          /><MoneyInput v-else v-model="form.value" required /><small>{{
             form.type === 'PERCENTAGE'
               ? 'مثلاً ۱۰ یعنی ده درصد افزایش نسبت به قیمت فعلی.'
               : 'این مبلغ جایگزین قیمت فعلی تمام کالاهای انتخابی می‌شود.'
@@ -91,9 +92,10 @@
 import { onMounted, reactive, ref, watch } from 'vue'
 import { Check, Eye, Info } from '@lucide/vue'
 import Button from '@/components/ui/Button.vue'
+import MoneyInput from '@/components/ui/MoneyInput.vue'
 import EmptyState from '@/components/ui/EmptyState.vue'
 import { toast } from '@/lib/toast'
-import { money, number } from '@/lib/format'
+import { money, number, parseNumber } from '@/lib/format'
 import { productsApi } from '@/services/products'
 import { categoriesApi } from '@/services/categories'
 import type { Category } from '@/types'
@@ -101,7 +103,7 @@ const emit = defineEmits<{ close: [saved: boolean] }>()
 const form = reactive({
   categoryId: undefined as number | undefined,
   type: 'PERCENTAGE',
-  value: 10,
+  value: 10 as string | number,
   priceType: 'SELL',
 })
 const categories = ref<Category[]>([])
@@ -111,17 +113,21 @@ const loading = ref(false),
   previewed = ref(false),
   error = ref('')
 let previewVersion = 0
+watch(
+  () => form.type,
+  () => {
+    const value = parseNumber(form.value)
+    form.value = Number.isFinite(value) ? value : ''
+  },
+)
 watch(form, () => {
   previewed.value = false
   rows.value = []
   previewVersion++
 })
 async function preview() {
-  if (
-    !Number.isFinite(form.value) ||
-    form.value < 0 ||
-    (form.type === 'FIXED' && !Number.isInteger(form.value))
-  ) {
+  const value = parseNumber(form.value)
+  if (!Number.isFinite(value) || value < 0 || (form.type === 'FIXED' && !Number.isInteger(value))) {
     error.value = 'مقدار معتبر و غیرمنفی وارد کنید.'
     return
   }
@@ -129,7 +135,7 @@ async function preview() {
   loading.value = true
   error.value = ''
   try {
-    const result = await productsApi.previewBulk({ ...form })
+    const result = await productsApi.previewBulk({ ...form, value })
     if (version === previewVersion) {
       rows.value = result.items
       previewed.value = true
@@ -145,7 +151,7 @@ async function apply() {
   applying.value = true
   error.value = ''
   try {
-    const result = await productsApi.bulk({ ...form })
+    const result = await productsApi.bulk({ ...form, value: parseNumber(form.value) })
     toast.success(`قیمت ${number(result.affectedProducts)} کالا به‌روز شد.`)
     emit('close', true)
   } catch (e) {

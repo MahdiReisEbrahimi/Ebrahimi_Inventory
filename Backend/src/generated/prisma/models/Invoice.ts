@@ -30,12 +30,18 @@ export type InvoiceAvgAggregateOutputType = {
   id: number | null
   customerId: number | null
   total: number | null
+  subtotal: number | null
+  discount: number | null
+  paidAmount: number | null
 }
 
 export type InvoiceSumAggregateOutputType = {
   id: number | null
   customerId: number | null
   total: number | null
+  subtotal: number | null
+  discount: number | null
+  paidAmount: number | null
 }
 
 export type InvoiceMinAggregateOutputType = {
@@ -45,9 +51,21 @@ export type InvoiceMinAggregateOutputType = {
   buyerLastName: string | null
   buyerNationalId: string | null
   buyerAddress: string | null
+  buyerPhone: string | null
   customerId: number | null
   notes: string | null
   total: number | null
+  subtotal: number | null
+  discount: number | null
+  paidAmount: number | null
+  settlement: string | null
+  currency: string | null
+  issueDate: Date | null
+  sellerName: string | null
+  sellerAddress: string | null
+  sellerPhone: string | null
+  sellerLogoUrl: string | null
+  sellerIban: string | null
   createdAt: Date | null
 }
 
@@ -58,9 +76,21 @@ export type InvoiceMaxAggregateOutputType = {
   buyerLastName: string | null
   buyerNationalId: string | null
   buyerAddress: string | null
+  buyerPhone: string | null
   customerId: number | null
   notes: string | null
   total: number | null
+  subtotal: number | null
+  discount: number | null
+  paidAmount: number | null
+  settlement: string | null
+  currency: string | null
+  issueDate: Date | null
+  sellerName: string | null
+  sellerAddress: string | null
+  sellerPhone: string | null
+  sellerLogoUrl: string | null
+  sellerIban: string | null
   createdAt: Date | null
 }
 
@@ -71,9 +101,21 @@ export type InvoiceCountAggregateOutputType = {
   buyerLastName: number
   buyerNationalId: number
   buyerAddress: number
+  buyerPhone: number
   customerId: number
   notes: number
   total: number
+  subtotal: number
+  discount: number
+  paidAmount: number
+  settlement: number
+  currency: number
+  issueDate: number
+  sellerName: number
+  sellerAddress: number
+  sellerPhone: number
+  sellerLogoUrl: number
+  sellerIban: number
   createdAt: number
   _all: number
 }
@@ -83,12 +125,18 @@ export type InvoiceAvgAggregateInputType = {
   id?: true
   customerId?: true
   total?: true
+  subtotal?: true
+  discount?: true
+  paidAmount?: true
 }
 
 export type InvoiceSumAggregateInputType = {
   id?: true
   customerId?: true
   total?: true
+  subtotal?: true
+  discount?: true
+  paidAmount?: true
 }
 
 export type InvoiceMinAggregateInputType = {
@@ -98,9 +146,21 @@ export type InvoiceMinAggregateInputType = {
   buyerLastName?: true
   buyerNationalId?: true
   buyerAddress?: true
+  buyerPhone?: true
   customerId?: true
   notes?: true
   total?: true
+  subtotal?: true
+  discount?: true
+  paidAmount?: true
+  settlement?: true
+  currency?: true
+  issueDate?: true
+  sellerName?: true
+  sellerAddress?: true
+  sellerPhone?: true
+  sellerLogoUrl?: true
+  sellerIban?: true
   createdAt?: true
 }
 
@@ -111,9 +171,21 @@ export type InvoiceMaxAggregateInputType = {
   buyerLastName?: true
   buyerNationalId?: true
   buyerAddress?: true
+  buyerPhone?: true
   customerId?: true
   notes?: true
   total?: true
+  subtotal?: true
+  discount?: true
+  paidAmount?: true
+  settlement?: true
+  currency?: true
+  issueDate?: true
+  sellerName?: true
+  sellerAddress?: true
+  sellerPhone?: true
+  sellerLogoUrl?: true
+  sellerIban?: true
   createdAt?: true
 }
 
@@ -124,9 +196,21 @@ export type InvoiceCountAggregateInputType = {
   buyerLastName?: true
   buyerNationalId?: true
   buyerAddress?: true
+  buyerPhone?: true
   customerId?: true
   notes?: true
   total?: true
+  subtotal?: true
+  discount?: true
+  paidAmount?: true
+  settlement?: true
+  currency?: true
+  issueDate?: true
+  sellerName?: true
+  sellerAddress?: true
+  sellerPhone?: true
+  sellerLogoUrl?: true
+  sellerIban?: true
   createdAt?: true
   _all?: true
 }
@@ -224,9 +308,21 @@ export type InvoiceGroupByOutputType = {
   buyerLastName: string | null
   buyerNationalId: string | null
   buyerAddress: string | null
+  buyerPhone: string | null
   customerId: number | null
   notes: string | null
   total: number
+  subtotal: number
+  discount: number
+  paidAmount: number
+  settlement: string
+  currency: string
+  issueDate: Date
+  sellerName: string | null
+  sellerAddress: string | null
+  sellerPhone: string | null
+  sellerLogoUrl: string | null
+  sellerIban: string | null
   createdAt: Date
   _count: InvoiceCountAggregateOutputType | null
   _avg: InvoiceAvgAggregateOutputType | null
@@ -260,9 +356,21 @@ export type InvoiceWhereInput = {
   buyerLastName?: Prisma.StringNullableFilter<"Invoice"> | string | null
   buyerNationalId?: Prisma.StringNullableFilter<"Invoice"> | string | null
   buyerAddress?: Prisma.StringNullableFilter<"Invoice"> | string | null
+  buyerPhone?: Prisma.StringNullableFilter<"Invoice"> | string | null
   customerId?: Prisma.IntNullableFilter<"Invoice"> | number | null
   notes?: Prisma.StringNullableFilter<"Invoice"> | string | null
   total?: Prisma.IntFilter<"Invoice"> | number
+  subtotal?: Prisma.IntFilter<"Invoice"> | number
+  discount?: Prisma.IntFilter<"Invoice"> | number
+  paidAmount?: Prisma.IntFilter<"Invoice"> | number
+  settlement?: Prisma.StringFilter<"Invoice"> | string
+  currency?: Prisma.StringFilter<"Invoice"> | string
+  issueDate?: Prisma.DateTimeFilter<"Invoice"> | Date | string
+  sellerName?: Prisma.StringNullableFilter<"Invoice"> | string | null
+  sellerAddress?: Prisma.StringNullableFilter<"Invoice"> | string | null
+  sellerPhone?: Prisma.StringNullableFilter<"Invoice"> | string | null
+  sellerLogoUrl?: Prisma.StringNullableFilter<"Invoice"> | string | null
+  sellerIban?: Prisma.StringNullableFilter<"Invoice"> | string | null
   createdAt?: Prisma.DateTimeFilter<"Invoice"> | Date | string
   customer?: Prisma.XOR<Prisma.BuyerNullableScalarRelationFilter, Prisma.BuyerWhereInput> | null
   items?: Prisma.InvoiceItemListRelationFilter
@@ -276,9 +384,21 @@ export type InvoiceOrderByWithRelationInput = {
   buyerLastName?: Prisma.SortOrderInput | Prisma.SortOrder
   buyerNationalId?: Prisma.SortOrderInput | Prisma.SortOrder
   buyerAddress?: Prisma.SortOrderInput | Prisma.SortOrder
+  buyerPhone?: Prisma.SortOrderInput | Prisma.SortOrder
   customerId?: Prisma.SortOrderInput | Prisma.SortOrder
   notes?: Prisma.SortOrderInput | Prisma.SortOrder
   total?: Prisma.SortOrder
+  subtotal?: Prisma.SortOrder
+  discount?: Prisma.SortOrder
+  paidAmount?: Prisma.SortOrder
+  settlement?: Prisma.SortOrder
+  currency?: Prisma.SortOrder
+  issueDate?: Prisma.SortOrder
+  sellerName?: Prisma.SortOrderInput | Prisma.SortOrder
+  sellerAddress?: Prisma.SortOrderInput | Prisma.SortOrder
+  sellerPhone?: Prisma.SortOrderInput | Prisma.SortOrder
+  sellerLogoUrl?: Prisma.SortOrderInput | Prisma.SortOrder
+  sellerIban?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   customer?: Prisma.BuyerOrderByWithRelationInput
   items?: Prisma.InvoiceItemOrderByRelationAggregateInput
@@ -295,9 +415,21 @@ export type InvoiceWhereUniqueInput = Prisma.AtLeast<{
   buyerLastName?: Prisma.StringNullableFilter<"Invoice"> | string | null
   buyerNationalId?: Prisma.StringNullableFilter<"Invoice"> | string | null
   buyerAddress?: Prisma.StringNullableFilter<"Invoice"> | string | null
+  buyerPhone?: Prisma.StringNullableFilter<"Invoice"> | string | null
   customerId?: Prisma.IntNullableFilter<"Invoice"> | number | null
   notes?: Prisma.StringNullableFilter<"Invoice"> | string | null
   total?: Prisma.IntFilter<"Invoice"> | number
+  subtotal?: Prisma.IntFilter<"Invoice"> | number
+  discount?: Prisma.IntFilter<"Invoice"> | number
+  paidAmount?: Prisma.IntFilter<"Invoice"> | number
+  settlement?: Prisma.StringFilter<"Invoice"> | string
+  currency?: Prisma.StringFilter<"Invoice"> | string
+  issueDate?: Prisma.DateTimeFilter<"Invoice"> | Date | string
+  sellerName?: Prisma.StringNullableFilter<"Invoice"> | string | null
+  sellerAddress?: Prisma.StringNullableFilter<"Invoice"> | string | null
+  sellerPhone?: Prisma.StringNullableFilter<"Invoice"> | string | null
+  sellerLogoUrl?: Prisma.StringNullableFilter<"Invoice"> | string | null
+  sellerIban?: Prisma.StringNullableFilter<"Invoice"> | string | null
   createdAt?: Prisma.DateTimeFilter<"Invoice"> | Date | string
   customer?: Prisma.XOR<Prisma.BuyerNullableScalarRelationFilter, Prisma.BuyerWhereInput> | null
   items?: Prisma.InvoiceItemListRelationFilter
@@ -311,9 +443,21 @@ export type InvoiceOrderByWithAggregationInput = {
   buyerLastName?: Prisma.SortOrderInput | Prisma.SortOrder
   buyerNationalId?: Prisma.SortOrderInput | Prisma.SortOrder
   buyerAddress?: Prisma.SortOrderInput | Prisma.SortOrder
+  buyerPhone?: Prisma.SortOrderInput | Prisma.SortOrder
   customerId?: Prisma.SortOrderInput | Prisma.SortOrder
   notes?: Prisma.SortOrderInput | Prisma.SortOrder
   total?: Prisma.SortOrder
+  subtotal?: Prisma.SortOrder
+  discount?: Prisma.SortOrder
+  paidAmount?: Prisma.SortOrder
+  settlement?: Prisma.SortOrder
+  currency?: Prisma.SortOrder
+  issueDate?: Prisma.SortOrder
+  sellerName?: Prisma.SortOrderInput | Prisma.SortOrder
+  sellerAddress?: Prisma.SortOrderInput | Prisma.SortOrder
+  sellerPhone?: Prisma.SortOrderInput | Prisma.SortOrder
+  sellerLogoUrl?: Prisma.SortOrderInput | Prisma.SortOrder
+  sellerIban?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   _count?: Prisma.InvoiceCountOrderByAggregateInput
   _avg?: Prisma.InvoiceAvgOrderByAggregateInput
@@ -332,20 +476,44 @@ export type InvoiceScalarWhereWithAggregatesInput = {
   buyerLastName?: Prisma.StringNullableWithAggregatesFilter<"Invoice"> | string | null
   buyerNationalId?: Prisma.StringNullableWithAggregatesFilter<"Invoice"> | string | null
   buyerAddress?: Prisma.StringNullableWithAggregatesFilter<"Invoice"> | string | null
+  buyerPhone?: Prisma.StringNullableWithAggregatesFilter<"Invoice"> | string | null
   customerId?: Prisma.IntNullableWithAggregatesFilter<"Invoice"> | number | null
   notes?: Prisma.StringNullableWithAggregatesFilter<"Invoice"> | string | null
   total?: Prisma.IntWithAggregatesFilter<"Invoice"> | number
+  subtotal?: Prisma.IntWithAggregatesFilter<"Invoice"> | number
+  discount?: Prisma.IntWithAggregatesFilter<"Invoice"> | number
+  paidAmount?: Prisma.IntWithAggregatesFilter<"Invoice"> | number
+  settlement?: Prisma.StringWithAggregatesFilter<"Invoice"> | string
+  currency?: Prisma.StringWithAggregatesFilter<"Invoice"> | string
+  issueDate?: Prisma.DateTimeWithAggregatesFilter<"Invoice"> | Date | string
+  sellerName?: Prisma.StringNullableWithAggregatesFilter<"Invoice"> | string | null
+  sellerAddress?: Prisma.StringNullableWithAggregatesFilter<"Invoice"> | string | null
+  sellerPhone?: Prisma.StringNullableWithAggregatesFilter<"Invoice"> | string | null
+  sellerLogoUrl?: Prisma.StringNullableWithAggregatesFilter<"Invoice"> | string | null
+  sellerIban?: Prisma.StringNullableWithAggregatesFilter<"Invoice"> | string | null
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"Invoice"> | Date | string
 }
 
 export type InvoiceCreateInput = {
-  number: string
+  number?: string
   buyerFirstName?: string | null
   buyerLastName?: string | null
   buyerNationalId?: string | null
   buyerAddress?: string | null
+  buyerPhone?: string | null
   notes?: string | null
   total: number
+  subtotal?: number
+  discount?: number
+  paidAmount?: number
+  settlement?: string
+  currency?: string
+  issueDate?: Date | string
+  sellerName?: string | null
+  sellerAddress?: string | null
+  sellerPhone?: string | null
+  sellerLogoUrl?: string | null
+  sellerIban?: string | null
   createdAt?: Date | string
   customer?: Prisma.BuyerCreateNestedOneWithoutInvoicesInput
   items?: Prisma.InvoiceItemCreateNestedManyWithoutInvoiceInput
@@ -354,14 +522,26 @@ export type InvoiceCreateInput = {
 
 export type InvoiceUncheckedCreateInput = {
   id?: number
-  number: string
+  number?: string
   buyerFirstName?: string | null
   buyerLastName?: string | null
   buyerNationalId?: string | null
   buyerAddress?: string | null
+  buyerPhone?: string | null
   customerId?: number | null
   notes?: string | null
   total: number
+  subtotal?: number
+  discount?: number
+  paidAmount?: number
+  settlement?: string
+  currency?: string
+  issueDate?: Date | string
+  sellerName?: string | null
+  sellerAddress?: string | null
+  sellerPhone?: string | null
+  sellerLogoUrl?: string | null
+  sellerIban?: string | null
   createdAt?: Date | string
   items?: Prisma.InvoiceItemUncheckedCreateNestedManyWithoutInvoiceInput
   transactions?: Prisma.InventoryTransactionUncheckedCreateNestedManyWithoutInvoiceInput
@@ -373,8 +553,20 @@ export type InvoiceUpdateInput = {
   buyerLastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   buyerNationalId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   buyerAddress?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  buyerPhone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   total?: Prisma.IntFieldUpdateOperationsInput | number
+  subtotal?: Prisma.IntFieldUpdateOperationsInput | number
+  discount?: Prisma.IntFieldUpdateOperationsInput | number
+  paidAmount?: Prisma.IntFieldUpdateOperationsInput | number
+  settlement?: Prisma.StringFieldUpdateOperationsInput | string
+  currency?: Prisma.StringFieldUpdateOperationsInput | string
+  issueDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  sellerName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  sellerAddress?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  sellerPhone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  sellerLogoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  sellerIban?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   customer?: Prisma.BuyerUpdateOneWithoutInvoicesNestedInput
   items?: Prisma.InvoiceItemUpdateManyWithoutInvoiceNestedInput
@@ -388,9 +580,21 @@ export type InvoiceUncheckedUpdateInput = {
   buyerLastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   buyerNationalId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   buyerAddress?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  buyerPhone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   customerId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   total?: Prisma.IntFieldUpdateOperationsInput | number
+  subtotal?: Prisma.IntFieldUpdateOperationsInput | number
+  discount?: Prisma.IntFieldUpdateOperationsInput | number
+  paidAmount?: Prisma.IntFieldUpdateOperationsInput | number
+  settlement?: Prisma.StringFieldUpdateOperationsInput | string
+  currency?: Prisma.StringFieldUpdateOperationsInput | string
+  issueDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  sellerName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  sellerAddress?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  sellerPhone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  sellerLogoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  sellerIban?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   items?: Prisma.InvoiceItemUncheckedUpdateManyWithoutInvoiceNestedInput
   transactions?: Prisma.InventoryTransactionUncheckedUpdateManyWithoutInvoiceNestedInput
@@ -398,14 +602,26 @@ export type InvoiceUncheckedUpdateInput = {
 
 export type InvoiceCreateManyInput = {
   id?: number
-  number: string
+  number?: string
   buyerFirstName?: string | null
   buyerLastName?: string | null
   buyerNationalId?: string | null
   buyerAddress?: string | null
+  buyerPhone?: string | null
   customerId?: number | null
   notes?: string | null
   total: number
+  subtotal?: number
+  discount?: number
+  paidAmount?: number
+  settlement?: string
+  currency?: string
+  issueDate?: Date | string
+  sellerName?: string | null
+  sellerAddress?: string | null
+  sellerPhone?: string | null
+  sellerLogoUrl?: string | null
+  sellerIban?: string | null
   createdAt?: Date | string
 }
 
@@ -415,8 +631,20 @@ export type InvoiceUpdateManyMutationInput = {
   buyerLastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   buyerNationalId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   buyerAddress?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  buyerPhone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   total?: Prisma.IntFieldUpdateOperationsInput | number
+  subtotal?: Prisma.IntFieldUpdateOperationsInput | number
+  discount?: Prisma.IntFieldUpdateOperationsInput | number
+  paidAmount?: Prisma.IntFieldUpdateOperationsInput | number
+  settlement?: Prisma.StringFieldUpdateOperationsInput | string
+  currency?: Prisma.StringFieldUpdateOperationsInput | string
+  issueDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  sellerName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  sellerAddress?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  sellerPhone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  sellerLogoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  sellerIban?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -427,9 +655,21 @@ export type InvoiceUncheckedUpdateManyInput = {
   buyerLastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   buyerNationalId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   buyerAddress?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  buyerPhone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   customerId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   total?: Prisma.IntFieldUpdateOperationsInput | number
+  subtotal?: Prisma.IntFieldUpdateOperationsInput | number
+  discount?: Prisma.IntFieldUpdateOperationsInput | number
+  paidAmount?: Prisma.IntFieldUpdateOperationsInput | number
+  settlement?: Prisma.StringFieldUpdateOperationsInput | string
+  currency?: Prisma.StringFieldUpdateOperationsInput | string
+  issueDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  sellerName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  sellerAddress?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  sellerPhone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  sellerLogoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  sellerIban?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -455,9 +695,21 @@ export type InvoiceCountOrderByAggregateInput = {
   buyerLastName?: Prisma.SortOrder
   buyerNationalId?: Prisma.SortOrder
   buyerAddress?: Prisma.SortOrder
+  buyerPhone?: Prisma.SortOrder
   customerId?: Prisma.SortOrder
   notes?: Prisma.SortOrder
   total?: Prisma.SortOrder
+  subtotal?: Prisma.SortOrder
+  discount?: Prisma.SortOrder
+  paidAmount?: Prisma.SortOrder
+  settlement?: Prisma.SortOrder
+  currency?: Prisma.SortOrder
+  issueDate?: Prisma.SortOrder
+  sellerName?: Prisma.SortOrder
+  sellerAddress?: Prisma.SortOrder
+  sellerPhone?: Prisma.SortOrder
+  sellerLogoUrl?: Prisma.SortOrder
+  sellerIban?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
 }
 
@@ -465,6 +717,9 @@ export type InvoiceAvgOrderByAggregateInput = {
   id?: Prisma.SortOrder
   customerId?: Prisma.SortOrder
   total?: Prisma.SortOrder
+  subtotal?: Prisma.SortOrder
+  discount?: Prisma.SortOrder
+  paidAmount?: Prisma.SortOrder
 }
 
 export type InvoiceMaxOrderByAggregateInput = {
@@ -474,9 +729,21 @@ export type InvoiceMaxOrderByAggregateInput = {
   buyerLastName?: Prisma.SortOrder
   buyerNationalId?: Prisma.SortOrder
   buyerAddress?: Prisma.SortOrder
+  buyerPhone?: Prisma.SortOrder
   customerId?: Prisma.SortOrder
   notes?: Prisma.SortOrder
   total?: Prisma.SortOrder
+  subtotal?: Prisma.SortOrder
+  discount?: Prisma.SortOrder
+  paidAmount?: Prisma.SortOrder
+  settlement?: Prisma.SortOrder
+  currency?: Prisma.SortOrder
+  issueDate?: Prisma.SortOrder
+  sellerName?: Prisma.SortOrder
+  sellerAddress?: Prisma.SortOrder
+  sellerPhone?: Prisma.SortOrder
+  sellerLogoUrl?: Prisma.SortOrder
+  sellerIban?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
 }
 
@@ -487,9 +754,21 @@ export type InvoiceMinOrderByAggregateInput = {
   buyerLastName?: Prisma.SortOrder
   buyerNationalId?: Prisma.SortOrder
   buyerAddress?: Prisma.SortOrder
+  buyerPhone?: Prisma.SortOrder
   customerId?: Prisma.SortOrder
   notes?: Prisma.SortOrder
   total?: Prisma.SortOrder
+  subtotal?: Prisma.SortOrder
+  discount?: Prisma.SortOrder
+  paidAmount?: Prisma.SortOrder
+  settlement?: Prisma.SortOrder
+  currency?: Prisma.SortOrder
+  issueDate?: Prisma.SortOrder
+  sellerName?: Prisma.SortOrder
+  sellerAddress?: Prisma.SortOrder
+  sellerPhone?: Prisma.SortOrder
+  sellerLogoUrl?: Prisma.SortOrder
+  sellerIban?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
 }
 
@@ -497,6 +776,9 @@ export type InvoiceSumOrderByAggregateInput = {
   id?: Prisma.SortOrder
   customerId?: Prisma.SortOrder
   total?: Prisma.SortOrder
+  subtotal?: Prisma.SortOrder
+  discount?: Prisma.SortOrder
+  paidAmount?: Prisma.SortOrder
 }
 
 export type InvoiceScalarRelationFilter = {
@@ -577,13 +859,25 @@ export type InvoiceUpdateOneRequiredWithoutItemsNestedInput = {
 }
 
 export type InvoiceCreateWithoutCustomerInput = {
-  number: string
+  number?: string
   buyerFirstName?: string | null
   buyerLastName?: string | null
   buyerNationalId?: string | null
   buyerAddress?: string | null
+  buyerPhone?: string | null
   notes?: string | null
   total: number
+  subtotal?: number
+  discount?: number
+  paidAmount?: number
+  settlement?: string
+  currency?: string
+  issueDate?: Date | string
+  sellerName?: string | null
+  sellerAddress?: string | null
+  sellerPhone?: string | null
+  sellerLogoUrl?: string | null
+  sellerIban?: string | null
   createdAt?: Date | string
   items?: Prisma.InvoiceItemCreateNestedManyWithoutInvoiceInput
   transactions?: Prisma.InventoryTransactionCreateNestedManyWithoutInvoiceInput
@@ -591,13 +885,25 @@ export type InvoiceCreateWithoutCustomerInput = {
 
 export type InvoiceUncheckedCreateWithoutCustomerInput = {
   id?: number
-  number: string
+  number?: string
   buyerFirstName?: string | null
   buyerLastName?: string | null
   buyerNationalId?: string | null
   buyerAddress?: string | null
+  buyerPhone?: string | null
   notes?: string | null
   total: number
+  subtotal?: number
+  discount?: number
+  paidAmount?: number
+  settlement?: string
+  currency?: string
+  issueDate?: Date | string
+  sellerName?: string | null
+  sellerAddress?: string | null
+  sellerPhone?: string | null
+  sellerLogoUrl?: string | null
+  sellerIban?: string | null
   createdAt?: Date | string
   items?: Prisma.InvoiceItemUncheckedCreateNestedManyWithoutInvoiceInput
   transactions?: Prisma.InventoryTransactionUncheckedCreateNestedManyWithoutInvoiceInput
@@ -639,20 +945,44 @@ export type InvoiceScalarWhereInput = {
   buyerLastName?: Prisma.StringNullableFilter<"Invoice"> | string | null
   buyerNationalId?: Prisma.StringNullableFilter<"Invoice"> | string | null
   buyerAddress?: Prisma.StringNullableFilter<"Invoice"> | string | null
+  buyerPhone?: Prisma.StringNullableFilter<"Invoice"> | string | null
   customerId?: Prisma.IntNullableFilter<"Invoice"> | number | null
   notes?: Prisma.StringNullableFilter<"Invoice"> | string | null
   total?: Prisma.IntFilter<"Invoice"> | number
+  subtotal?: Prisma.IntFilter<"Invoice"> | number
+  discount?: Prisma.IntFilter<"Invoice"> | number
+  paidAmount?: Prisma.IntFilter<"Invoice"> | number
+  settlement?: Prisma.StringFilter<"Invoice"> | string
+  currency?: Prisma.StringFilter<"Invoice"> | string
+  issueDate?: Prisma.DateTimeFilter<"Invoice"> | Date | string
+  sellerName?: Prisma.StringNullableFilter<"Invoice"> | string | null
+  sellerAddress?: Prisma.StringNullableFilter<"Invoice"> | string | null
+  sellerPhone?: Prisma.StringNullableFilter<"Invoice"> | string | null
+  sellerLogoUrl?: Prisma.StringNullableFilter<"Invoice"> | string | null
+  sellerIban?: Prisma.StringNullableFilter<"Invoice"> | string | null
   createdAt?: Prisma.DateTimeFilter<"Invoice"> | Date | string
 }
 
 export type InvoiceCreateWithoutTransactionsInput = {
-  number: string
+  number?: string
   buyerFirstName?: string | null
   buyerLastName?: string | null
   buyerNationalId?: string | null
   buyerAddress?: string | null
+  buyerPhone?: string | null
   notes?: string | null
   total: number
+  subtotal?: number
+  discount?: number
+  paidAmount?: number
+  settlement?: string
+  currency?: string
+  issueDate?: Date | string
+  sellerName?: string | null
+  sellerAddress?: string | null
+  sellerPhone?: string | null
+  sellerLogoUrl?: string | null
+  sellerIban?: string | null
   createdAt?: Date | string
   customer?: Prisma.BuyerCreateNestedOneWithoutInvoicesInput
   items?: Prisma.InvoiceItemCreateNestedManyWithoutInvoiceInput
@@ -660,14 +990,26 @@ export type InvoiceCreateWithoutTransactionsInput = {
 
 export type InvoiceUncheckedCreateWithoutTransactionsInput = {
   id?: number
-  number: string
+  number?: string
   buyerFirstName?: string | null
   buyerLastName?: string | null
   buyerNationalId?: string | null
   buyerAddress?: string | null
+  buyerPhone?: string | null
   customerId?: number | null
   notes?: string | null
   total: number
+  subtotal?: number
+  discount?: number
+  paidAmount?: number
+  settlement?: string
+  currency?: string
+  issueDate?: Date | string
+  sellerName?: string | null
+  sellerAddress?: string | null
+  sellerPhone?: string | null
+  sellerLogoUrl?: string | null
+  sellerIban?: string | null
   createdAt?: Date | string
   items?: Prisma.InvoiceItemUncheckedCreateNestedManyWithoutInvoiceInput
 }
@@ -694,8 +1036,20 @@ export type InvoiceUpdateWithoutTransactionsInput = {
   buyerLastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   buyerNationalId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   buyerAddress?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  buyerPhone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   total?: Prisma.IntFieldUpdateOperationsInput | number
+  subtotal?: Prisma.IntFieldUpdateOperationsInput | number
+  discount?: Prisma.IntFieldUpdateOperationsInput | number
+  paidAmount?: Prisma.IntFieldUpdateOperationsInput | number
+  settlement?: Prisma.StringFieldUpdateOperationsInput | string
+  currency?: Prisma.StringFieldUpdateOperationsInput | string
+  issueDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  sellerName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  sellerAddress?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  sellerPhone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  sellerLogoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  sellerIban?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   customer?: Prisma.BuyerUpdateOneWithoutInvoicesNestedInput
   items?: Prisma.InvoiceItemUpdateManyWithoutInvoiceNestedInput
@@ -708,21 +1062,45 @@ export type InvoiceUncheckedUpdateWithoutTransactionsInput = {
   buyerLastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   buyerNationalId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   buyerAddress?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  buyerPhone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   customerId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   total?: Prisma.IntFieldUpdateOperationsInput | number
+  subtotal?: Prisma.IntFieldUpdateOperationsInput | number
+  discount?: Prisma.IntFieldUpdateOperationsInput | number
+  paidAmount?: Prisma.IntFieldUpdateOperationsInput | number
+  settlement?: Prisma.StringFieldUpdateOperationsInput | string
+  currency?: Prisma.StringFieldUpdateOperationsInput | string
+  issueDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  sellerName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  sellerAddress?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  sellerPhone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  sellerLogoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  sellerIban?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   items?: Prisma.InvoiceItemUncheckedUpdateManyWithoutInvoiceNestedInput
 }
 
 export type InvoiceCreateWithoutItemsInput = {
-  number: string
+  number?: string
   buyerFirstName?: string | null
   buyerLastName?: string | null
   buyerNationalId?: string | null
   buyerAddress?: string | null
+  buyerPhone?: string | null
   notes?: string | null
   total: number
+  subtotal?: number
+  discount?: number
+  paidAmount?: number
+  settlement?: string
+  currency?: string
+  issueDate?: Date | string
+  sellerName?: string | null
+  sellerAddress?: string | null
+  sellerPhone?: string | null
+  sellerLogoUrl?: string | null
+  sellerIban?: string | null
   createdAt?: Date | string
   customer?: Prisma.BuyerCreateNestedOneWithoutInvoicesInput
   transactions?: Prisma.InventoryTransactionCreateNestedManyWithoutInvoiceInput
@@ -730,14 +1108,26 @@ export type InvoiceCreateWithoutItemsInput = {
 
 export type InvoiceUncheckedCreateWithoutItemsInput = {
   id?: number
-  number: string
+  number?: string
   buyerFirstName?: string | null
   buyerLastName?: string | null
   buyerNationalId?: string | null
   buyerAddress?: string | null
+  buyerPhone?: string | null
   customerId?: number | null
   notes?: string | null
   total: number
+  subtotal?: number
+  discount?: number
+  paidAmount?: number
+  settlement?: string
+  currency?: string
+  issueDate?: Date | string
+  sellerName?: string | null
+  sellerAddress?: string | null
+  sellerPhone?: string | null
+  sellerLogoUrl?: string | null
+  sellerIban?: string | null
   createdAt?: Date | string
   transactions?: Prisma.InventoryTransactionUncheckedCreateNestedManyWithoutInvoiceInput
 }
@@ -764,8 +1154,20 @@ export type InvoiceUpdateWithoutItemsInput = {
   buyerLastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   buyerNationalId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   buyerAddress?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  buyerPhone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   total?: Prisma.IntFieldUpdateOperationsInput | number
+  subtotal?: Prisma.IntFieldUpdateOperationsInput | number
+  discount?: Prisma.IntFieldUpdateOperationsInput | number
+  paidAmount?: Prisma.IntFieldUpdateOperationsInput | number
+  settlement?: Prisma.StringFieldUpdateOperationsInput | string
+  currency?: Prisma.StringFieldUpdateOperationsInput | string
+  issueDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  sellerName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  sellerAddress?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  sellerPhone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  sellerLogoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  sellerIban?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   customer?: Prisma.BuyerUpdateOneWithoutInvoicesNestedInput
   transactions?: Prisma.InventoryTransactionUpdateManyWithoutInvoiceNestedInput
@@ -778,22 +1180,46 @@ export type InvoiceUncheckedUpdateWithoutItemsInput = {
   buyerLastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   buyerNationalId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   buyerAddress?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  buyerPhone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   customerId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   total?: Prisma.IntFieldUpdateOperationsInput | number
+  subtotal?: Prisma.IntFieldUpdateOperationsInput | number
+  discount?: Prisma.IntFieldUpdateOperationsInput | number
+  paidAmount?: Prisma.IntFieldUpdateOperationsInput | number
+  settlement?: Prisma.StringFieldUpdateOperationsInput | string
+  currency?: Prisma.StringFieldUpdateOperationsInput | string
+  issueDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  sellerName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  sellerAddress?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  sellerPhone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  sellerLogoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  sellerIban?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   transactions?: Prisma.InventoryTransactionUncheckedUpdateManyWithoutInvoiceNestedInput
 }
 
 export type InvoiceCreateManyCustomerInput = {
   id?: number
-  number: string
+  number?: string
   buyerFirstName?: string | null
   buyerLastName?: string | null
   buyerNationalId?: string | null
   buyerAddress?: string | null
+  buyerPhone?: string | null
   notes?: string | null
   total: number
+  subtotal?: number
+  discount?: number
+  paidAmount?: number
+  settlement?: string
+  currency?: string
+  issueDate?: Date | string
+  sellerName?: string | null
+  sellerAddress?: string | null
+  sellerPhone?: string | null
+  sellerLogoUrl?: string | null
+  sellerIban?: string | null
   createdAt?: Date | string
 }
 
@@ -803,8 +1229,20 @@ export type InvoiceUpdateWithoutCustomerInput = {
   buyerLastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   buyerNationalId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   buyerAddress?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  buyerPhone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   total?: Prisma.IntFieldUpdateOperationsInput | number
+  subtotal?: Prisma.IntFieldUpdateOperationsInput | number
+  discount?: Prisma.IntFieldUpdateOperationsInput | number
+  paidAmount?: Prisma.IntFieldUpdateOperationsInput | number
+  settlement?: Prisma.StringFieldUpdateOperationsInput | string
+  currency?: Prisma.StringFieldUpdateOperationsInput | string
+  issueDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  sellerName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  sellerAddress?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  sellerPhone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  sellerLogoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  sellerIban?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   items?: Prisma.InvoiceItemUpdateManyWithoutInvoiceNestedInput
   transactions?: Prisma.InventoryTransactionUpdateManyWithoutInvoiceNestedInput
@@ -817,8 +1255,20 @@ export type InvoiceUncheckedUpdateWithoutCustomerInput = {
   buyerLastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   buyerNationalId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   buyerAddress?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  buyerPhone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   total?: Prisma.IntFieldUpdateOperationsInput | number
+  subtotal?: Prisma.IntFieldUpdateOperationsInput | number
+  discount?: Prisma.IntFieldUpdateOperationsInput | number
+  paidAmount?: Prisma.IntFieldUpdateOperationsInput | number
+  settlement?: Prisma.StringFieldUpdateOperationsInput | string
+  currency?: Prisma.StringFieldUpdateOperationsInput | string
+  issueDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  sellerName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  sellerAddress?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  sellerPhone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  sellerLogoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  sellerIban?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   items?: Prisma.InvoiceItemUncheckedUpdateManyWithoutInvoiceNestedInput
   transactions?: Prisma.InventoryTransactionUncheckedUpdateManyWithoutInvoiceNestedInput
@@ -831,8 +1281,20 @@ export type InvoiceUncheckedUpdateManyWithoutCustomerInput = {
   buyerLastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   buyerNationalId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   buyerAddress?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  buyerPhone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   total?: Prisma.IntFieldUpdateOperationsInput | number
+  subtotal?: Prisma.IntFieldUpdateOperationsInput | number
+  discount?: Prisma.IntFieldUpdateOperationsInput | number
+  paidAmount?: Prisma.IntFieldUpdateOperationsInput | number
+  settlement?: Prisma.StringFieldUpdateOperationsInput | string
+  currency?: Prisma.StringFieldUpdateOperationsInput | string
+  issueDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  sellerName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  sellerAddress?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  sellerPhone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  sellerLogoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  sellerIban?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -883,9 +1345,21 @@ export type InvoiceSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs 
   buyerLastName?: boolean
   buyerNationalId?: boolean
   buyerAddress?: boolean
+  buyerPhone?: boolean
   customerId?: boolean
   notes?: boolean
   total?: boolean
+  subtotal?: boolean
+  discount?: boolean
+  paidAmount?: boolean
+  settlement?: boolean
+  currency?: boolean
+  issueDate?: boolean
+  sellerName?: boolean
+  sellerAddress?: boolean
+  sellerPhone?: boolean
+  sellerLogoUrl?: boolean
+  sellerIban?: boolean
   createdAt?: boolean
   customer?: boolean | Prisma.Invoice$customerArgs<ExtArgs>
   items?: boolean | Prisma.Invoice$itemsArgs<ExtArgs>
@@ -900,9 +1374,21 @@ export type InvoiceSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Exten
   buyerLastName?: boolean
   buyerNationalId?: boolean
   buyerAddress?: boolean
+  buyerPhone?: boolean
   customerId?: boolean
   notes?: boolean
   total?: boolean
+  subtotal?: boolean
+  discount?: boolean
+  paidAmount?: boolean
+  settlement?: boolean
+  currency?: boolean
+  issueDate?: boolean
+  sellerName?: boolean
+  sellerAddress?: boolean
+  sellerPhone?: boolean
+  sellerLogoUrl?: boolean
+  sellerIban?: boolean
   createdAt?: boolean
   customer?: boolean | Prisma.Invoice$customerArgs<ExtArgs>
 }, ExtArgs["result"]["invoice"]>
@@ -914,9 +1400,21 @@ export type InvoiceSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Exten
   buyerLastName?: boolean
   buyerNationalId?: boolean
   buyerAddress?: boolean
+  buyerPhone?: boolean
   customerId?: boolean
   notes?: boolean
   total?: boolean
+  subtotal?: boolean
+  discount?: boolean
+  paidAmount?: boolean
+  settlement?: boolean
+  currency?: boolean
+  issueDate?: boolean
+  sellerName?: boolean
+  sellerAddress?: boolean
+  sellerPhone?: boolean
+  sellerLogoUrl?: boolean
+  sellerIban?: boolean
   createdAt?: boolean
   customer?: boolean | Prisma.Invoice$customerArgs<ExtArgs>
 }, ExtArgs["result"]["invoice"]>
@@ -928,13 +1426,25 @@ export type InvoiceSelectScalar = {
   buyerLastName?: boolean
   buyerNationalId?: boolean
   buyerAddress?: boolean
+  buyerPhone?: boolean
   customerId?: boolean
   notes?: boolean
   total?: boolean
+  subtotal?: boolean
+  discount?: boolean
+  paidAmount?: boolean
+  settlement?: boolean
+  currency?: boolean
+  issueDate?: boolean
+  sellerName?: boolean
+  sellerAddress?: boolean
+  sellerPhone?: boolean
+  sellerLogoUrl?: boolean
+  sellerIban?: boolean
   createdAt?: boolean
 }
 
-export type InvoiceOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "number" | "buyerFirstName" | "buyerLastName" | "buyerNationalId" | "buyerAddress" | "customerId" | "notes" | "total" | "createdAt", ExtArgs["result"]["invoice"]>
+export type InvoiceOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "number" | "buyerFirstName" | "buyerLastName" | "buyerNationalId" | "buyerAddress" | "buyerPhone" | "customerId" | "notes" | "total" | "subtotal" | "discount" | "paidAmount" | "settlement" | "currency" | "issueDate" | "sellerName" | "sellerAddress" | "sellerPhone" | "sellerLogoUrl" | "sellerIban" | "createdAt", ExtArgs["result"]["invoice"]>
 export type InvoiceInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   customer?: boolean | Prisma.Invoice$customerArgs<ExtArgs>
   items?: boolean | Prisma.Invoice$itemsArgs<ExtArgs>
@@ -962,9 +1472,21 @@ export type $InvoicePayload<ExtArgs extends runtime.Types.Extensions.InternalArg
     buyerLastName: string | null
     buyerNationalId: string | null
     buyerAddress: string | null
+    buyerPhone: string | null
     customerId: number | null
     notes: string | null
     total: number
+    subtotal: number
+    discount: number
+    paidAmount: number
+    settlement: string
+    currency: string
+    issueDate: Date
+    sellerName: string | null
+    sellerAddress: string | null
+    sellerPhone: string | null
+    sellerLogoUrl: string | null
+    sellerIban: string | null
     createdAt: Date
   }, ExtArgs["result"]["invoice"]>
   composites: {}
@@ -1398,9 +1920,21 @@ export interface InvoiceFieldRefs {
   readonly buyerLastName: Prisma.FieldRef<"Invoice", 'String'>
   readonly buyerNationalId: Prisma.FieldRef<"Invoice", 'String'>
   readonly buyerAddress: Prisma.FieldRef<"Invoice", 'String'>
+  readonly buyerPhone: Prisma.FieldRef<"Invoice", 'String'>
   readonly customerId: Prisma.FieldRef<"Invoice", 'Int'>
   readonly notes: Prisma.FieldRef<"Invoice", 'String'>
   readonly total: Prisma.FieldRef<"Invoice", 'Int'>
+  readonly subtotal: Prisma.FieldRef<"Invoice", 'Int'>
+  readonly discount: Prisma.FieldRef<"Invoice", 'Int'>
+  readonly paidAmount: Prisma.FieldRef<"Invoice", 'Int'>
+  readonly settlement: Prisma.FieldRef<"Invoice", 'String'>
+  readonly currency: Prisma.FieldRef<"Invoice", 'String'>
+  readonly issueDate: Prisma.FieldRef<"Invoice", 'DateTime'>
+  readonly sellerName: Prisma.FieldRef<"Invoice", 'String'>
+  readonly sellerAddress: Prisma.FieldRef<"Invoice", 'String'>
+  readonly sellerPhone: Prisma.FieldRef<"Invoice", 'String'>
+  readonly sellerLogoUrl: Prisma.FieldRef<"Invoice", 'String'>
+  readonly sellerIban: Prisma.FieldRef<"Invoice", 'String'>
   readonly createdAt: Prisma.FieldRef<"Invoice", 'DateTime'>
 }
     

@@ -75,11 +75,9 @@
             /></label>
             <label class="form-field"
               ><span>قیمت خرید واحد <small>اختیاری · تومان</small></span
-              ><input
-                v-model="priceText"
-                inputmode="numeric"
-                placeholder="قیمت فعلی حفظ شود"
-              /><small>با وارد کردن مبلغ، قیمت خرید کالا به‌روز می‌شود.</small></label
+              ><MoneyInput v-model="priceText" placeholder="قیمت فعلی حفظ شود" /><small
+                >با وارد کردن مبلغ، قیمت خرید کالا به‌روز می‌شود.</small
+              ></label
             >
             <label class="form-field"
               ><span>تاریخ <small>اختیاری</small></span
@@ -183,7 +181,15 @@
                 {{ movement.type === 'SALE' ? '−' : '+' }} {{ number(movement.quantity) }}
                 {{ movement.product.unit }}
               </td>
-              <td class="number-cell">{{ money(movement.unitPrice) }}</td>
+              <td class="number-cell">
+                {{
+                  money(
+                    movement.unitPrice == null
+                      ? null
+                      : movement.unitPrice / (movement.currency === 'IRR' ? 10 : 1),
+                  )
+                }}
+              </td>
               <td class="number-cell">{{ date(movement.createdAt) }}</td>
               <td class="movement-note">
                 {{ movement.invoice?.number || movement.description || '—' }}
@@ -204,6 +210,7 @@ import EmptyState from '@/components/ui/EmptyState.vue'
 import Button from '@/components/ui/Button.vue'
 import { toast } from '@/lib/toast'
 import { date, money, number, parseNumber } from '@/lib/format'
+import MoneyInput from '@/components/ui/MoneyInput.vue'
 import { productsApi } from '@/services/products'
 import { inventoryApi } from '@/services/inventory'
 import type { InventoryMovement, Invoice, Product } from '@/types'

@@ -1210,7 +1210,8 @@ export const InventoryTransactionScalarFieldEnum = {
   unitPrice: 'unitPrice',
   description: 'description',
   invoiceId: 'invoiceId',
-  createdAt: 'createdAt'
+  createdAt: 'createdAt',
+  currency: 'currency'
 } as const
 
 export type InventoryTransactionScalarFieldEnum = (typeof InventoryTransactionScalarFieldEnum)[keyof typeof InventoryTransactionScalarFieldEnum]
@@ -1223,9 +1224,21 @@ export const InvoiceScalarFieldEnum = {
   buyerLastName: 'buyerLastName',
   buyerNationalId: 'buyerNationalId',
   buyerAddress: 'buyerAddress',
+  buyerPhone: 'buyerPhone',
   customerId: 'customerId',
   notes: 'notes',
   total: 'total',
+  subtotal: 'subtotal',
+  discount: 'discount',
+  paidAmount: 'paidAmount',
+  settlement: 'settlement',
+  currency: 'currency',
+  issueDate: 'issueDate',
+  sellerName: 'sellerName',
+  sellerAddress: 'sellerAddress',
+  sellerPhone: 'sellerPhone',
+  sellerLogoUrl: 'sellerLogoUrl',
+  sellerIban: 'sellerIban',
   createdAt: 'createdAt'
 } as const
 
@@ -1252,6 +1265,8 @@ export const StoreSettingsScalarFieldEnum = {
   address: 'address',
   phone: 'phone',
   logoUrl: 'logoUrl',
+  iban: 'iban',
+  defaultInvoiceNotes: 'defaultInvoiceNotes',
   updatedAt: 'updatedAt'
 } as const
 

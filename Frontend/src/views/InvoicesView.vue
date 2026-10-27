@@ -25,60 +25,35 @@
       class="panel invoice-editor no-print"
       :aria-busy="saving"
     >
-      <header class="editor-heading">
-        <div>
-          <h1>
-            {{ editingInvoiceId ? 'ویرایش فاکتور ' + editingInvoiceNumber : 'فاکتور فروش جدید' }}
-          </h1>
-          <small class="muted">{{
-            editingInvoiceId
-              ? 'تغییرات پس از ذخیره اعمال می‌شوند.'
-              : 'شماره پس از ثبت · همه مبالغ به ریال'
-          }}</small>
-        </div>
-        <PersianDatePicker v-model="issueDate" :disabled="saving" />
-      </header>
-      <div class="editor-parties">
-        <div class="seller-inline">
-          <span class="muted">فروشنده</span><b>{{ settings?.name }}</b
-          ><button
-            class="icon-button"
-            aria-label="ویرایش مشخصات فروشگاه"
-            @click="settingsOpen = true"
-          >
-            <Pencil :size="16" /></button
-          ><small class="muted">{{ settings?.phone }} {{ settings?.address }}</small>
-        </div>
-        <div class="buyer-inline">
+      <header class="editor-toolbar">
+        <div class="editor-buyer">
           <SearchSelect
             v-model="selectedBuyerId"
             :options="buyerOptions"
             label="خریدار"
             placeholder="انتخاب خریدار"
             create-label="طرف حساب جدید"
+            :disabled="saving"
             @create="openBuyer()"
           />
-          <button
-            v-if="selectedBuyer"
-            class="icon-button"
-            aria-label="ویرایش خریدار"
-            @click="openBuyer(selectedBuyer)"
-          >
-            <Pencil :size="16" />
-          </button>
-          <button
-            v-if="selectedBuyer"
-            class="icon-button icon-button--delete"
-            aria-label="حذف خریدار"
-            @click="buyerToDelete = selectedBuyer"
-          >
-            <Trash2 :size="16" />
-          </button>
-          <small v-if="selectedBuyer" class="muted"
-            >{{ selectedBuyer.phone }} {{ selectedBuyer.address }}</small
-          >
         </div>
-      </div>
+        <h1 class="editor-title">
+          {{ editingInvoiceId ? 'ویرایش فاکتور ' + editingInvoiceNumber : 'فاکتور جدید' }}
+        </h1>
+        <div class="editor-tools">
+          <PersianDatePicker v-model="issueDate" :disabled="saving" />
+          <button
+            type="button"
+            class="icon-button store-settings-button"
+            aria-label="تغییر اطلاعات فروشگاه"
+            title="تغییر اطلاعات فروشگاه"
+            :disabled="saving"
+            @click="settingsOpen = true"
+          >
+            <Store :size="17" />
+          </button>
+        </div>
+      </header>
       <div
         ref="linesRegion"
         class="invoice-lines-scroll"
@@ -122,10 +97,9 @@
                 <b :title="line.name">{{ line.name }}</b>
               </td>
               <td>
-                <input
-                  v-model.number="line.quantity"
+                <NumberInput
+                  v-model="line.quantity"
                   :data-product-id="line.productId"
-                  type="number"
                   min="1"
                   :max="stockOf(line.productId)"
                   step="1"
@@ -173,56 +147,77 @@
         </table>
       </div>
       <div class="editor-bottom">
-        <div class="financial-fields">
+        <div class="invoice-details">
+          <fieldset class="settlement" :disabled="saving">
+            <legend>روش تسویه</legend>
+            <div class="settlement-options">
+              <label :class="{ selected: settlement === 'CASH' }">
+                <input v-model="settlement" type="radio" value="CASH" />
+                <span>نقدی</span>
+              </label>
+              <label :class="{ selected: settlement === 'INSTALLMENT' }">
+                <input v-model="settlement" type="radio" value="INSTALLMENT" />
+                <span>اقساطی</span>
+              </label>
+            </div>
+          </fieldset>
+          <label class="form-field invoice-notes">
+            <span>توضیحات فاکتور <small>اختیاری</small></span>
+            <textarea
+              v-model="notes"
+              rows="2"
+              maxlength="600"
+              placeholder="توضیحات یا شرایط توافق‌شده با خریدار…"
+              :disabled="saving"
+              @input="notesTouched = true"
+            />
+          </label>
+        </div>
+        <section class="invoice-summary" aria-label="خلاصه مبالغ فاکتور">
           <div class="subtotal">
-            <span>جمع اقلام</span><b>{{ rial(draftSubtotal) }}</b>
+            <span
+              >جمع اقلام <small>{{ number(draft.length) }} قلم کالا</small></span
+            >
+            <b>{{ rial(draftSubtotal) }}</b>
           </div>
-          <label class="form-field"
-            ><span>تخفیف · ریال <small>اختیاری</small></span
-            ><MoneyInput
+          <label class="discount-field">
+            <span>تخفیف <small>ریال · اختیاری</small></span>
+            <MoneyInput
               v-model="discountText"
               :disabled="saving"
               aria-label="تخفیف فاکتور به ریال"
               placeholder="۰"
-          /></label>
-        </div>
-        <div class="grand-total">
-          <span
-            >جمع کل فاکتور <strong>{{ rial(draftTotal) }}</strong></span
-          ><small>{{ amountInWords(draftTotal) }}</small>
-        </div>
-        <fieldset class="settlement">
-          <legend>شرایط تسویه‌حساب</legend>
-          <label
-            ><input v-model="settlement" type="radio" value="CASH" :disabled="saving" /> نقدی</label
-          ><label
-            ><input v-model="settlement" type="radio" value="INSTALLMENT" :disabled="saving" />
-            اقساطی</label
-          >
-        </fieldset>
-        <label class="form-field invoice-notes"
-          ><span>توضیحات</span
-          ><textarea
-            v-model="notes"
-            rows="1"
-            maxlength="600"
-            :disabled="saving"
-            @input="notesTouched = true"
-          />
-        </label>
-        <div class="editor-actions">
-          <Button :disabled="saving || !draft.length || !selectedBuyer || !!loadError" @click="save"
-            ><Check :size="17" />{{
-              saving ? 'در حال ذخیره…' : editingInvoiceId ? 'ذخیره تغییرات' : 'ثبت فاکتور'
-            }}</Button
-          >
-          <Button variant="outline" :disabled="saving || !draft.length" @click="printDraft"
-            ><Printer :size="17" />پیش‌نمایش</Button
-          >
-          <Button v-if="editingInvoiceId" variant="ghost" :disabled="saving" @click="cancelEdit"
-            >انصراف از ویرایش</Button
-          >
-          <small class="muted">با ثبت فاکتور، موجودی کالاها به‌روز می‌شود.</small>
+            />
+          </label>
+          <div class="grand-total">
+            <div>
+              <span>مبلغ نهایی</span><strong>{{ rial(draftTotal) }}</strong>
+            </div>
+            <small>{{ amountInWords(draftTotal) }}</small>
+          </div>
+        </section>
+        <div class="editor-footer">
+          <p :id="saveHintId" class="editor-save-hint">
+            <template v-if="!draft.length">برای ثبت فاکتور، ابتدا کالا اضافه کنید.</template>
+            <template v-else-if="!selectedBuyer">برای ثبت فاکتور، خریدار را انتخاب کنید.</template>
+            <template v-else>با ذخیره فاکتور، موجودی کالاها به‌روز می‌شود.</template>
+          </p>
+          <div class="editor-actions">
+            <Button
+              :disabled="saving || !draft.length || !selectedBuyer || !!loadError"
+              :aria-describedby="saveHintId"
+              @click="save"
+              ><Check :size="17" />{{
+                saving ? 'در حال ذخیره…' : editingInvoiceId ? 'ذخیره تغییرات' : 'ثبت فاکتور'
+              }}</Button
+            >
+            <Button variant="outline" :disabled="saving || !draft.length" @click="printDraft"
+              ><Printer :size="17" />پیش‌نمایش</Button
+            >
+            <Button v-if="editingInvoiceId" variant="ghost" :disabled="saving" @click="cancelEdit"
+              >انصراف از ویرایش</Button
+            >
+          </div>
         </div>
       </div>
     </section>
@@ -348,23 +343,6 @@
       </form></AppDialog
     >
     <AppDialog
-      :open="!!buyerToDelete"
-      title="حذف خریدار"
-      width="440px"
-      @update:open="!$event && (buyerToDelete = null)"
-      ><p>
-        خریدار «{{ buyerToDelete?.firstName }} {{ buyerToDelete?.lastName }}» حذف شود؟ اطلاعات
-        فاکتورهای قبلی باقی می‌ماند.
-      </p>
-
-      <DialogActions>
-        <Button variant="outline" @click="buyerToDelete = null">انصراف</Button
-        ><Button variant="destructive" :disabled="buyerSaving" @click="deleteBuyer"
-          >تأیید حذف</Button
-        >
-      </DialogActions></AppDialog
-    >
-    <AppDialog
       :open="settingsOpen"
       @update:open="!settingsSaving && (settingsOpen = $event)"
       title="اطلاعات فروشگاه"
@@ -418,7 +396,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, reactive, ref, useId } from 'vue'
 import { onBeforeRouteLeave } from 'vue-router'
-import { Check, Pencil, Plus, Printer, Search, Trash2 } from '@lucide/vue'
+import { Check, Pencil, Plus, Printer, Search, Store, Trash2 } from '@lucide/vue'
 import EmptyState from '@/components/ui/EmptyState.vue'
 import Button from '@/components/ui/Button.vue'
 import DialogActions from '@/components/ui/DialogActions.vue'
@@ -429,12 +407,14 @@ import InvoicePaper from '@/components/InvoicePaper.vue'
 import { toast } from '@/lib/toast'
 import { date, number, parseNumber } from '@/lib/format'
 import MoneyInput from '@/components/ui/MoneyInput.vue'
+import NumberInput from '@/components/ui/NumberInput.vue'
 import { validateInvoiceLines } from '@/lib/invoice'
 import { amountInWords, invoiceInRials, rial } from '@/lib/invoicePresentation'
 import { todayInTehran } from '@/lib/persianDate'
 import { productsApi } from '@/services/products'
 import { inventoryApi } from '@/services/inventory'
 import type { Buyer, Invoice, InvoiceItem, Product, StoreSettings } from '@/types'
+const saveHintId = useId()
 const buyerFormId = useId()
 const settingsFormId = useId()
 type DraftLine = InvoiceItem & { priceText: string }
@@ -467,8 +447,7 @@ const archiveLoading = ref(false),
   paperSection = ref<HTMLElement>()
 const buyerOpen = ref(false),
   buyerSaving = ref(false),
-  editingBuyerId = ref<number | null>(null),
-  buyerToDelete = ref<Buyer | null>(null)
+  editingBuyerId = ref<number | null>(null)
 const settingsOpen = ref(false),
   settingsSaving = ref(false)
 const buyerForm = reactive({
@@ -819,23 +798,6 @@ async function saveBuyer() {
     buyerSaving.value = false
   }
 }
-async function deleteBuyer() {
-  if (!buyerToDelete.value || buyerSaving.value) return
-  buyerSaving.value = true
-
-  try {
-    const id = buyerToDelete.value.id
-    await inventoryApi.deleteBuyer(id)
-    buyers.value = buyers.value.filter((b) => b.id !== id)
-    if (selectedBuyerId.value === id) selectedBuyerId.value = undefined
-    buyerToDelete.value = null
-    toast.success('خریدار حذف شد.')
-  } catch (e) {
-    toast.error(e instanceof Error ? e.message : 'حذف خریدار انجام نشد.')
-  } finally {
-    buyerSaving.value = false
-  }
-}
 async function saveSettings() {
   if (settingsSaving.value) return
 
@@ -879,6 +841,7 @@ onMounted(load)
   font-size: 12px;
 }
 .invoice-editor {
+  container-type: inline-size;
   overflow: hidden;
   width: 100%;
   flex: 1 0 480px;
@@ -886,27 +849,52 @@ onMounted(load)
   display: flex;
   flex-direction: column;
 }
-.editor-heading {
+.editor-toolbar {
   flex-shrink: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+}
+.editor-title {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.6;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+.editor-buyer {
+  min-width: 0;
+  width: 100%;
+  max-width: 280px;
+}
+.editor-buyer :deep(.search-select-trigger) {
+  width: 100%;
+  min-width: 0;
+}
+.editor-buyer :deep(.search-select-trigger > span) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.editor-buyer :deep(.search-select-trigger > svg) {
+  flex-shrink: 0;
+}
+.editor-tools {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 8px 14px;
-  border-bottom: 1px solid var(--border);
+  justify-content: flex-end;
+  gap: 6px;
+  min-width: 0;
 }
-.editor-heading h1 {
-  margin: 0;
-  font-size: 16px;
-}
-.editor-heading > div {
-  display: flex;
-  align-items: baseline;
-  flex-wrap: wrap;
-  gap: 4px 10px;
-}
-.editor-heading small {
-  font-size: 10px;
+.store-settings-button {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  min-height: 32px;
+  padding: 6px;
+  color: var(--muted-foreground);
 }
 .invoice-editor :deep(.search-select-trigger),
 .invoice-editor :deep(.date-picker-trigger) {
@@ -914,40 +902,8 @@ onMounted(load)
   padding: 5px 10px 5px 16px;
   font-size: 12px;
 }
-.editor-parties {
-  flex-shrink: 0;
-  display: grid;
-  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
-  gap: 12px;
-  padding: 6px 14px;
-  border-bottom: 1px solid var(--border);
-}
-.seller-inline,
-.buyer-inline {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
-  min-width: 0;
-  font-size: 12px;
-}
-.editor-parties .icon-button {
-  width: 28px;
-  height: 28px;
-  min-height: 28px;
-  padding: 4px;
-}
-.seller-inline > small,
-.buyer-inline > small {
-  width: 100%;
-  font-size: 10px;
-  overflow: hidden;
-  text-overflow: ellipsis;
+.editor-tools :deep(.date-picker-trigger) {
   white-space: nowrap;
-}
-.buyer-inline > :first-child {
-  flex: 1;
-  min-width: 160px;
 }
 .invoice-lines-scroll {
   flex: 1;
@@ -1079,101 +1035,164 @@ onMounted(load)
 }
 .editor-bottom {
   flex-shrink: 0;
-  padding: 10px 14px;
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 8px 16px;
+  gap: 16px 24px;
+  padding: 16px;
 }
-.editor-bottom > .notice,
-.editor-bottom > .editor-actions {
-  grid-column: 1 / -1;
+.invoice-details {
+  display: grid;
+  align-content: start;
+  gap: 14px;
+  min-width: 0;
 }
 .editor-bottom .form-field {
-  gap: 3px;
+  gap: 6px;
 }
-.editor-bottom .form-field > span {
-  font-size: 11px;
+.editor-bottom .form-field > span,
+.settlement legend {
+  font-size: 12px;
+  font-weight: 500;
 }
 .editor-bottom input:not([type='radio']),
 .editor-bottom textarea {
-  min-height: 32px;
-  padding: 4px 8px;
+  min-height: 38px;
+  padding: 7px 10px;
   font-size: 12px;
-}
-.invoice-notes {
-  display: flex;
-  align-items: center;
 }
 .invoice-notes textarea {
-  flex: 1;
-  width: 0;
+  width: 100%;
+  min-height: 64px;
+  max-height: 160px;
+  resize: vertical;
 }
-.editor-actions :deep(.button) {
-  min-height: 34px;
-  padding: 6px 12px;
+.invoice-summary {
+  min-width: 0;
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--muted) 45%, var(--card));
   font-size: 12px;
 }
-.financial-fields {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  align-items: end;
+.subtotal,
+.discount-field,
+.grand-total > div {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   gap: 12px;
-  font-size: 11px;
 }
-.subtotal {
+.subtotal > span,
+.discount-field > span {
   display: grid;
-  gap: 4px;
-  align-self: center;
+  gap: 3px;
+  flex-shrink: 0;
 }
-.subtotal > span {
+.invoice-summary small {
+  font-size: 10px;
+  font-weight: 400;
   color: var(--muted-foreground);
 }
-.grand-total {
+.subtotal b,
+.grand-total strong {
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+  text-align: end;
+}
+.discount-field input {
+  width: 160px;
   min-width: 0;
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-start;
-  align-items: center;
-  gap: 8px;
-  background: var(--accent);
-  color: var(--accent-foreground);
-  padding: 7px 10px;
-  border-radius: 8px;
+  max-width: 55%;
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+}
+.grand-total {
+  display: grid;
+  gap: 6px;
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
+}
+.grand-total > div > span {
+  flex-shrink: 0;
+  font-weight: 600;
 }
 .grand-total strong {
-  margin-inline-start: 8px;
-  font-size: 16px;
+  font-size: 19px;
+  color: var(--primary);
 }
-.grand-total small {
-  font-size: 11px;
+.grand-total > small {
+  text-align: end;
+  line-height: 1.8;
+  overflow-wrap: anywhere;
 }
 .settlement {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 10px;
+  min-width: 0;
   padding: 0;
   margin: 0;
   border: 0;
-  font-size: 11px;
 }
 .settlement legend {
-  float: right;
-  margin-inline-end: 8px;
+  margin-bottom: 6px;
+  padding: 0;
+}
+.settlement-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
 }
 .settlement label {
   display: flex;
   align-items: center;
-  gap: 6px;
+  justify-content: center;
+  gap: 8px;
+  min-height: 38px;
+  padding: 7px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--card);
+  font-size: 12px;
+  cursor: pointer;
+}
+.settlement label.selected {
+  border-color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 8%, var(--card));
+}
+.settlement label:focus-within {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+.settlement:disabled label {
+  cursor: default;
+  opacity: 0.6;
 }
 .settlement input {
   accent-color: var(--primary);
   width: 16px;
   min-height: 16px;
+  margin: 0;
   padding: 0;
   border: 0;
   box-shadow: none;
   flex: 0 0 16px;
+}
+.editor-footer {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+.editor-save-hint {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.8;
+  color: var(--muted-foreground);
 }
 .editor-actions,
 .paper-toolbar,
@@ -1181,11 +1200,12 @@ onMounted(load)
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 8px;
 }
-.editor-actions > small {
-  margin-inline-start: auto;
-  font-size: 11px;
+.editor-actions :deep(.button) {
+  min-height: 38px;
+  padding: 8px 14px;
+  font-size: 12px;
 }
 .paper-toolbar {
   justify-content: space-between;
@@ -1231,19 +1251,35 @@ onMounted(load)
 .settings-extra {
   margin-top: 18px;
 }
+@container (max-width: 640px) {
+  .editor-toolbar {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px 10px;
+  }
+  .editor-title {
+    grid-column: 1 / -1;
+    grid-row: 1;
+    font-size: 14px;
+  }
+  .editor-buyer {
+    max-width: none;
+  }
+  .editor-toolbar :deep(.search-select-trigger),
+  .editor-toolbar :deep(.date-picker-trigger),
+  .store-settings-button {
+    min-height: 44px;
+  }
+  .store-settings-button {
+    width: 44px;
+    height: 44px;
+  }
+  .editor-tools :deep(.date-picker-trigger) {
+    padding-inline: 8px;
+    gap: 6px;
+  }
+}
 @media (max-width: 740px) {
-  .editor-parties {
-    grid-template-columns: 1fr;
-    gap: 12px;
-  }
-  .financial-fields {
-    grid-template-columns: 1fr 1fr;
-  }
-  .editor-heading {
-    flex-wrap: wrap;
-  }
-  .editor-heading,
-  .editor-parties,
+  .editor-toolbar,
   .editor-bottom {
     padding-inline: 14px;
   }
@@ -1251,10 +1287,41 @@ onMounted(load)
     grid-template-columns: 1fr;
   }
 }
-@media (max-width: 600px) {
+@container (max-width: 560px) {
   .editor-bottom {
     grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
   }
+  .editor-footer {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .editor-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .editor-actions :deep(.button--ghost) {
+    grid-column: 1 / -1;
+  }
+  .editor-actions :deep(.button),
+  .settlement label,
+  .editor-bottom input:not([type='radio']) {
+    min-height: 44px;
+  }
+}
+@container (max-width: 340px) {
+  .editor-toolbar {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .editor-tools {
+    justify-content: space-between;
+  }
+  .editor-tools :deep(.date-picker-trigger) {
+    flex: 1;
+    justify-content: center;
+  }
+}
+@media (max-width: 600px) {
   .invoice-editor {
     flex-basis: 680px;
     min-height: 680px;

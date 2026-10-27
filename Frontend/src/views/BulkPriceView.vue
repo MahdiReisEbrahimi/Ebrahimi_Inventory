@@ -26,11 +26,10 @@
             form.type === 'PERCENTAGE' ? 'درصد افزایش' : 'قیمت جدید · تومان'
           }}</label>
           <div class="change-input">
-            <input
+            <NumberInput
               v-if="form.type === 'PERCENTAGE'"
               id="bulk-change-value"
-              v-model.number="form.value"
-              type="number"
+              v-model="form.value"
               min="0"
               step="0.1"
               required
@@ -121,6 +120,7 @@ import { Check, Eye, Info } from '@lucide/vue'
 import Button from '@/components/ui/Button.vue'
 import DialogActions from '@/components/ui/DialogActions.vue'
 import MoneyInput from '@/components/ui/MoneyInput.vue'
+import NumberInput from '@/components/ui/NumberInput.vue'
 import EmptyState from '@/components/ui/EmptyState.vue'
 import { toast } from '@/lib/toast'
 import { money, number, parseNumber } from '@/lib/format'

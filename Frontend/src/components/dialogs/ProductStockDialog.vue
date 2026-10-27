@@ -11,7 +11,7 @@
       <div class="form-grid">
         <label class="form-field">
           <span>تعداد {{ type === 'RETURN' ? 'مرجوعی' : 'خرید' }} · {{ product.unit }}</span>
-          <input v-model.number="form.quantity" type="number" min="1" step="1" required />
+          <NumberInput v-model="form.quantity" min="1" step="1" required />
         </label>
         <template v-if="type === 'PURCHASE'">
           <label class="price-unchanged">
@@ -63,6 +63,7 @@ import { Check, Package } from '@lucide/vue'
 import Button from '@/components/ui/Button.vue'
 import DialogActions from '@/components/ui/DialogActions.vue'
 import MoneyInput from '@/components/ui/MoneyInput.vue'
+import NumberInput from '@/components/ui/NumberInput.vue'
 import { inventoryApi } from '@/services/inventory'
 import { number, parseNumber } from '@/lib/format'
 import { toast } from '@/lib/toast'

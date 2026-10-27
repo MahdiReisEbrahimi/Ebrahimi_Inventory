@@ -77,17 +77,13 @@
             /></label>
             <label class="form-field">
               <span>موجودی انبار</span>
-              <input v-model.number="form.stock" type="number" min="0" step="1" required />
+              <NumberInput v-model="form.stock" min="0" step="1" required />
             </label>
             <label class="form-field"
               ><span>حداقل موجودی مورد نیاز</span
-              ><input
-                v-model.number="form.minStock"
-                type="number"
-                min="0"
-                step="1"
-                required
-              /><small>در این مقدار یا کمتر، هشدار تأمین نمایش داده می‌شود.</small></label
+              ><NumberInput v-model="form.minStock" min="0" step="1" required /><small
+                >در این مقدار یا کمتر، هشدار تأمین نمایش داده می‌شود.</small
+              ></label
             >
           </div>
         </section>
@@ -110,6 +106,7 @@ import PageHeader from '@/components/ui/PageHeader.vue'
 import Button from '@/components/ui/Button.vue'
 import DialogActions from '@/components/ui/DialogActions.vue'
 import MoneyInput from '@/components/ui/MoneyInput.vue'
+import NumberInput from '@/components/ui/NumberInput.vue'
 import { toast } from '@/lib/toast'
 import { number, parseNumber } from '@/lib/format'
 import { categoriesApi } from '@/services/categories'

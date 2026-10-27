@@ -69,6 +69,7 @@ test('numeric fields accept localized typing, paste and composition with numeric
       if (key === 'value') node.value = value
     },
   })
+  const localized = ref(false)
   const amount = ref(1)
   const max = ref(10000000)
   const root = { children: [] as any[] }
@@ -77,6 +78,7 @@ test('numeric fields accept localized typing, paste and composition with numeric
       h('form', [
         h(NumberInput, {
           modelValue: amount.value,
+          persianDigits: localized.value,
           'onUpdate:modelValue': (value: number) => {
             amount.value = value
           },
@@ -137,6 +139,21 @@ test('numeric fields accept localized typing, paste and composition with numeric
     await nextTick()
     assert.equal(input.value, '15')
     assert.equal(input.validityMessage, '')
+    localized.value = true
+    amount.value = 123
+    await nextTick()
+    assert.equal(input.value, '۱۲۳')
+    for (const isComposing of [false, true]) {
+      input.value = '1٢۳4'
+      input.selectionStart = 2
+      input.selectionEnd = 2
+      input.props.onInput({ target: input, isComposing })
+      assert.equal(input.value, '۱۲۳۴')
+      assert.equal(amount.value, 1234)
+      assert.equal(input.selectionStart, 2)
+      await nextTick()
+      assert.equal(input.value, '۱۲۳۴')
+    }
     max.value = 10
     await nextTick()
     assert.notEqual(input.validityMessage, '')

@@ -106,7 +106,7 @@ model InventoryTransaction {
   product     Product                  @relation(fields: [productId], references: [id], onDelete: Restrict)
   type        InventoryTransactionType
   quantity    Int
-  unitPrice   Int?
+  unitPrice   Decimal?                 @db.Decimal(12, 0)
   description String?
   invoiceId   Int?
   invoice     Invoice?                 @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
@@ -128,10 +128,10 @@ model Invoice {
   customerId     Int?
   customer       Buyer?                   @relation(fields: [customerId], references: [id], onDelete: SetNull)
   notes          String?
-  total          Int
-  subtotal       Int                      @default(0)
-  discount       Int                      @default(0)
-  paidAmount     Int                      @default(0)
+  total          Decimal                  @db.Decimal(12, 0)
+  subtotal       Decimal                  @default(0) @db.Decimal(12, 0)
+  discount       Decimal                  @default(0) @db.Decimal(12, 0)
+  paidAmount     Decimal                  @default(0) @db.Decimal(12, 0)
   settlement     String                   @default("CASH")
   currency       String                   @default("IRR")
   issueDate      DateTime                 @default(now()) @db.Date
@@ -156,8 +156,8 @@ model InvoiceItem {
   name      String
   unit      String
   quantity  Int
-  unitPrice Int
-  total     Int
+  unitPrice Decimal  @db.Decimal(12, 0)
+  total     Decimal  @db.Decimal(12, 0)
 }
 
 model StoreSettings {

@@ -15,3 +15,10 @@ export function parseNumber(value: string | number): number {
   const normalized = normalizeNumberText(value)
   return normalized ? Number(normalized) : Number.NaN
 }
+
+export function toPersianDigits(value: string): string {
+  return value.replace(/[0-9٠-٩]/g, (digit) => {
+    const index = /[0-9]/.test(digit) ? Number(digit) : '٠١٢٣٤٥٦٧٨٩'.indexOf(digit)
+    return '۰۱۲۳۴۵۶۷۸۹'[index]!
+  })
+}

@@ -64,7 +64,7 @@
         <table class="invoice-lines">
           <colgroup>
             <col class="index-col" />
-            <col />
+            <col class="name-col" />
             <col class="qty-col" />
             <col class="unit-col" />
             <col class="price-col" />
@@ -99,6 +99,7 @@
               <td>
                 <NumberInput
                   v-model="line.quantity"
+                  persian-digits
                   :data-product-id="line.productId"
                   min="1"
                   :max="stockOf(line.productId)"
@@ -120,8 +121,16 @@
             </tr>
             <tr class="line-adder-row">
               <td class="adder-index">{{ number(draft.length + 1) }}</td>
-              <td colspan="5">
-                <div class="line-adder">
+              <td>
+                <div class="line-adder" role="group" aria-label="انتخاب کالا و دسته‌بندی">
+                  <SearchSelect
+                    :options="productOptions"
+                    label="افزودن کالا به فاکتور"
+                    placeholder="جست‌وجوی کالا…"
+                    :disabled="saving"
+                    @update:model-value="addProduct"
+                    @close-auto-focus="focusAddedLine"
+                  />
                   <SearchSelect
                     v-model="selectedCategoryId"
                     :options="categoryOptions"
@@ -129,59 +138,24 @@
                     placeholder="همه دسته‌بندی‌ها"
                     :disabled="saving"
                   />
-                  <SearchSelect
-                    :options="productOptions"
-                    label="افزودن کالا به فاکتور"
-                    placeholder="افزودن کالا؛ نام را جست‌وجو کنید…"
-                    :disabled="saving"
-                    @update:model-value="addProduct"
-                    @close-auto-focus="focusAddedLine"
-                  />
                 </div>
                 <small v-if="!draft.length" class="adder-hint"
-                  >کالا را مستقیم جست‌وجو کنید یا ابتدا دسته‌بندی را انتخاب کنید.</small
+                  >کالا را جست‌وجو کنید یا دسته‌بندی را تغییر دهید.</small
                 >
               </td>
+              <td v-for="column in 4" :key="column" aria-hidden="true"></td>
             </tr>
           </tbody>
         </table>
       </div>
       <div class="editor-bottom">
-        <div class="invoice-details">
-          <fieldset class="settlement" :disabled="saving">
-            <legend>روش تسویه</legend>
-            <div class="settlement-options">
-              <label :class="{ selected: settlement === 'CASH' }">
-                <input v-model="settlement" type="radio" value="CASH" />
-                <span>نقدی</span>
-              </label>
-              <label :class="{ selected: settlement === 'INSTALLMENT' }">
-                <input v-model="settlement" type="radio" value="INSTALLMENT" />
-                <span>اقساطی</span>
-              </label>
-            </div>
-          </fieldset>
-          <label class="form-field invoice-notes">
-            <span>توضیحات فاکتور <small>اختیاری</small></span>
-            <textarea
-              v-model="notes"
-              rows="2"
-              maxlength="600"
-              placeholder="توضیحات یا شرایط توافق‌شده با خریدار…"
-              :disabled="saving"
-              @input="notesTouched = true"
-            />
-          </label>
-        </div>
         <section class="invoice-summary" aria-label="خلاصه مبالغ فاکتور">
           <div class="subtotal">
-            <span
-              >جمع اقلام <small>{{ number(draft.length) }} قلم کالا</small></span
-            >
+            <span>جمع {{ number(draft.length) }} قلم کالا</span>
             <b>{{ rial(draftSubtotal) }}</b>
           </div>
           <label class="discount-field">
-            <span>تخفیف <small>ریال · اختیاری</small></span>
+            <span>تخفیف <small>ریال</small></span>
             <MoneyInput
               v-model="discountText"
               :disabled="saving"
@@ -191,17 +165,39 @@
           </label>
           <div class="grand-total">
             <div>
-              <span>مبلغ نهایی</span><strong>{{ rial(draftTotal) }}</strong>
+              <span>مبلغ نهایی</span
+              ><strong :title="amountInWords(draftTotal)">{{ rial(draftTotal) }}</strong>
             </div>
             <small>{{ amountInWords(draftTotal) }}</small>
           </div>
         </section>
         <div class="editor-footer">
-          <p :id="saveHintId" class="editor-save-hint">
-            <template v-if="!draft.length">برای ثبت فاکتور، ابتدا کالا اضافه کنید.</template>
-            <template v-else-if="!selectedBuyer">برای ثبت فاکتور، خریدار را انتخاب کنید.</template>
-            <template v-else>با ذخیره فاکتور، موجودی کالاها به‌روز می‌شود.</template>
-          </p>
+          <div class="editor-options">
+            <fieldset class="settlement" :disabled="saving">
+              <legend class="visually-hidden">روش تسویه</legend>
+              <div class="settlement-options">
+                <label :class="{ selected: settlement === 'CASH' }">
+                  <input v-model="settlement" type="radio" value="CASH" />
+                  <span>نقدی</span>
+                </label>
+                <label :class="{ selected: settlement === 'INSTALLMENT' }">
+                  <input v-model="settlement" type="radio" value="INSTALLMENT" />
+                  <span>اقساطی</span>
+                </label>
+              </div>
+            </fieldset>
+            <button
+              type="button"
+              class="notes-toggle"
+              :aria-expanded="notesExpanded"
+              :aria-controls="notesFieldId"
+              @click="notesExpanded = !notesExpanded"
+            >
+              توضیحات
+              <span v-if="notes.trim()" class="notes-indicator" aria-label="دارای توضیحات"></span>
+              <ChevronDown :size="14" :class="{ rotated: notesExpanded }" />
+            </button>
+          </div>
           <div class="editor-actions">
             <Button
               :disabled="saving || !draft.length || !selectedBuyer || !!loadError"
@@ -218,7 +214,30 @@
               >انصراف از ویرایش</Button
             >
           </div>
+          <p
+            :id="saveHintId"
+            class="editor-save-hint"
+            :class="{ 'visually-hidden': draft.length && selectedBuyer && !loadError }"
+          >
+            <template v-if="loadError"
+              >برای ثبت فاکتور، دریافت اطلاعات را دوباره امتحان کنید.</template
+            >
+            <template v-else-if="!draft.length">برای ثبت فاکتور، ابتدا کالا اضافه کنید.</template>
+            <template v-else-if="!selectedBuyer">برای ثبت فاکتور، خریدار را انتخاب کنید.</template>
+            <template v-else>با ذخیره فاکتور، موجودی کالاها به‌روز می‌شود.</template>
+          </p>
         </div>
+        <label v-show="notesExpanded" :id="notesFieldId" class="form-field invoice-notes">
+          <span>توضیحات فاکتور <small>اختیاری</small></span>
+          <textarea
+            v-model="notes"
+            rows="2"
+            maxlength="600"
+            placeholder="توضیحات یا شرایط توافق‌شده با خریدار…"
+            :disabled="saving"
+            @input="notesTouched = true"
+          />
+        </label>
       </div>
     </section>
     <section v-if="activeTab === 'archive' && !activeInvoice" class="panel no-print">
@@ -396,7 +415,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, reactive, ref, useId } from 'vue'
 import { onBeforeRouteLeave } from 'vue-router'
-import { Check, Pencil, Plus, Printer, Search, Store, Trash2 } from '@lucide/vue'
+import { Check, ChevronDown, Pencil, Plus, Printer, Search, Store, Trash2 } from '@lucide/vue'
 import EmptyState from '@/components/ui/EmptyState.vue'
 import Button from '@/components/ui/Button.vue'
 import DialogActions from '@/components/ui/DialogActions.vue'
@@ -414,6 +433,8 @@ import { todayInTehran } from '@/lib/persianDate'
 import { productsApi } from '@/services/products'
 import { inventoryApi } from '@/services/inventory'
 import type { Buyer, Invoice, InvoiceItem, Product, StoreSettings } from '@/types'
+const notesFieldId = useId()
+const notesExpanded = ref(false)
 const saveHintId = useId()
 const buyerFormId = useId()
 const settingsFormId = useId()
@@ -699,6 +720,7 @@ async function openInvoice(invoice: Invoice, print = false) {
   }
 }
 function resetDraft() {
+  notesExpanded.value = false
   draft.value = []
   originalItems.value = []
   editingInvoiceId.value = undefined
@@ -832,6 +854,11 @@ onMounted(load)
   min-height: 0;
   gap: 12px;
 }
+.invoice-page:has(> .invoice-editor) {
+  margin: 0;
+  padding: 0;
+  gap: 0;
+}
 .invoice-tabs {
   white-space: nowrap;
 }
@@ -841,6 +868,28 @@ onMounted(load)
   font-size: 12px;
 }
 .invoice-editor {
+  --background: #fafafa;
+  --foreground: #262626;
+  --card: #ffffff;
+  --card-foreground: #262626;
+  --primary: #262626;
+  --primary-foreground: #ffffff;
+  --secondary: #f5f5f5;
+  --secondary-foreground: #404040;
+  --muted: #f5f5f5;
+  --muted-foreground: #737373;
+  --accent: #e5e5e5;
+  --accent-foreground: #262626;
+  --border: #e5e5e5;
+  --input: #d4d4d4;
+  --ring: #737373;
+  --radius: 4px;
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  color: var(--foreground);
+  background: var(--card);
   container-type: inline-size;
   overflow: hidden;
   width: 100%;
@@ -848,6 +897,31 @@ onMounted(load)
   min-height: 480px;
   display: flex;
   flex-direction: column;
+}
+:global(.dark .invoice-editor) {
+  --background: #141414;
+  --foreground: #ededed;
+  --card: #1e1e1e;
+  --card-foreground: #ededed;
+  --primary: #e5e5e5;
+  --primary-foreground: #171717;
+  --secondary: #2b2b2b;
+  --secondary-foreground: #dedede;
+  --muted: #262626;
+  --muted-foreground: #b0b0b0;
+  --accent: #303030;
+  --accent-foreground: #ededed;
+  --border: #383838;
+  --input: #505050;
+  --ring: #a3a3a3;
+}
+.invoice-editor :deep(.button),
+.invoice-editor :deep(.icon-button),
+.invoice-editor :deep(.search-select-trigger),
+.invoice-editor :deep(.date-picker-trigger),
+.invoice-editor input,
+.invoice-editor textarea {
+  border-radius: 4px;
 }
 .editor-toolbar {
   flex-shrink: 0;
@@ -930,18 +1004,42 @@ onMounted(load)
 }
 .line-adder {
   display: grid;
-  grid-template-columns: minmax(130px, 0.6fr) minmax(0, 1.4fr);
-  gap: 8px;
+  grid-template-columns: minmax(0, 11fr) minmax(0, 7fr);
+  width: 100%;
+  max-width: 360px;
+  border: 1px solid var(--input);
+  border-radius: 4px;
+  background: var(--card);
+}
+.line-adder:focus-within {
+  border-color: var(--ring);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--ring) 15%, transparent);
+}
+.line-adder :deep(.search-select-trigger) {
+  min-width: 0;
+  gap: 6px;
+  padding-inline: 8px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+.line-adder :deep(.search-select-trigger:last-child) {
+  border-inline-start: 1px solid var(--input);
+  background: var(--muted);
+}
+.line-adder :deep(.search-select-trigger > svg) {
+  flex-shrink: 0;
 }
 .adder-hint {
   display: block;
   margin-top: 6px;
   font-size: 11px;
   color: var(--muted-foreground);
+  white-space: normal;
 }
 .invoice-lines {
   width: 100%;
-  min-width: 560px;
+  min-width: 820px;
   border-collapse: separate;
   border-spacing: 0;
   table-layout: fixed;
@@ -951,17 +1049,20 @@ onMounted(load)
 .index-col {
   width: 44px;
 }
+.name-col {
+  width: 37.5%;
+}
 .qty-col {
-  width: 64px;
+  width: 6.25%;
 }
 .unit-col {
-  width: 50px;
+  width: 12.5%;
 }
 .price-col {
-  width: 128px;
+  width: 18.75%;
 }
 .total-col {
-  width: 132px;
+  width: auto;
 }
 .invoice-lines th {
   position: sticky;
@@ -975,6 +1076,10 @@ onMounted(load)
 .invoice-lines td {
   padding: 3px 8px;
   border-top: 1px solid var(--border);
+}
+.invoice-lines th:not(:last-child),
+.invoice-lines td:not(:last-child) {
+  border-inline-end: 1px solid var(--border);
 }
 .invoice-lines input {
   min-height: 28px;
@@ -1036,61 +1141,23 @@ onMounted(load)
 .editor-bottom {
   flex-shrink: 0;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 16px 24px;
-  padding: 16px;
-}
-.invoice-details {
-  display: grid;
-  align-content: start;
-  gap: 14px;
-  min-width: 0;
-}
-.editor-bottom .form-field {
-  gap: 6px;
-}
-.editor-bottom .form-field > span,
-.settlement legend {
-  font-size: 12px;
-  font-weight: 500;
-}
-.editor-bottom input:not([type='radio']),
-.editor-bottom textarea {
-  min-height: 38px;
-  padding: 7px 10px;
-  font-size: 12px;
-}
-.invoice-notes textarea {
-  width: 100%;
-  min-height: 64px;
-  max-height: 160px;
-  resize: vertical;
+  gap: 10px;
+  padding: 10px 14px;
 }
 .invoice-summary {
   min-width: 0;
   display: grid;
-  align-content: start;
-  gap: 12px;
-  padding: 14px;
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  background: color-mix(in srgb, var(--muted) 45%, var(--card));
+  grid-template-columns: minmax(0, 1fr) minmax(160px, 0.8fr) minmax(0, 1.4fr);
+  align-items: center;
+  gap: 16px;
   font-size: 12px;
 }
-.subtotal,
-.discount-field,
-.grand-total > div {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
+.subtotal {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
 }
 .subtotal > span,
-.discount-field > span {
-  display: grid;
-  gap: 3px;
-  flex-shrink: 0;
-}
 .invoice-summary small {
   font-size: 10px;
   font-weight: 400;
@@ -1100,33 +1167,68 @@ onMounted(load)
 .grand-total strong {
   font-variant-numeric: tabular-nums;
   overflow-wrap: anywhere;
-  text-align: end;
 }
-.discount-field input {
-  width: 160px;
+.discount-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   min-width: 0;
-  max-width: 55%;
+}
+.discount-field > span {
+  flex-shrink: 0;
+}
+.discount-field > span small {
+  margin-inline-start: 2px;
+}
+.editor-bottom .discount-field input {
+  min-width: 0;
+  width: 100%;
+  min-height: 32px;
+  padding: 4px 8px;
+  font-size: 12px;
   text-align: end;
   font-variant-numeric: tabular-nums;
 }
 .grand-total {
   display: grid;
-  gap: 6px;
-  border-top: 1px solid var(--border);
-  padding-top: 12px;
+  gap: 2px;
+  min-width: 0;
+  padding-inline-start: 16px;
+  border-inline-start: 1px solid var(--border);
+}
+.grand-total > div {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
 }
 .grand-total > div > span {
   flex-shrink: 0;
-  font-weight: 600;
+  font-weight: 500;
 }
 .grand-total strong {
-  font-size: 19px;
+  font-size: 18px;
   color: var(--primary);
+  text-align: end;
 }
 .grand-total > small {
   text-align: end;
-  line-height: 1.8;
+  line-height: 1.6;
   overflow-wrap: anywhere;
+}
+.editor-footer {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 6px 12px;
+  border-top: 1px solid var(--border);
+  padding-top: 8px;
+}
+.editor-options {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 12px;
 }
 .settlement {
   min-width: 0;
@@ -1134,33 +1236,39 @@ onMounted(load)
   margin: 0;
   border: 0;
 }
-.settlement legend {
-  margin-bottom: 6px;
-  padding: 0;
-}
 .settlement-options {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
+  display: flex;
+  gap: 0;
 }
 .settlement label {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  min-height: 38px;
-  padding: 7px 12px;
+  gap: 6px;
+  min-height: 32px;
+  padding: 4px 10px;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 4px;
   background: var(--card);
   font-size: 12px;
   cursor: pointer;
 }
+.settlement label:first-child {
+  border-start-end-radius: 0;
+  border-end-end-radius: 0;
+}
+.settlement label:last-child {
+  margin-inline-start: -1px;
+  border-start-start-radius: 0;
+  border-end-start-radius: 0;
+}
 .settlement label.selected {
+  z-index: 1;
   border-color: var(--primary);
-  background: color-mix(in srgb, var(--primary) 8%, var(--card));
+  background: var(--muted);
 }
 .settlement label:focus-within {
+  z-index: 2;
   outline: 2px solid var(--ring);
   outline-offset: 2px;
 }
@@ -1170,29 +1278,71 @@ onMounted(load)
 }
 .settlement input {
   accent-color: var(--primary);
-  width: 16px;
-  min-height: 16px;
+  width: 14px;
+  min-height: 14px;
   margin: 0;
   padding: 0;
   border: 0;
   box-shadow: none;
-  flex: 0 0 16px;
+  flex: 0 0 14px;
 }
-.editor-footer {
-  grid-column: 1 / -1;
-  display: flex;
+.notes-toggle {
+  display: inline-flex;
   align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 12px;
-  padding-top: 14px;
-  border-top: 1px solid var(--border);
+  gap: 6px;
+  min-height: 32px;
+  padding: 4px 6px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--muted-foreground);
+  font-size: 12px;
+}
+.notes-toggle:hover,
+.notes-toggle[aria-expanded='true'] {
+  background: var(--muted);
+  color: var(--foreground);
+}
+.notes-toggle .rotated {
+  transform: rotate(180deg);
+}
+.notes-indicator {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.invoice-notes {
+  gap: 4px;
+}
+.invoice-notes > span {
+  font-size: 11px;
+}
+.invoice-notes textarea {
+  width: 100%;
+  min-height: 56px;
+  max-height: 120px;
+  padding: 6px 8px;
+  font-size: 12px;
+  resize: vertical;
 }
 .editor-save-hint {
+  grid-column: 1 / -1;
   margin: 0;
-  font-size: 11px;
-  line-height: 1.8;
+  font-size: 10px;
+  line-height: 1.6;
   color: var(--muted-foreground);
+}
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
 }
 .editor-actions,
 .paper-toolbar,
@@ -1200,11 +1350,11 @@ onMounted(load)
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 6px;
 }
 .editor-actions :deep(.button) {
-  min-height: 38px;
-  padding: 8px 14px;
+  min-height: 32px;
+  padding: 5px 10px;
   font-size: 12px;
 }
 .paper-toolbar {
@@ -1287,14 +1437,27 @@ onMounted(load)
     grid-template-columns: 1fr;
   }
 }
-@container (max-width: 560px) {
-  .editor-bottom {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 16px;
+@container (max-width: 680px) {
+  .invoice-summary {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 8px 16px;
+  }
+  .grand-total {
+    grid-column: 1 / -1;
+    padding-inline-start: 0;
+    border-inline-start: 0;
+  }
+  .grand-total > small {
+    display: none;
+  }
+  .grand-total strong {
+    font-size: 17px;
   }
   .editor-footer {
-    align-items: stretch;
-    flex-direction: column;
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .editor-options {
+    justify-content: space-between;
   }
   .editor-actions {
     display: grid;
@@ -1305,7 +1468,8 @@ onMounted(load)
   }
   .editor-actions :deep(.button),
   .settlement label,
-  .editor-bottom input:not([type='radio']) {
+  .notes-toggle,
+  .editor-bottom .discount-field input {
     min-height: 44px;
   }
 }

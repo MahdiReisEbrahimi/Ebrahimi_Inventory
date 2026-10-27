@@ -29,19 +29,19 @@ export type AggregateInvoice = {
 export type InvoiceAvgAggregateOutputType = {
   id: number | null
   customerId: number | null
-  total: number | null
-  subtotal: number | null
-  discount: number | null
-  paidAmount: number | null
+  total: runtime.Decimal | null
+  subtotal: runtime.Decimal | null
+  discount: runtime.Decimal | null
+  paidAmount: runtime.Decimal | null
 }
 
 export type InvoiceSumAggregateOutputType = {
   id: number | null
   customerId: number | null
-  total: number | null
-  subtotal: number | null
-  discount: number | null
-  paidAmount: number | null
+  total: runtime.Decimal | null
+  subtotal: runtime.Decimal | null
+  discount: runtime.Decimal | null
+  paidAmount: runtime.Decimal | null
 }
 
 export type InvoiceMinAggregateOutputType = {
@@ -54,10 +54,10 @@ export type InvoiceMinAggregateOutputType = {
   buyerPhone: string | null
   customerId: number | null
   notes: string | null
-  total: number | null
-  subtotal: number | null
-  discount: number | null
-  paidAmount: number | null
+  total: runtime.Decimal | null
+  subtotal: runtime.Decimal | null
+  discount: runtime.Decimal | null
+  paidAmount: runtime.Decimal | null
   settlement: string | null
   currency: string | null
   issueDate: Date | null
@@ -79,10 +79,10 @@ export type InvoiceMaxAggregateOutputType = {
   buyerPhone: string | null
   customerId: number | null
   notes: string | null
-  total: number | null
-  subtotal: number | null
-  discount: number | null
-  paidAmount: number | null
+  total: runtime.Decimal | null
+  subtotal: runtime.Decimal | null
+  discount: runtime.Decimal | null
+  paidAmount: runtime.Decimal | null
   settlement: string | null
   currency: string | null
   issueDate: Date | null
@@ -311,10 +311,10 @@ export type InvoiceGroupByOutputType = {
   buyerPhone: string | null
   customerId: number | null
   notes: string | null
-  total: number
-  subtotal: number
-  discount: number
-  paidAmount: number
+  total: runtime.Decimal
+  subtotal: runtime.Decimal
+  discount: runtime.Decimal
+  paidAmount: runtime.Decimal
   settlement: string
   currency: string
   issueDate: Date
@@ -359,10 +359,10 @@ export type InvoiceWhereInput = {
   buyerPhone?: Prisma.StringNullableFilter<"Invoice"> | string | null
   customerId?: Prisma.IntNullableFilter<"Invoice"> | number | null
   notes?: Prisma.StringNullableFilter<"Invoice"> | string | null
-  total?: Prisma.IntFilter<"Invoice"> | number
-  subtotal?: Prisma.IntFilter<"Invoice"> | number
-  discount?: Prisma.IntFilter<"Invoice"> | number
-  paidAmount?: Prisma.IntFilter<"Invoice"> | number
+  total?: Prisma.DecimalFilter<"Invoice"> | runtime.Decimal | runtime.DecimalJsLike | number | string
+  subtotal?: Prisma.DecimalFilter<"Invoice"> | runtime.Decimal | runtime.DecimalJsLike | number | string
+  discount?: Prisma.DecimalFilter<"Invoice"> | runtime.Decimal | runtime.DecimalJsLike | number | string
+  paidAmount?: Prisma.DecimalFilter<"Invoice"> | runtime.Decimal | runtime.DecimalJsLike | number | string
   settlement?: Prisma.StringFilter<"Invoice"> | string
   currency?: Prisma.StringFilter<"Invoice"> | string
   issueDate?: Prisma.DateTimeFilter<"Invoice"> | Date | string
@@ -418,10 +418,10 @@ export type InvoiceWhereUniqueInput = Prisma.AtLeast<{
   buyerPhone?: Prisma.StringNullableFilter<"Invoice"> | string | null
   customerId?: Prisma.IntNullableFilter<"Invoice"> | number | null
   notes?: Prisma.StringNullableFilter<"Invoice"> | string | null
-  total?: Prisma.IntFilter<"Invoice"> | number
-  subtotal?: Prisma.IntFilter<"Invoice"> | number
-  discount?: Prisma.IntFilter<"Invoice"> | number
-  paidAmount?: Prisma.IntFilter<"Invoice"> | number
+  total?: Prisma.DecimalFilter<"Invoice"> | runtime.Decimal | runtime.DecimalJsLike | number | string
+  subtotal?: Prisma.DecimalFilter<"Invoice"> | runtime.Decimal | runtime.DecimalJsLike | number | string
+  discount?: Prisma.DecimalFilter<"Invoice"> | runtime.Decimal | runtime.DecimalJsLike | number | string
+  paidAmount?: Prisma.DecimalFilter<"Invoice"> | runtime.Decimal | runtime.DecimalJsLike | number | string
   settlement?: Prisma.StringFilter<"Invoice"> | string
   currency?: Prisma.StringFilter<"Invoice"> | string
   issueDate?: Prisma.DateTimeFilter<"Invoice"> | Date | string
@@ -479,10 +479,10 @@ export type InvoiceScalarWhereWithAggregatesInput = {
   buyerPhone?: Prisma.StringNullableWithAggregatesFilter<"Invoice"> | string | null
   customerId?: Prisma.IntNullableWithAggregatesFilter<"Invoice"> | number | null
   notes?: Prisma.StringNullableWithAggregatesFilter<"Invoice"> | string | null
-  total?: Prisma.IntWithAggregatesFilter<"Invoice"> | number
-  subtotal?: Prisma.IntWithAggregatesFilter<"Invoice"> | number
-  discount?: Prisma.IntWithAggregatesFilter<"Invoice"> | number
-  paidAmount?: Prisma.IntWithAggregatesFilter<"Invoice"> | number
+  total?: Prisma.DecimalWithAggregatesFilter<"Invoice"> | runtime.Decimal | runtime.DecimalJsLike | number | string
+  subtotal?: Prisma.DecimalWithAggregatesFilter<"Invoice"> | runtime.Decimal | runtime.DecimalJsLike | number | string
+  discount?: Prisma.DecimalWithAggregatesFilter<"Invoice"> | runtime.Decimal | runtime.DecimalJsLike | number | string
+  paidAmount?: Prisma.DecimalWithAggregatesFilter<"Invoice"> | runtime.Decimal | runtime.DecimalJsLike | number | string
   settlement?: Prisma.StringWithAggregatesFilter<"Invoice"> | string
   currency?: Prisma.StringWithAggregatesFilter<"Invoice"> | string
   issueDate?: Prisma.DateTimeWithAggregatesFilter<"Invoice"> | Date | string
@@ -502,10 +502,10 @@ export type InvoiceCreateInput = {
   buyerAddress?: string | null
   buyerPhone?: string | null
   notes?: string | null
-  total: number
-  subtotal?: number
-  discount?: number
-  paidAmount?: number
+  total: runtime.Decimal | runtime.DecimalJsLike | number | string
+  subtotal?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  discount?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  paidAmount?: runtime.Decimal | runtime.DecimalJsLike | number | string
   settlement?: string
   currency?: string
   issueDate?: Date | string
@@ -530,10 +530,10 @@ export type InvoiceUncheckedCreateInput = {
   buyerPhone?: string | null
   customerId?: number | null
   notes?: string | null
-  total: number
-  subtotal?: number
-  discount?: number
-  paidAmount?: number
+  total: runtime.Decimal | runtime.DecimalJsLike | number | string
+  subtotal?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  discount?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  paidAmount?: runtime.Decimal | runtime.DecimalJsLike | number | string
   settlement?: string
   currency?: string
   issueDate?: Date | string
@@ -555,10 +555,10 @@ export type InvoiceUpdateInput = {
   buyerAddress?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   buyerPhone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  total?: Prisma.IntFieldUpdateOperationsInput | number
-  subtotal?: Prisma.IntFieldUpdateOperationsInput | number
-  discount?: Prisma.IntFieldUpdateOperationsInput | number
-  paidAmount?: Prisma.IntFieldUpdateOperationsInput | number
+  total?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  subtotal?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  discount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  paidAmount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   settlement?: Prisma.StringFieldUpdateOperationsInput | string
   currency?: Prisma.StringFieldUpdateOperationsInput | string
   issueDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -583,10 +583,10 @@ export type InvoiceUncheckedUpdateInput = {
   buyerPhone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   customerId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  total?: Prisma.IntFieldUpdateOperationsInput | number
-  subtotal?: Prisma.IntFieldUpdateOperationsInput | number
-  discount?: Prisma.IntFieldUpdateOperationsInput | number
-  paidAmount?: Prisma.IntFieldUpdateOperationsInput | number
+  total?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  subtotal?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  discount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  paidAmount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   settlement?: Prisma.StringFieldUpdateOperationsInput | string
   currency?: Prisma.StringFieldUpdateOperationsInput | string
   issueDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -610,10 +610,10 @@ export type InvoiceCreateManyInput = {
   buyerPhone?: string | null
   customerId?: number | null
   notes?: string | null
-  total: number
-  subtotal?: number
-  discount?: number
-  paidAmount?: number
+  total: runtime.Decimal | runtime.DecimalJsLike | number | string
+  subtotal?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  discount?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  paidAmount?: runtime.Decimal | runtime.DecimalJsLike | number | string
   settlement?: string
   currency?: string
   issueDate?: Date | string
@@ -633,10 +633,10 @@ export type InvoiceUpdateManyMutationInput = {
   buyerAddress?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   buyerPhone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  total?: Prisma.IntFieldUpdateOperationsInput | number
-  subtotal?: Prisma.IntFieldUpdateOperationsInput | number
-  discount?: Prisma.IntFieldUpdateOperationsInput | number
-  paidAmount?: Prisma.IntFieldUpdateOperationsInput | number
+  total?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  subtotal?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  discount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  paidAmount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   settlement?: Prisma.StringFieldUpdateOperationsInput | string
   currency?: Prisma.StringFieldUpdateOperationsInput | string
   issueDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -658,10 +658,10 @@ export type InvoiceUncheckedUpdateManyInput = {
   buyerPhone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   customerId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  total?: Prisma.IntFieldUpdateOperationsInput | number
-  subtotal?: Prisma.IntFieldUpdateOperationsInput | number
-  discount?: Prisma.IntFieldUpdateOperationsInput | number
-  paidAmount?: Prisma.IntFieldUpdateOperationsInput | number
+  total?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  subtotal?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  discount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  paidAmount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   settlement?: Prisma.StringFieldUpdateOperationsInput | string
   currency?: Prisma.StringFieldUpdateOperationsInput | string
   issueDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -844,6 +844,14 @@ export type InvoiceUpdateOneWithoutTransactionsNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.InvoiceUpdateToOneWithWhereWithoutTransactionsInput, Prisma.InvoiceUpdateWithoutTransactionsInput>, Prisma.InvoiceUncheckedUpdateWithoutTransactionsInput>
 }
 
+export type DecimalFieldUpdateOperationsInput = {
+  set?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  increment?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  decrement?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  multiply?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  divide?: runtime.Decimal | runtime.DecimalJsLike | number | string
+}
+
 export type InvoiceCreateNestedOneWithoutItemsInput = {
   create?: Prisma.XOR<Prisma.InvoiceCreateWithoutItemsInput, Prisma.InvoiceUncheckedCreateWithoutItemsInput>
   connectOrCreate?: Prisma.InvoiceCreateOrConnectWithoutItemsInput
@@ -866,10 +874,10 @@ export type InvoiceCreateWithoutCustomerInput = {
   buyerAddress?: string | null
   buyerPhone?: string | null
   notes?: string | null
-  total: number
-  subtotal?: number
-  discount?: number
-  paidAmount?: number
+  total: runtime.Decimal | runtime.DecimalJsLike | number | string
+  subtotal?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  discount?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  paidAmount?: runtime.Decimal | runtime.DecimalJsLike | number | string
   settlement?: string
   currency?: string
   issueDate?: Date | string
@@ -892,10 +900,10 @@ export type InvoiceUncheckedCreateWithoutCustomerInput = {
   buyerAddress?: string | null
   buyerPhone?: string | null
   notes?: string | null
-  total: number
-  subtotal?: number
-  discount?: number
-  paidAmount?: number
+  total: runtime.Decimal | runtime.DecimalJsLike | number | string
+  subtotal?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  discount?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  paidAmount?: runtime.Decimal | runtime.DecimalJsLike | number | string
   settlement?: string
   currency?: string
   issueDate?: Date | string
@@ -948,10 +956,10 @@ export type InvoiceScalarWhereInput = {
   buyerPhone?: Prisma.StringNullableFilter<"Invoice"> | string | null
   customerId?: Prisma.IntNullableFilter<"Invoice"> | number | null
   notes?: Prisma.StringNullableFilter<"Invoice"> | string | null
-  total?: Prisma.IntFilter<"Invoice"> | number
-  subtotal?: Prisma.IntFilter<"Invoice"> | number
-  discount?: Prisma.IntFilter<"Invoice"> | number
-  paidAmount?: Prisma.IntFilter<"Invoice"> | number
+  total?: Prisma.DecimalFilter<"Invoice"> | runtime.Decimal | runtime.DecimalJsLike | number | string
+  subtotal?: Prisma.DecimalFilter<"Invoice"> | runtime.Decimal | runtime.DecimalJsLike | number | string
+  discount?: Prisma.DecimalFilter<"Invoice"> | runtime.Decimal | runtime.DecimalJsLike | number | string
+  paidAmount?: Prisma.DecimalFilter<"Invoice"> | runtime.Decimal | runtime.DecimalJsLike | number | string
   settlement?: Prisma.StringFilter<"Invoice"> | string
   currency?: Prisma.StringFilter<"Invoice"> | string
   issueDate?: Prisma.DateTimeFilter<"Invoice"> | Date | string
@@ -971,10 +979,10 @@ export type InvoiceCreateWithoutTransactionsInput = {
   buyerAddress?: string | null
   buyerPhone?: string | null
   notes?: string | null
-  total: number
-  subtotal?: number
-  discount?: number
-  paidAmount?: number
+  total: runtime.Decimal | runtime.DecimalJsLike | number | string
+  subtotal?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  discount?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  paidAmount?: runtime.Decimal | runtime.DecimalJsLike | number | string
   settlement?: string
   currency?: string
   issueDate?: Date | string
@@ -998,10 +1006,10 @@ export type InvoiceUncheckedCreateWithoutTransactionsInput = {
   buyerPhone?: string | null
   customerId?: number | null
   notes?: string | null
-  total: number
-  subtotal?: number
-  discount?: number
-  paidAmount?: number
+  total: runtime.Decimal | runtime.DecimalJsLike | number | string
+  subtotal?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  discount?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  paidAmount?: runtime.Decimal | runtime.DecimalJsLike | number | string
   settlement?: string
   currency?: string
   issueDate?: Date | string
@@ -1038,10 +1046,10 @@ export type InvoiceUpdateWithoutTransactionsInput = {
   buyerAddress?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   buyerPhone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  total?: Prisma.IntFieldUpdateOperationsInput | number
-  subtotal?: Prisma.IntFieldUpdateOperationsInput | number
-  discount?: Prisma.IntFieldUpdateOperationsInput | number
-  paidAmount?: Prisma.IntFieldUpdateOperationsInput | number
+  total?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  subtotal?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  discount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  paidAmount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   settlement?: Prisma.StringFieldUpdateOperationsInput | string
   currency?: Prisma.StringFieldUpdateOperationsInput | string
   issueDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1065,10 +1073,10 @@ export type InvoiceUncheckedUpdateWithoutTransactionsInput = {
   buyerPhone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   customerId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  total?: Prisma.IntFieldUpdateOperationsInput | number
-  subtotal?: Prisma.IntFieldUpdateOperationsInput | number
-  discount?: Prisma.IntFieldUpdateOperationsInput | number
-  paidAmount?: Prisma.IntFieldUpdateOperationsInput | number
+  total?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  subtotal?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  discount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  paidAmount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   settlement?: Prisma.StringFieldUpdateOperationsInput | string
   currency?: Prisma.StringFieldUpdateOperationsInput | string
   issueDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1089,10 +1097,10 @@ export type InvoiceCreateWithoutItemsInput = {
   buyerAddress?: string | null
   buyerPhone?: string | null
   notes?: string | null
-  total: number
-  subtotal?: number
-  discount?: number
-  paidAmount?: number
+  total: runtime.Decimal | runtime.DecimalJsLike | number | string
+  subtotal?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  discount?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  paidAmount?: runtime.Decimal | runtime.DecimalJsLike | number | string
   settlement?: string
   currency?: string
   issueDate?: Date | string
@@ -1116,10 +1124,10 @@ export type InvoiceUncheckedCreateWithoutItemsInput = {
   buyerPhone?: string | null
   customerId?: number | null
   notes?: string | null
-  total: number
-  subtotal?: number
-  discount?: number
-  paidAmount?: number
+  total: runtime.Decimal | runtime.DecimalJsLike | number | string
+  subtotal?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  discount?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  paidAmount?: runtime.Decimal | runtime.DecimalJsLike | number | string
   settlement?: string
   currency?: string
   issueDate?: Date | string
@@ -1156,10 +1164,10 @@ export type InvoiceUpdateWithoutItemsInput = {
   buyerAddress?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   buyerPhone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  total?: Prisma.IntFieldUpdateOperationsInput | number
-  subtotal?: Prisma.IntFieldUpdateOperationsInput | number
-  discount?: Prisma.IntFieldUpdateOperationsInput | number
-  paidAmount?: Prisma.IntFieldUpdateOperationsInput | number
+  total?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  subtotal?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  discount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  paidAmount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   settlement?: Prisma.StringFieldUpdateOperationsInput | string
   currency?: Prisma.StringFieldUpdateOperationsInput | string
   issueDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1183,10 +1191,10 @@ export type InvoiceUncheckedUpdateWithoutItemsInput = {
   buyerPhone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   customerId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  total?: Prisma.IntFieldUpdateOperationsInput | number
-  subtotal?: Prisma.IntFieldUpdateOperationsInput | number
-  discount?: Prisma.IntFieldUpdateOperationsInput | number
-  paidAmount?: Prisma.IntFieldUpdateOperationsInput | number
+  total?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  subtotal?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  discount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  paidAmount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   settlement?: Prisma.StringFieldUpdateOperationsInput | string
   currency?: Prisma.StringFieldUpdateOperationsInput | string
   issueDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1208,10 +1216,10 @@ export type InvoiceCreateManyCustomerInput = {
   buyerAddress?: string | null
   buyerPhone?: string | null
   notes?: string | null
-  total: number
-  subtotal?: number
-  discount?: number
-  paidAmount?: number
+  total: runtime.Decimal | runtime.DecimalJsLike | number | string
+  subtotal?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  discount?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  paidAmount?: runtime.Decimal | runtime.DecimalJsLike | number | string
   settlement?: string
   currency?: string
   issueDate?: Date | string
@@ -1231,10 +1239,10 @@ export type InvoiceUpdateWithoutCustomerInput = {
   buyerAddress?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   buyerPhone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  total?: Prisma.IntFieldUpdateOperationsInput | number
-  subtotal?: Prisma.IntFieldUpdateOperationsInput | number
-  discount?: Prisma.IntFieldUpdateOperationsInput | number
-  paidAmount?: Prisma.IntFieldUpdateOperationsInput | number
+  total?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  subtotal?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  discount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  paidAmount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   settlement?: Prisma.StringFieldUpdateOperationsInput | string
   currency?: Prisma.StringFieldUpdateOperationsInput | string
   issueDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1257,10 +1265,10 @@ export type InvoiceUncheckedUpdateWithoutCustomerInput = {
   buyerAddress?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   buyerPhone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  total?: Prisma.IntFieldUpdateOperationsInput | number
-  subtotal?: Prisma.IntFieldUpdateOperationsInput | number
-  discount?: Prisma.IntFieldUpdateOperationsInput | number
-  paidAmount?: Prisma.IntFieldUpdateOperationsInput | number
+  total?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  subtotal?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  discount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  paidAmount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   settlement?: Prisma.StringFieldUpdateOperationsInput | string
   currency?: Prisma.StringFieldUpdateOperationsInput | string
   issueDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1283,10 +1291,10 @@ export type InvoiceUncheckedUpdateManyWithoutCustomerInput = {
   buyerAddress?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   buyerPhone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  total?: Prisma.IntFieldUpdateOperationsInput | number
-  subtotal?: Prisma.IntFieldUpdateOperationsInput | number
-  discount?: Prisma.IntFieldUpdateOperationsInput | number
-  paidAmount?: Prisma.IntFieldUpdateOperationsInput | number
+  total?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  subtotal?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  discount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  paidAmount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   settlement?: Prisma.StringFieldUpdateOperationsInput | string
   currency?: Prisma.StringFieldUpdateOperationsInput | string
   issueDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1475,10 +1483,10 @@ export type $InvoicePayload<ExtArgs extends runtime.Types.Extensions.InternalArg
     buyerPhone: string | null
     customerId: number | null
     notes: string | null
-    total: number
-    subtotal: number
-    discount: number
-    paidAmount: number
+    total: runtime.Decimal
+    subtotal: runtime.Decimal
+    discount: runtime.Decimal
+    paidAmount: runtime.Decimal
     settlement: string
     currency: string
     issueDate: Date
@@ -1923,10 +1931,10 @@ export interface InvoiceFieldRefs {
   readonly buyerPhone: Prisma.FieldRef<"Invoice", 'String'>
   readonly customerId: Prisma.FieldRef<"Invoice", 'Int'>
   readonly notes: Prisma.FieldRef<"Invoice", 'String'>
-  readonly total: Prisma.FieldRef<"Invoice", 'Int'>
-  readonly subtotal: Prisma.FieldRef<"Invoice", 'Int'>
-  readonly discount: Prisma.FieldRef<"Invoice", 'Int'>
-  readonly paidAmount: Prisma.FieldRef<"Invoice", 'Int'>
+  readonly total: Prisma.FieldRef<"Invoice", 'Decimal'>
+  readonly subtotal: Prisma.FieldRef<"Invoice", 'Decimal'>
+  readonly discount: Prisma.FieldRef<"Invoice", 'Decimal'>
+  readonly paidAmount: Prisma.FieldRef<"Invoice", 'Decimal'>
   readonly settlement: Prisma.FieldRef<"Invoice", 'String'>
   readonly currency: Prisma.FieldRef<"Invoice", 'String'>
   readonly issueDate: Prisma.FieldRef<"Invoice", 'DateTime'>

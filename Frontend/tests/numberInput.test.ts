@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { numberInputError } from '../src/lib/numberInput.ts'
-import { parseNumber } from '../src/lib/format.ts'
+import { parseNumber, toPersianDigits } from '../src/lib/format.ts'
 
 test('localized numbers preserve quantities, decimals and validation constraints', () => {
   for (const text of ['۱۲۳', '١٢٣', '123', '۱٢3']) {
@@ -22,4 +22,11 @@ test('localized numbers preserve quantities, decimals and validation constraints
   for (const text of ['-', '.', 'عدد', '0x10', '1e3']) {
     assert.notEqual(numberInputError(text, {}), '')
   }
+})
+
+test('digit localization preserves text, separators and partial numeric edits', () => {
+  assert.equal(toPersianDigits('12٣۴٫5'), '۱۲۳۴٫۵')
+  assert.equal(toPersianDigits('-1.'), '-۱.')
+  assert.equal(toPersianDigits('کالا A12، 3٬456 ریال'), 'کالا A۱۲، ۳٬۴۵۶ ریال')
+  assert.equal(toPersianDigits(''), '')
 })

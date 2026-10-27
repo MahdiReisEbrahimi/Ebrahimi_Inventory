@@ -63,38 +63,58 @@
           </tbody>
         </table>
         <div v-if="pageIndex === pages.length - 1" class="paper-bottom">
-          <div v-if="(normalized.discount || 0) > 0" class="paper-totals">
-            <span
-              >جمع اقلام: <b>{{ rial(normalized.subtotal || 0) }}</b></span
-            >
-            <span
-              >تخفیف: <b>{{ rial(normalized.discount || 0) }}</b></span
-            >
-          </div>
-          <div class="paper-grand-total">
-            <b>جمع کل فاکتور: {{ rial(normalized.total) }}</b
-            ><span>({{ amountInWords(normalized.total) }})</span>
-          </div>
-          <div class="paper-settlement">
-            <span
-              >شرایط تسویه‌حساب:
-              {{
-                invoice.settlement === 'INSTALLMENT' ? '☐ نقدی   ☑ اقساطی' : '☑ نقدی   ☐ اقساطی'
-              }}</span
-            >
-            <span
-              >شماره شبای فروشنده: <bdi>{{ seller.iban || '—' }}</bdi></span
-            >
-          </div>
-          <p v-if="invoice.notes" class="paper-notes"><b>توضیحات: </b>{{ invoice.notes }}</p>
+          <table class="paper-footer-table" aria-label="خلاصه و امضاهای فاکتور">
+            <colgroup>
+              <col style="width: 25%" />
+              <col style="width: 25%" />
+              <col style="width: 50%" />
+            </colgroup>
+            <tbody>
+              <tr>
+                <td colspan="2">
+                  <div class="footer-sale-terms">
+                    <b>شرایط و نحوه فروش:</b>
+                    <span>{{ invoice.settlement === 'INSTALLMENT' ? '☐' : '☑' }} نقدی</span>
+                    <span>{{ invoice.settlement === 'INSTALLMENT' ? '☑' : '☐' }} غیرنقدی</span>
+                  </div>
+                </td>
+                <td>
+                  <div class="footer-amount-row">
+                    <b>جمع کل فاکتور</b
+                    ><span>{{ rial(normalized.subtotal ?? normalized.total) }}</span>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td colspan="2" class="footer-notes">
+                  <b>توضیحات: </b>{{ invoice.notes || '…………………………………………' }}
+                </td>
+                <td>
+                  <div class="footer-amount-row">
+                    <b>تخفیف</b><span>{{ rial(normalized.discount || 0) }}</span>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td class="footer-signature"><b>مهر و امضا فروشنده:</b></td>
+                <td class="footer-signature"><b>مهر و امضا خریدار:</b></td>
+                <td>
+                  <div class="footer-payment">
+                    <div>
+                      <b>مبلغ پرداختی</b><span>{{ amountInWords(normalized.total) }}</span>
+                    </div>
+                    <strong>{{ rial(normalized.total) }}</strong>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
         <div v-else class="paper-continued">ادامه اقلام در صفحه بعد</div>
-        <footer class="paper-signatures">
-          <span><template v-if="pageIndex === pages.length - 1">امضای فروشنده</template></span>
+        <footer class="paper-page-footer">
           <span class="paper-pagination"
             >صفحه <bdi>{{ number(pageIndex + 1) }}/{{ number(pages.length) }}</bdi></span
           >
-          <span><template v-if="pageIndex === pages.length - 1">امضای خریدار</template></span>
         </footer>
       </div>
     </article>
@@ -119,16 +139,17 @@ async function prepareForPrint() {
       img.decode().catch(() => undefined),
     ),
   )
-  scales.value = Array.from(
-    sheets.value?.querySelectorAll<HTMLElement>('.invoice-paper') || [],
-  ).map((sheet) => {
-    const content = sheet.querySelector<HTMLElement>('.paper-content')!
-    return Math.min(
-      1,
-      sheet.clientHeight / content.scrollHeight,
-      sheet.clientWidth / content.scrollWidth,
-    )
-  })
+  const elements = Array.from(sheets.value?.querySelectorAll<HTMLElement>('.invoice-paper') || [])
+  const measure = () =>
+    elements.map((sheet) => {
+      const content = sheet.querySelector<HTMLElement>('.paper-content')!
+      return Math.min(
+        1,
+        sheet.clientHeight / Math.max(content.scrollHeight, content.offsetHeight),
+        sheet.clientWidth / Math.max(content.scrollWidth, content.offsetWidth),
+      )
+    })
+  scales.value = measure()
   await nextTick()
 }
 watch(
@@ -168,12 +189,12 @@ const seller = computed(() => ({
   overflow: hidden;
   font-size: 9px;
   line-height: 1.5;
-  font-family: 'Vazirmatn', Tahoma, sans-serif;
+  font-family: var(--font-family);
 }
 .paper-content {
   width: 198mm;
-  min-height: 135mm;
   padding: 3mm;
+  border: 1px solid #111;
   display: flex;
   flex-direction: column;
   transform-origin: top right;
@@ -274,57 +295,65 @@ td:nth-child(n + 5) {
   font-variant-numeric: tabular-nums;
 }
 .paper-bottom {
-  margin-top: auto;
-  padding-top: 2mm;
+  margin-top: 0;
 }
-.paper-totals {
-  display: flex;
-  justify-content: space-between;
-  gap: 2mm;
+.paper-page-footer {
+  margin-top: 1mm;
   font-size: 8px;
+  text-align: center;
 }
-.paper-grand-total {
+.paper-footer-table {
+  margin-top: -1px;
+}
+.paper-footer-table td {
+  border-color: #111;
+  padding: 1mm 1.5mm;
+  text-align: start;
+  vertical-align: top;
+  white-space: normal;
+}
+.footer-sale-terms,
+.footer-amount-row {
   display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
+  align-items: center;
   gap: 3mm;
-  padding: 1.5mm 2mm;
-  margin-top: 1.5mm;
-  border: 1px solid #aaa;
-  background: #f5f5f5;
 }
-.paper-grand-total span {
-  font-size: 8px;
+.footer-amount-row {
+  justify-content: space-between;
 }
-.paper-settlement {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1mm 6mm;
-  padding-top: 1mm;
-  font-size: 8px;
+.footer-sale-terms span,
+.footer-amount-row span {
+  white-space: nowrap;
 }
-.paper-notes {
-  font-size: 8px;
-  margin: 1mm 0 0;
+.paper-footer-table .footer-notes {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
-.paper-signatures {
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
-  align-items: start;
-  gap: 3mm;
-  margin-top: 2mm;
-  min-height: 10mm;
-  padding: 1mm 12mm 0;
-  border-top: 1px solid #ccc;
+.paper-footer-table .footer-signature {
+  height: 10mm;
   font-size: 8px;
 }
-.paper-signatures > :last-child {
-  text-align: end;
+.footer-payment {
+  display: flex;
+  flex-direction: column;
+  gap: 1mm;
 }
-.paper-pagination {
-  text-align: center;
+.footer-payment > div {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 2mm;
+}
+.footer-payment > div b {
+  white-space: nowrap;
+}
+.footer-payment > div span {
+  font-size: 8px;
+}
+.footer-payment > strong {
+  font-size: 15px;
+  text-align: end;
+  font-variant-numeric: tabular-nums;
 }
 .paper-continued {
   text-align: center;
@@ -353,7 +382,7 @@ td:nth-child(n + 5) {
   tr,
   .paper-bottom,
   .paper-header,
-  .paper-signatures,
+  .paper-page-footer,
   .paper-parties {
     break-inside: avoid;
   }

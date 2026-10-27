@@ -270,6 +270,7 @@ onMounted(load)
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr));
   gap: 12px;
+  padding-left: 10px
 }
 .category-card {
   padding: 16px;

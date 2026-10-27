@@ -109,7 +109,7 @@ describe.skipIf(process.env.RUN_INVOICE_DB_TESTS !== '1')(
         where: { invoiceId },
       });
       expect(movement.currency).toBe('IRR');
-      expect(movement.unitPrice).toBe(1000);
+      expect(movement.unitPrice?.toNumber()).toBe(1000);
     });
 
     it('edits an invoice without double-decrementing stock or duplicating sale movements', async () => {
@@ -350,6 +350,91 @@ describe.skipIf(process.env.RUN_INVOICE_DB_TESTS !== '1')(
       expect(
         await prisma.product.findUniqueOrThrow({ where: { id: productId } }),
       ).toMatchObject({ buyPrice: 99, sellPrice: 150 });
+    });
+
+    it('persists and edits invoices at the 100 billion rial boundary', async () => {
+      const largeProduct = await prisma.product.create({
+        data: {
+          name: `${tag}-large-invoice`,
+          categoryId,
+          unit: 'عدد',
+          stock: 100,
+          buyPrice: 100,
+          sellPrice: 100,
+        },
+      });
+      let largeInvoiceId: number | undefined;
+      try {
+        const data = {
+          customerId: buyerId,
+          discount: 10_000_000_000,
+          paidAmount: 40_000_000_000,
+          items: [
+            {
+              productId: largeProduct.id,
+              quantity: 50,
+              unitPrice: 2_000_000_000,
+            },
+          ],
+        };
+        const created = await service.createInvoice(data);
+        largeInvoiceId = created.id;
+        expect(created.subtotal).toBe(100_000_000_000);
+        expect(created.total).toBe(90_000_000_000);
+        expect(created.items[0].total).toBe(100_000_000_000);
+        expect((await service.invoice(created.id)).paidAmount).toBe(
+          40_000_000_000,
+        );
+        expect(
+          (await service.invoices({ customerId: buyerId })).find(
+            (i) => i.id === created.id,
+          )?.subtotal,
+        ).toBe(100_000_000_000);
+        const edited = await service.updateInvoice(created.id, {
+          ...data,
+          discount: 0,
+          paidAmount: 100_000_000_000,
+          items: [
+            {
+              productId: largeProduct.id,
+              quantity: 1,
+              unitPrice: 100_000_000_000,
+            },
+          ],
+        });
+        expect(edited.total).toBe(100_000_000_000);
+        expect(edited.items[0].unitPrice).toBe(100_000_000_000);
+        expect(
+          (await service.movements()).find((m) => m.invoiceId === created.id)
+            ?.unitPrice,
+        ).toBe(100_000_000_000);
+        expect(edited.paidAmount).toBe(100_000_000_000);
+        await expect(
+          service.updateInvoice(created.id, {
+            ...data,
+            items: [
+              ...data.items,
+              { productId: largeProduct.id, quantity: 1, unitPrice: 1 },
+            ],
+          }),
+        ).rejects.toThrow('۱۰۰ میلیارد ریال');
+        expect((await service.invoice(created.id)).total).toBe(100_000_000_000);
+        expect(
+          (
+            await prisma.product.findUniqueOrThrow({
+              where: { id: largeProduct.id },
+            })
+          ).stock,
+        ).toBe(99);
+      } finally {
+        if (largeInvoiceId) {
+          await prisma.inventoryTransaction.deleteMany({
+            where: { invoiceId: largeInvoiceId },
+          });
+          await prisma.invoice.delete({ where: { id: largeInvoiceId } });
+        }
+        await prisma.product.delete({ where: { id: largeProduct.id } });
+      }
     });
 
     it('archives invoiced products while preserving their invoice and stock', async () => {

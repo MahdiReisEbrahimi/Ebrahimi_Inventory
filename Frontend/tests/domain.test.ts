@@ -46,21 +46,46 @@ test('duplicate rows cannot jointly exceed available stock', () => {
   assert.equal(validateInvoiceLines([line, { ...line, quantity: 3 }], stock), '')
 })
 
-test('invoice rejects invalid prices and totals that cannot fit database integers', () => {
+test('invoice rejects invalid prices and totals above 100 billion rials', () => {
   for (const unitPrice of [-1, 1.5, Number.NaN, Infinity]) {
     assert.notEqual(validateInvoiceLines([{ ...line, unitPrice }], stock), '')
   }
-  assert.notEqual(validateInvoiceLines([{ ...line, unitPrice: 1_500_000_000 }], stock), '')
+  assert.notEqual(validateInvoiceLines([{ ...line, unitPrice: 50_000_000_001 }], stock), '')
   assert.notEqual(
     validateInvoiceLines(
       [
-        { productId: 1, quantity: 1, unitPrice: 1_500_000_000 },
-        { productId: 2, quantity: 1, unitPrice: 1_500_000_000 },
+        { productId: 1, quantity: 1, unitPrice: 50_000_000_001 },
+        { productId: 2, quantity: 1, unitPrice: 50_000_000_001 },
       ],
       stock,
     ),
     '',
   )
+})
+
+test('invoice cap includes exactly 100 billion rials across one or multiple rows', () => {
+  const stock = () => 100
+  const largeLine = { productId: 1, quantity: 50, unitPrice: 2_000_000_000 }
+  assert.equal(validateInvoiceLines([largeLine], stock), '')
+  assert.equal(
+    validateInvoiceLines([{ ...largeLine, quantity: 1, unitPrice: 100_000_000_000 }], stock),
+    '',
+  )
+  assert.equal(
+    validateInvoiceLines(
+      [
+        { ...largeLine, quantity: 25 },
+        { ...largeLine, productId: 2, quantity: 25 },
+      ],
+      stock,
+    ),
+    '',
+  )
+  assert.notEqual(
+    validateInvoiceLines([largeLine, { productId: 2, quantity: 1, unitPrice: 1 }], stock),
+    '',
+  )
+  assert.notEqual(validateInvoiceLines([{ ...largeLine, quantity: 51 }], stock), '')
 })
 
 function withThemeEnvironment(

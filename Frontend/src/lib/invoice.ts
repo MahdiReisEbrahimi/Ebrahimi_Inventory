@@ -1,5 +1,5 @@
 type InvoiceLine = { productId: number; quantity: number; unitPrice: number }
-const MAX_INTEGER = 2_147_483_647
+export const MAX_INVOICE_AMOUNT = 100_000_000_000
 
 /** Validate the draft before a request. The API remains the authority on stock. */
 export function validateInvoiceLines(
@@ -25,8 +25,8 @@ export function validateInvoiceLines(
       return 'قیمت هر کالا باید عدد صحیح و غیرمنفی باشد.'
     }
     total += line.quantity * line.unitPrice
-    if (!Number.isSafeInteger(total) || total > MAX_INTEGER) {
-      return 'مبلغ فاکتور از سقف قابل ثبت بیشتر است.'
+    if (!Number.isSafeInteger(total) || total > MAX_INVOICE_AMOUNT) {
+      return 'مبلغ فاکتور نباید بیشتر از ۱۰۰ میلیارد ریال باشد.'
     }
   }
   return ''

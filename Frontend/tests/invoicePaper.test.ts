@@ -6,7 +6,7 @@ import vue from '@vitejs/plugin-vue'
 import { h } from 'vue'
 import { renderToString } from 'vue/server-renderer'
 
-test('printed invoice repeats compact headers and keeps parties/footer on first/last pages', async () => {
+test('invoice preview and print share the table footer on the final page', async () => {
   const server = await createServer({
     configFile: false,
     plugins: [vue()],
@@ -15,7 +15,7 @@ test('printed invoice repeats compact headers and keeps parties/footer on first/
   })
   try {
     const { default: Paper } = await server.ssrLoadModule('/src/components/InvoicePaper.vue')
-    for (const count of [10, 11, 21]) {
+    for (const count of [1, 10, 11, 21]) {
       const invoice = {
         id: 114,
         number: '114',
@@ -48,19 +48,30 @@ test('printed invoice repeats compact headers and keeps parties/footer on first/
           },
         }),
       )
+      const printFooter = html.match(/<table class="paper-footer-table"[^]*?<\/table>/)?.[0]
+      assert.ok(printFooter)
+      assert.equal((printFooter.match(/<tr\b[^>]*>/g) || []).length, 3)
+      assert.match(printFooter, /شرایط و نحوه فروش:/)
+      assert.match(printFooter, /☐ نقدی/)
+      assert.match(printFooter, /☑ غیرنقدی/)
+      assert.match(printFooter, /مهر و امضا فروشنده/)
+      assert.match(printFooter, /مهر و امضا خریدار/)
+      assert.match(printFooter, /مبلغ پرداختی/)
+      assert.match(printFooter, /۹٬۹۶۸٬۰۰۰ ریال/)
+      assert.match(printFooter, /توضیح(?:ات) مخصوص صفحه آخر/)
+      assert.doesNotMatch(printFooter, /شماره شبا/)
       const pages = Math.ceil(count / 10)
       assert.equal((html.match(/class="invoice-paper"/g) || []).length, pages)
       assert.equal((html.match(/class="paper-header"/g) || []).length, pages)
       assert.equal((html.match(/class="paper-parties"/g) || []).length, 1)
       assert.equal((html.match(/class="paper-bottom"/g) || []).length, 1)
       assert.equal((html.match(/class="paper-pagination"/g) || []).length, pages)
-      assert.equal((html.match(/امضای فروشنده/g) || []).length, 1)
-      assert.equal((html.match(/امضای خریدار/g) || []).length, 1)
+      assert.equal((html.match(/مهر و امضا فروشنده/g) || []).length, 1)
+      assert.equal((html.match(/مهر و امضا خریدار/g) || []).length, 1)
       assert.equal((html.match(/test-logo.png/g) || []).length, pages)
-      assert.match(html, /تخفیف:/)
-      assert.match(html, /جمع اقلام:/)
-      assert.doesNotMatch(html, /مبلغ پرداختی|مانده:/)
-      assert.match(html, /class="paper-settlement"[^]*?IR000000000000000000000000[^]*?<\/div>/)
+      assert.equal((html.match(/class="paper-footer-table"/g) || []).length, 1)
+      assert.match(html, /تخفیف/)
+      assert.match(html, /جمع کل فاکتور/)
       for (const header of html.matchAll(/<header[^]*?<\/header>/g)) {
         assert.doesNotMatch(header[0], /صفحه/)
       }
@@ -77,16 +88,22 @@ test('printed invoice repeats compact headers and keeps parties/footer on first/
         assert.doesNotMatch(articles[1]!, /paper-parties/)
         assert.doesNotMatch(articles[1]!, /paper-bottom/)
       }
-      const withoutDiscount = await renderToString(
+      const renderedWithoutDiscount = await renderToString(
         h(Paper, {
-          invoice: { ...invoice, discount: 0, subtotal: invoice.total },
+          invoice: { ...invoice, discount: 0, subtotal: invoice.total, settlement: 'CASH' },
           settings: null,
         }),
       )
-      assert.doesNotMatch(withoutDiscount, /تخفیف|جمع اقلام/)
-      assert.match(withoutDiscount, /جمع کل فاکتور/)
-      assert.doesNotMatch(withoutDiscount, /paper-totals|مبلغ پرداختی|مانده:/)
-      assert.match(withoutDiscount, /نه میلیون و نهصد و شصت و هشت هزار ریال/)
+      const cashFooter = renderedWithoutDiscount.match(
+        /<table class="paper-footer-table"[^]*?<\/table>/,
+      )?.[0]
+      assert.ok(cashFooter)
+      assert.match(cashFooter, /☑ نقدی/)
+      assert.match(cashFooter, /☐ غیرنقدی/)
+      assert.match(cashFooter, /تخفیف/)
+      assert.match(cashFooter, /۰ ریال/)
+      assert.match(cashFooter, /جمع کل فاکتور/)
+      assert.match(cashFooter, /نه میلیون و نهصد و شصت و هشت هزار ریال/)
     }
   } finally {
     await server.close()

@@ -30,7 +30,7 @@ export type InventoryTransactionAvgAggregateOutputType = {
   id: number | null
   productId: number | null
   quantity: number | null
-  unitPrice: number | null
+  unitPrice: runtime.Decimal | null
   invoiceId: number | null
 }
 
@@ -38,7 +38,7 @@ export type InventoryTransactionSumAggregateOutputType = {
   id: number | null
   productId: number | null
   quantity: number | null
-  unitPrice: number | null
+  unitPrice: runtime.Decimal | null
   invoiceId: number | null
 }
 
@@ -47,7 +47,7 @@ export type InventoryTransactionMinAggregateOutputType = {
   productId: number | null
   type: $Enums.InventoryTransactionType | null
   quantity: number | null
-  unitPrice: number | null
+  unitPrice: runtime.Decimal | null
   description: string | null
   invoiceId: number | null
   createdAt: Date | null
@@ -59,7 +59,7 @@ export type InventoryTransactionMaxAggregateOutputType = {
   productId: number | null
   type: $Enums.InventoryTransactionType | null
   quantity: number | null
-  unitPrice: number | null
+  unitPrice: runtime.Decimal | null
   description: string | null
   invoiceId: number | null
   createdAt: Date | null
@@ -224,7 +224,7 @@ export type InventoryTransactionGroupByOutputType = {
   productId: number
   type: $Enums.InventoryTransactionType
   quantity: number
-  unitPrice: number | null
+  unitPrice: runtime.Decimal | null
   description: string | null
   invoiceId: number | null
   createdAt: Date
@@ -259,7 +259,7 @@ export type InventoryTransactionWhereInput = {
   productId?: Prisma.IntFilter<"InventoryTransaction"> | number
   type?: Prisma.EnumInventoryTransactionTypeFilter<"InventoryTransaction"> | $Enums.InventoryTransactionType
   quantity?: Prisma.IntFilter<"InventoryTransaction"> | number
-  unitPrice?: Prisma.IntNullableFilter<"InventoryTransaction"> | number | null
+  unitPrice?: Prisma.DecimalNullableFilter<"InventoryTransaction"> | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   description?: Prisma.StringNullableFilter<"InventoryTransaction"> | string | null
   invoiceId?: Prisma.IntNullableFilter<"InventoryTransaction"> | number | null
   createdAt?: Prisma.DateTimeFilter<"InventoryTransaction"> | Date | string
@@ -290,7 +290,7 @@ export type InventoryTransactionWhereUniqueInput = Prisma.AtLeast<{
   productId?: Prisma.IntFilter<"InventoryTransaction"> | number
   type?: Prisma.EnumInventoryTransactionTypeFilter<"InventoryTransaction"> | $Enums.InventoryTransactionType
   quantity?: Prisma.IntFilter<"InventoryTransaction"> | number
-  unitPrice?: Prisma.IntNullableFilter<"InventoryTransaction"> | number | null
+  unitPrice?: Prisma.DecimalNullableFilter<"InventoryTransaction"> | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   description?: Prisma.StringNullableFilter<"InventoryTransaction"> | string | null
   invoiceId?: Prisma.IntNullableFilter<"InventoryTransaction"> | number | null
   createdAt?: Prisma.DateTimeFilter<"InventoryTransaction"> | Date | string
@@ -324,7 +324,7 @@ export type InventoryTransactionScalarWhereWithAggregatesInput = {
   productId?: Prisma.IntWithAggregatesFilter<"InventoryTransaction"> | number
   type?: Prisma.EnumInventoryTransactionTypeWithAggregatesFilter<"InventoryTransaction"> | $Enums.InventoryTransactionType
   quantity?: Prisma.IntWithAggregatesFilter<"InventoryTransaction"> | number
-  unitPrice?: Prisma.IntNullableWithAggregatesFilter<"InventoryTransaction"> | number | null
+  unitPrice?: Prisma.DecimalNullableWithAggregatesFilter<"InventoryTransaction"> | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   description?: Prisma.StringNullableWithAggregatesFilter<"InventoryTransaction"> | string | null
   invoiceId?: Prisma.IntNullableWithAggregatesFilter<"InventoryTransaction"> | number | null
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"InventoryTransaction"> | Date | string
@@ -334,7 +334,7 @@ export type InventoryTransactionScalarWhereWithAggregatesInput = {
 export type InventoryTransactionCreateInput = {
   type: $Enums.InventoryTransactionType
   quantity: number
-  unitPrice?: number | null
+  unitPrice?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   description?: string | null
   createdAt?: Date | string
   currency?: string
@@ -347,7 +347,7 @@ export type InventoryTransactionUncheckedCreateInput = {
   productId: number
   type: $Enums.InventoryTransactionType
   quantity: number
-  unitPrice?: number | null
+  unitPrice?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   description?: string | null
   invoiceId?: number | null
   createdAt?: Date | string
@@ -357,7 +357,7 @@ export type InventoryTransactionUncheckedCreateInput = {
 export type InventoryTransactionUpdateInput = {
   type?: Prisma.EnumInventoryTransactionTypeFieldUpdateOperationsInput | $Enums.InventoryTransactionType
   quantity?: Prisma.IntFieldUpdateOperationsInput | number
-  unitPrice?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  unitPrice?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   currency?: Prisma.StringFieldUpdateOperationsInput | string
@@ -370,7 +370,7 @@ export type InventoryTransactionUncheckedUpdateInput = {
   productId?: Prisma.IntFieldUpdateOperationsInput | number
   type?: Prisma.EnumInventoryTransactionTypeFieldUpdateOperationsInput | $Enums.InventoryTransactionType
   quantity?: Prisma.IntFieldUpdateOperationsInput | number
-  unitPrice?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  unitPrice?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   invoiceId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -382,7 +382,7 @@ export type InventoryTransactionCreateManyInput = {
   productId: number
   type: $Enums.InventoryTransactionType
   quantity: number
-  unitPrice?: number | null
+  unitPrice?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   description?: string | null
   invoiceId?: number | null
   createdAt?: Date | string
@@ -392,7 +392,7 @@ export type InventoryTransactionCreateManyInput = {
 export type InventoryTransactionUpdateManyMutationInput = {
   type?: Prisma.EnumInventoryTransactionTypeFieldUpdateOperationsInput | $Enums.InventoryTransactionType
   quantity?: Prisma.IntFieldUpdateOperationsInput | number
-  unitPrice?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  unitPrice?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   currency?: Prisma.StringFieldUpdateOperationsInput | string
@@ -403,7 +403,7 @@ export type InventoryTransactionUncheckedUpdateManyInput = {
   productId?: Prisma.IntFieldUpdateOperationsInput | number
   type?: Prisma.EnumInventoryTransactionTypeFieldUpdateOperationsInput | $Enums.InventoryTransactionType
   quantity?: Prisma.IntFieldUpdateOperationsInput | number
-  unitPrice?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  unitPrice?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   invoiceId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -518,6 +518,14 @@ export type EnumInventoryTransactionTypeFieldUpdateOperationsInput = {
   set?: $Enums.InventoryTransactionType
 }
 
+export type NullableDecimalFieldUpdateOperationsInput = {
+  set?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  increment?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  decrement?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  multiply?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  divide?: runtime.Decimal | runtime.DecimalJsLike | number | string
+}
+
 export type InventoryTransactionCreateNestedManyWithoutInvoiceInput = {
   create?: Prisma.XOR<Prisma.InventoryTransactionCreateWithoutInvoiceInput, Prisma.InventoryTransactionUncheckedCreateWithoutInvoiceInput> | Prisma.InventoryTransactionCreateWithoutInvoiceInput[] | Prisma.InventoryTransactionUncheckedCreateWithoutInvoiceInput[]
   connectOrCreate?: Prisma.InventoryTransactionCreateOrConnectWithoutInvoiceInput | Prisma.InventoryTransactionCreateOrConnectWithoutInvoiceInput[]
@@ -563,7 +571,7 @@ export type InventoryTransactionUncheckedUpdateManyWithoutInvoiceNestedInput = {
 export type InventoryTransactionCreateWithoutProductInput = {
   type: $Enums.InventoryTransactionType
   quantity: number
-  unitPrice?: number | null
+  unitPrice?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   description?: string | null
   createdAt?: Date | string
   currency?: string
@@ -574,7 +582,7 @@ export type InventoryTransactionUncheckedCreateWithoutProductInput = {
   id?: number
   type: $Enums.InventoryTransactionType
   quantity: number
-  unitPrice?: number | null
+  unitPrice?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   description?: string | null
   invoiceId?: number | null
   createdAt?: Date | string
@@ -615,7 +623,7 @@ export type InventoryTransactionScalarWhereInput = {
   productId?: Prisma.IntFilter<"InventoryTransaction"> | number
   type?: Prisma.EnumInventoryTransactionTypeFilter<"InventoryTransaction"> | $Enums.InventoryTransactionType
   quantity?: Prisma.IntFilter<"InventoryTransaction"> | number
-  unitPrice?: Prisma.IntNullableFilter<"InventoryTransaction"> | number | null
+  unitPrice?: Prisma.DecimalNullableFilter<"InventoryTransaction"> | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   description?: Prisma.StringNullableFilter<"InventoryTransaction"> | string | null
   invoiceId?: Prisma.IntNullableFilter<"InventoryTransaction"> | number | null
   createdAt?: Prisma.DateTimeFilter<"InventoryTransaction"> | Date | string
@@ -625,7 +633,7 @@ export type InventoryTransactionScalarWhereInput = {
 export type InventoryTransactionCreateWithoutInvoiceInput = {
   type: $Enums.InventoryTransactionType
   quantity: number
-  unitPrice?: number | null
+  unitPrice?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   description?: string | null
   createdAt?: Date | string
   currency?: string
@@ -637,7 +645,7 @@ export type InventoryTransactionUncheckedCreateWithoutInvoiceInput = {
   productId: number
   type: $Enums.InventoryTransactionType
   quantity: number
-  unitPrice?: number | null
+  unitPrice?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   description?: string | null
   createdAt?: Date | string
   currency?: string
@@ -673,7 +681,7 @@ export type InventoryTransactionCreateManyProductInput = {
   id?: number
   type: $Enums.InventoryTransactionType
   quantity: number
-  unitPrice?: number | null
+  unitPrice?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   description?: string | null
   invoiceId?: number | null
   createdAt?: Date | string
@@ -683,7 +691,7 @@ export type InventoryTransactionCreateManyProductInput = {
 export type InventoryTransactionUpdateWithoutProductInput = {
   type?: Prisma.EnumInventoryTransactionTypeFieldUpdateOperationsInput | $Enums.InventoryTransactionType
   quantity?: Prisma.IntFieldUpdateOperationsInput | number
-  unitPrice?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  unitPrice?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   currency?: Prisma.StringFieldUpdateOperationsInput | string
@@ -694,7 +702,7 @@ export type InventoryTransactionUncheckedUpdateWithoutProductInput = {
   id?: Prisma.IntFieldUpdateOperationsInput | number
   type?: Prisma.EnumInventoryTransactionTypeFieldUpdateOperationsInput | $Enums.InventoryTransactionType
   quantity?: Prisma.IntFieldUpdateOperationsInput | number
-  unitPrice?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  unitPrice?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   invoiceId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -705,7 +713,7 @@ export type InventoryTransactionUncheckedUpdateManyWithoutProductInput = {
   id?: Prisma.IntFieldUpdateOperationsInput | number
   type?: Prisma.EnumInventoryTransactionTypeFieldUpdateOperationsInput | $Enums.InventoryTransactionType
   quantity?: Prisma.IntFieldUpdateOperationsInput | number
-  unitPrice?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  unitPrice?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   invoiceId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -717,7 +725,7 @@ export type InventoryTransactionCreateManyInvoiceInput = {
   productId: number
   type: $Enums.InventoryTransactionType
   quantity: number
-  unitPrice?: number | null
+  unitPrice?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   description?: string | null
   createdAt?: Date | string
   currency?: string
@@ -726,7 +734,7 @@ export type InventoryTransactionCreateManyInvoiceInput = {
 export type InventoryTransactionUpdateWithoutInvoiceInput = {
   type?: Prisma.EnumInventoryTransactionTypeFieldUpdateOperationsInput | $Enums.InventoryTransactionType
   quantity?: Prisma.IntFieldUpdateOperationsInput | number
-  unitPrice?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  unitPrice?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   currency?: Prisma.StringFieldUpdateOperationsInput | string
@@ -738,7 +746,7 @@ export type InventoryTransactionUncheckedUpdateWithoutInvoiceInput = {
   productId?: Prisma.IntFieldUpdateOperationsInput | number
   type?: Prisma.EnumInventoryTransactionTypeFieldUpdateOperationsInput | $Enums.InventoryTransactionType
   quantity?: Prisma.IntFieldUpdateOperationsInput | number
-  unitPrice?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  unitPrice?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   currency?: Prisma.StringFieldUpdateOperationsInput | string
@@ -749,7 +757,7 @@ export type InventoryTransactionUncheckedUpdateManyWithoutInvoiceInput = {
   productId?: Prisma.IntFieldUpdateOperationsInput | number
   type?: Prisma.EnumInventoryTransactionTypeFieldUpdateOperationsInput | $Enums.InventoryTransactionType
   quantity?: Prisma.IntFieldUpdateOperationsInput | number
-  unitPrice?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  unitPrice?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   currency?: Prisma.StringFieldUpdateOperationsInput | string
@@ -836,7 +844,7 @@ export type $InventoryTransactionPayload<ExtArgs extends runtime.Types.Extension
     productId: number
     type: $Enums.InventoryTransactionType
     quantity: number
-    unitPrice: number | null
+    unitPrice: runtime.Decimal | null
     description: string | null
     invoiceId: number | null
     createdAt: Date
@@ -1270,7 +1278,7 @@ export interface InventoryTransactionFieldRefs {
   readonly productId: Prisma.FieldRef<"InventoryTransaction", 'Int'>
   readonly type: Prisma.FieldRef<"InventoryTransaction", 'InventoryTransactionType'>
   readonly quantity: Prisma.FieldRef<"InventoryTransaction", 'Int'>
-  readonly unitPrice: Prisma.FieldRef<"InventoryTransaction", 'Int'>
+  readonly unitPrice: Prisma.FieldRef<"InventoryTransaction", 'Decimal'>
   readonly description: Prisma.FieldRef<"InventoryTransaction", 'String'>
   readonly invoiceId: Prisma.FieldRef<"InventoryTransaction", 'Int'>
   readonly createdAt: Prisma.FieldRef<"InventoryTransaction", 'DateTime'>

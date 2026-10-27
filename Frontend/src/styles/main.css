@@ -37,7 +37,8 @@
   --sidebar-accent: #2a5145;
   --sidebar-accent-foreground: #ffffff;
   --sidebar-border: #34564a;
-  font-family: 'Vazirmatn', Tahoma, sans-serif;
+  --font-family: 'Vazirmatn', Tahoma, sans-serif;
+  font-family: var(--font-family);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;

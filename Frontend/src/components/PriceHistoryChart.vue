@@ -36,23 +36,24 @@ const chartOption = computed(() => {
   const dark = isDark.value
   const style = getComputedStyle(document.documentElement)
   const token = (name: string) => style.getPropertyValue(name).trim()
+  const fontFamily = token('--font-family')
   return {
     animation:
       !preferences.value.reduceMotion &&
       !window.matchMedia('(prefers-reduced-motion: reduce)').matches,
     color: [dark ? '#e7bf7c' : '#93611b', preferences.value.primaryColor || token('--primary')],
-    textStyle: { fontFamily: 'Vazirmatn', color: token('--muted-foreground') },
+    textStyle: { fontFamily, color: token('--muted-foreground') },
     tooltip: {
       trigger: 'axis',
       confine: true,
       backgroundColor: token('--popover'),
       borderColor: token('--border'),
-      textStyle: { color: token('--foreground'), fontFamily: 'Vazirmatn' },
+      textStyle: { color: token('--foreground'), fontFamily },
       valueFormatter: (value: number | null) => (value == null ? '—' : number(value) + ' تومان'),
     },
     legend: {
       top: 16,
-      textStyle: { color: token('--foreground'), fontFamily: 'Vazirmatn', fontSize: 11 },
+      textStyle: { color: token('--foreground'), fontFamily, fontSize: 11 },
       icon: 'roundRect',
       itemWidth: 14,
       itemHeight: 5,

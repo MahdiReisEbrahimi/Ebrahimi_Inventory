@@ -14,12 +14,32 @@ import {
   UpdateStoreSettingsDto,
 } from './inventory.dto.js';
 
+export const MAX_INVOICE_AMOUNT = 100_000_000_000;
+
+type InvoiceWithItems = Prisma.InvoiceGetPayload<{ include: { items: true } }>;
+
+// Invoice amounts use exact database decimals; the API keeps numeric rial values.
+function invoiceResponse<T extends InvoiceWithItems>(invoice: T) {
+  return {
+    ...invoice,
+    subtotal: invoice.subtotal.toNumber(),
+    discount: invoice.discount.toNumber(),
+    total: invoice.total.toNumber(),
+    paidAmount: invoice.paidAmount.toNumber(),
+    items: invoice.items.map((item) => ({
+      ...item,
+      unitPrice: item.unitPrice.toNumber(),
+      total: item.total.toNumber(),
+    })),
+  };
+}
+
 @Injectable()
 export class InventoryService {
   constructor(private readonly prisma: PrismaService) {}
 
-  movements() {
-    return this.prisma.inventoryTransaction.findMany({
+  async movements() {
+    const movements = await this.prisma.inventoryTransaction.findMany({
       include: {
         product: { select: { id: true, name: true, unit: true } },
         invoice: { select: { number: true } },
@@ -27,6 +47,10 @@ export class InventoryService {
       orderBy: { createdAt: 'desc' },
       take: 500,
     });
+    return movements.map((movement) => ({
+      ...movement,
+      unitPrice: movement.unitPrice?.toNumber() ?? null,
+    }));
   }
 
   async createMovement(data: CreateMovementDto) {
@@ -117,7 +141,7 @@ export class InventoryService {
           details: { quantity: data.quantity, stock: updated.stock },
         },
       });
-      return movement;
+      return { ...movement, unitPrice: movement.unitPrice?.toNumber() ?? null };
     });
   }
 
@@ -175,20 +199,23 @@ export class InventoryService {
         item.quantity > 2_147_483_647 ||
         !Number.isInteger(item.unitPrice) ||
         item.unitPrice < 0 ||
-        item.unitPrice > 2_147_483_647
+        item.unitPrice > MAX_INVOICE_AMOUNT
       )
         throw new BadRequestException('اطلاعات اقلام فاکتور معتبر نیست.');
     const subtotal = data.items.reduce(
       (sum, item) => sum + item.quantity * item.unitPrice,
       0,
     );
+    if (subtotal > MAX_INVOICE_AMOUNT)
+      throw new BadRequestException(
+        'مبلغ فاکتور نباید بیشتر از ۱۰۰ میلیارد ریال باشد.',
+      );
     const discount = data.discount ?? 0;
     const total = subtotal - discount;
     const paidAmount =
       data.paidAmount ?? (data.settlement === 'INSTALLMENT' ? 0 : total);
     if (
       !Number.isSafeInteger(subtotal) ||
-      subtotal > 2_147_483_647 ||
       !Number.isInteger(discount) ||
       discount < 0 ||
       discount > subtotal ||
@@ -333,10 +360,12 @@ export class InventoryService {
               },
             });
           }
-          return tx.invoice.findUniqueOrThrow({
-            where: { id: invoice.id },
-            include: { items: true },
-          });
+          return invoiceResponse(
+            await tx.invoice.findUniqueOrThrow({
+              where: { id: invoice.id },
+              include: { items: true },
+            }),
+          );
         },
         { isolationLevel: 'Serializable', timeout: 15000 },
       );
@@ -425,19 +454,20 @@ export class InventoryService {
         },
       };
     }
-    return this.prisma.invoice.findMany({
+    const invoices = await this.prisma.invoice.findMany({
       where,
       include: { items: true, customer: true },
       orderBy: [{ issueDate: 'desc' }, { id: 'desc' }],
       take: 500,
     });
+    return invoices.map(invoiceResponse);
   }
   invoice(id: number) {
     return this.prisma.invoice
       .findUnique({ where: { id }, include: { items: true } })
       .then((v) => {
         if (!v) throw new NotFoundException('فاکتور پیدا نشد.');
-        return v;
+        return invoiceResponse(v);
       });
   }
   async storeSettings() {

@@ -444,6 +444,12 @@ watch(
 .page-content.page-content--invoices {
   padding: 16px;
 }
+/* Let the invoice editor meet the content edges at every viewport size. */
+.page-content.page-content--invoices:has(.invoice-editor) {
+  padding: 0;
+  margin: 0;
+  scrollbar-gutter: auto;
+}
 .page-content--invoices > * {
   max-width: none;
 }

@@ -27,6 +27,7 @@ test('invoice preview and print share the table footer on the final page', async
         discount: 32_000,
         paidAmount: 0,
         settlement: 'INSTALLMENT',
+        sellerIban: '',
         buyerFirstName: 'خریدار',
         buyerLastName: 'نمونه',
         buyerAddress: 'نشانی خریدار',
@@ -57,7 +58,10 @@ test('invoice preview and print share the table footer on the final page', async
       const printFooter = html.match(/<table class="paper-footer-table"[^]*?<\/table>/)?.[0]
       assert.ok(printFooter)
       assert.equal((printFooter.match(/<tr\b[^>]*>/g) || []).length, 3)
-      assert.match(printFooter, /شرایط و نحوه فروش:/)
+      const footerRows = [...printFooter.matchAll(/<tr\b[^>]*>([^]*?)<\/tr>/g)]
+      assert.match(footerRows[1]![1]!, /footer-signature/)
+      assert.match(footerRows[2]![1]!, /footer-notes/)
+      assert.match(printFooter, /شرایط فروش:/)
       assert.match(printFooter, /☐ نقدی/)
       assert.match(printFooter, /☑ غیرنقدی/)
       assert.match(printFooter, /مهر و امضا فروشنده/)
@@ -65,7 +69,15 @@ test('invoice preview and print share the table footer on the final page', async
       assert.match(printFooter, /مبلغ پرداختی/)
       assert.match(printFooter, /۹٬۹۶۸٬۰۰۰ ریال/)
       assert.match(printFooter, /توضیح(?:ات) مخصوص صفحه آخر/)
-      assert.doesNotMatch(printFooter, /شماره شبا/)
+      const saleTermsRow = printFooter.match(/<tr\b[^>]*>([^]*?)<\/tr>/)?.[1]
+      assert.ok(saleTermsRow)
+      const saleCells = [...saleTermsRow.matchAll(/<td\b([^>]*?)>([^]*?)<\/td>/g)]
+      assert.equal(saleCells.length, 3)
+      assert.doesNotMatch(saleCells[0]![1]!, /colspan/)
+      assert.doesNotMatch(saleCells[1]![1]!, /colspan/)
+      assert.match(saleCells[0]![2]!, /شرایط فروش:/)
+      assert.match(saleCells[1]![2]!, /شماره شبا:/)
+      assert.match(saleCells[1]![2]!, /<bdi dir="ltr"[^>]*>IR۰۰۰۰۰۰۰۰۰۰۰۰۰۰۰۰۰۰۰۰۰۰۰۰<\/bdi>/)
       const pages = invoicePages(invoice.items).length
       assert.equal((html.match(/class="invoice-paper"/g) || []).length, pages)
       assert.equal((html.match(/class="paper-header"/g) || []).length, pages)
@@ -74,7 +86,8 @@ test('invoice preview and print share the table footer on the final page', async
       assert.equal((html.match(/class="paper-pagination"/g) || []).length, pages)
       assert.equal((html.match(/مهر و امضا فروشنده/g) || []).length, 1)
       assert.equal((html.match(/مهر و امضا خریدار/g) || []).length, 1)
-      assert.equal((html.match(/test-logo.png/g) || []).length, pages)
+      assert.equal((html.match(/\/branding\/ebrahimi-black.svg/g) || []).length, pages)
+      assert.doesNotMatch(html, /test-logo.png/)
       assert.equal((html.match(/class="paper-footer-table"/g) || []).length, 1)
       assert.match(html, /تخفیف/)
       assert.match(html, /جمع کل فاکتور/)
@@ -120,8 +133,12 @@ test('invoice preview and print share the table footer on the final page', async
       assert.ok(cashFooter, renderedWithoutDiscount.match(/<table[^>]*>/g)?.join('\n'))
       assert.match(cashFooter, /☑ نقدی/)
       assert.match(cashFooter, /☐ غیرنقدی/)
+      assert.doesNotMatch(cashFooter, /شماره شبا/)
       assert.doesNotMatch(cashFooter, /تخفیف|جمع کل فاکتور/)
       assert.match(cashFooter, /rowspan="3"/)
+      const cashRows = [...cashFooter.matchAll(/<tr\b[^>]*>([^]*?)<\/tr>/g)]
+      assert.match(cashRows[1]![1]!, /footer-signature/)
+      assert.match(cashRows[2]![1]!, /footer-notes/)
       assert.equal((cashFooter.match(/class="footer-payment"/g) || []).length, 1)
       assert.match(cashFooter, /نه میلیون و نهصد و شصت و هشت هزار ریال/)
     }

@@ -2,12 +2,8 @@
   <div class="app-shell">
     <a class="skip-link" href="#main-content">رفتن به محتوای صفحه</a>
     <aside id="desktop-sidebar" class="sidebar" :class="{ 'is-collapsed': sidebarCollapsed }">
-      <RouterLink to="/" class="brand" aria-label="انبارک، صفحه اصلی">
-        <span class="brand-symbol"><Boxes :size="25" :stroke-width="1.6" /></span>
-        <span class="brand-copy"
-          ><b>انبارک<span class="brand-dot">.</span></b
-          ><small>همراه هر روز فروشگاه شما</small></span
-        >
+      <RouterLink to="/" class="brand" aria-label="فروشگاه ابراهیمی، صفحه اصلی">
+        <StoreLogo on-dark />
       </RouterLink>
       <div class="workspace-label"></div>
       <nav aria-label="منوی اصلی">
@@ -143,7 +139,7 @@
           dir="rtl"
         >
           <div class="mobile-sidebar__heading">
-            <DialogTitle>انبارک · منوی اصلی</DialogTitle
+            <DialogTitle aria-label="منوی اصلی فروشگاه ابراهیمی"><StoreLogo on-dark /></DialogTitle
             ><DialogClose class="icon-button" aria-label="بستن منو"><X :size="20" /></DialogClose>
           </div>
           <nav aria-label="منوی موبایل">
@@ -171,7 +167,6 @@ import {
   ArrowLeft,
   ArrowLeftRight,
   Bell,
-  Boxes,
   ChevronLeft,
   House,
   Tags,
@@ -196,6 +191,7 @@ import {
   PopoverContent,
 } from 'reka-ui'
 import ToastHost from '@/components/ui/ToastHost.vue'
+import StoreLogo from '@/components/StoreLogo.vue'
 import { productsApi } from '@/services/products'
 import { number } from '@/lib/format'
 import type { Product } from '@/types'
@@ -299,7 +295,6 @@ watch(
   justify-content: center;
   padding-inline: 0;
 }
-.sidebar.is-collapsed .brand-copy,
 .sidebar.is-collapsed .nav-label,
 .sidebar.is-collapsed .nav-dot {
   display: none;
@@ -311,31 +306,14 @@ watch(
 .brand {
   display: flex;
   align-items: center;
-  gap: 12px;
+  justify-content: center;
   padding: 0 8px;
 }
-.brand-symbol {
-  display: grid;
-  place-items: center;
-  width: 46px;
-  height: 46px;
-  border: 1px solid var(--sidebar-border);
-  border-radius: 14px;
-  background: var(--sidebar-accent);
+.brand .store-logo {
+  width: 104px;
 }
-.brand b {
-  font-size: 27px;
-  line-height: 1.2;
-  font-weight: 850;
-}
-.brand-dot {
-  color: #c4d890;
-}
-.brand small {
-  display: block;
-  color: var(--sidebar-muted);
-  font-size: 10px;
-  margin-top: 7px;
+.sidebar.is-collapsed .store-logo {
+  width: 48px;
 }
 .workspace-label {
   font-size: 10px;

@@ -4,23 +4,27 @@
       <div class="paper-content" :style="{ transform: `scale(${scales[pageIndex] || 1})` }">
         <header class="paper-header">
           <div class="paper-logo">
-            <img v-if="seller.logoUrl" :src="seller.logoUrl" alt="لوگوی فروشگاه" />
+            <img
+              src="/branding/ebrahimi-black.svg"
+              alt="لوگوی فروشگاه ابراهیمی"
+              width="1000"
+              height="789"
+            />
           </div>
           <div class="paper-brand">
             <h2>{{ seller.name }}</h2>
             <span>فاکتور فروش کالا</span>
           </div>
           <div class="paper-reference">
-            <span v-if="draft">پیش‌نویس · ثبت نشده</span>
-            <span v-else
-              >شماره فاکتور: <bdi dir="ltr">{{ toPersianDigits(invoice.number) }}</bdi></span
-            >
-            <span
-              >تاریخ صدور:
-              <bdi dir="ltr">{{
-                persianNumericDateLabel(invoice.issueDate || invoice.createdAt)
-              }}</bdi></span
-            >
+            <span v-if="draft" class="paper-draft">پیش‌نویس · ثبت نشده</span>
+            <template v-else>
+              <span>شماره فاکتور:</span>
+              <bdi dir="ltr">{{ toPersianDigits(invoice.number) }}</bdi>
+            </template>
+            <span>تاریخ:</span>
+            <bdi dir="ltr">{{
+              persianNumericDateLabel(invoice.issueDate || invoice.createdAt)
+            }}</bdi>
           </div>
         </header>
         <table v-if="pageIndex === 0" class="paper-parties" aria-label="مشخصات فروشنده و خریدار">
@@ -92,11 +96,17 @@
             </colgroup>
             <tbody>
               <tr>
-                <td colspan="2">
+                <td>
                   <div class="footer-sale-terms">
-                    <b>شرایط و نحوه فروش:</b>
+                    <b>شرایط فروش:</b>
                     <span>{{ invoice.settlement === 'INSTALLMENT' ? '☐' : '☑' }} نقدی</span>
                     <span>{{ invoice.settlement === 'INSTALLMENT' ? '☑' : '☐' }} غیرنقدی</span>
+                  </div>
+                </td>
+                <td>
+                  <div v-if="seller.iban" class="footer-iban">
+                    <b>شماره شبا:</b>
+                    <bdi dir="ltr">{{ toPersianDigits(seller.iban) }}</bdi>
                   </div>
                 </td>
                 <td v-if="!hasDiscount" rowspan="3" class="footer-payment-cell">
@@ -115,9 +125,8 @@
                 </td>
               </tr>
               <tr>
-                <td colspan="2" class="footer-notes">
-                  <b>توضیحات: </b>{{ invoice.notes || '…………………………………………' }}
-                </td>
+                <td class="footer-signature"><b>مهر و امضا فروشنده:</b></td>
+                <td class="footer-signature"><b>مهر و امضا خریدار:</b></td>
                 <td v-if="hasDiscount">
                   <div class="footer-amount-row">
                     <b>تخفیف</b><span>{{ rial(normalized.discount || 0) }}</span>
@@ -125,8 +134,9 @@
                 </td>
               </tr>
               <tr>
-                <td class="footer-signature"><b>مهر و امضا فروشنده:</b></td>
-                <td class="footer-signature"><b>مهر و امضا خریدار:</b></td>
+                <td colspan="2" class="footer-notes">
+                  <b>توضیحات: </b>{{ invoice.notes || '…………………………………………' }}
+                </td>
                 <td v-if="hasDiscount">
                   <div class="footer-payment">
                     <div>
@@ -244,8 +254,7 @@ const seller = computed(() => ({
   name: props.invoice.sellerName ?? props.settings?.name ?? 'فروشگاه',
   address: props.invoice.sellerAddress ?? props.settings?.address,
   phone: props.invoice.sellerPhone ?? props.settings?.phone,
-  logoUrl: props.invoice.sellerLogoUrl ?? props.settings?.logoUrl,
-  iban: props.invoice.sellerIban ?? props.settings?.iban,
+  iban: props.invoice.sellerIban?.trim() || props.settings?.iban?.trim(),
 }))
 const parties = computed(() => [
   {
@@ -326,14 +335,19 @@ const parties = computed(() => [
 }
 .paper-reference {
   display: grid;
-  text-align: left;
-  gap: 1mm 5mm;
+  grid-template-columns: max-content max-content;
+  justify-self: end;
+  text-align: start;
+  gap: 1mm 2mm;
   font-size: 9px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
-.paper-reference > span {
+.paper-reference .paper-draft {
   grid-column: 1 / -1;
+}
+.paper-reference > bdi {
+  justify-self: end;
 }
 .paper-parties {
   text-align: start;
@@ -453,10 +467,19 @@ td:nth-child(n + 5) {
   border-inline-end: var(--paper-border);
 }
 .footer-sale-terms,
+.footer-iban,
 .footer-amount-row {
   display: flex;
   align-items: center;
   gap: 3mm;
+}
+.footer-sale-terms {
+  gap: 1.5mm;
+  white-space: nowrap;
+}
+.footer-iban {
+  gap: 1mm;
+  white-space: nowrap;
 }
 .footer-amount-row {
   justify-content: space-between;

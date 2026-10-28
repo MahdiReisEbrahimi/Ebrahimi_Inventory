@@ -376,25 +376,22 @@
             ><input v-model="settingsForm.phone" type="tel" maxlength="30" /></label
           ><label class="form-field full-width"
             ><span>نشانی فروشگاه</span
-            ><textarea v-model="settingsForm.address" rows="2" maxlength="200" /></label
-          ><label class="form-field full-width"
-            ><span>نشانی تصویر لوگو <small>اختیاری</small></span
-            ><input
-              v-model="settingsForm.logoUrl"
-              type="text"
-              placeholder="/logo.png"
-              dir="ltr"
-              maxlength="2000"
-            />
-            <small class="muted"
-              >آدرس کامل یا مسیر فایل در پوشه public، مانند /logo.png</small
-            ></label
-          >
+            ><textarea v-model="settingsForm.address" rows="2" maxlength="200" />
+          </label>
         </div>
         <label class="form-field settings-extra"
           ><span>شماره شبای فروشنده</span
-          ><input v-model="settingsForm.iban" dir="ltr" maxlength="26" placeholder="IR…"
-        /></label>
+          ><span class="iban-input" dir="ltr">
+            <span class="iban-input__prefix" aria-hidden="true">IR</span>
+            <input
+              :value="ibanDigits"
+              inputmode="numeric"
+              dir="ltr"
+              aria-label="شماره شبای فروشنده، ۲۴ رقم پس از IR"
+              placeholder="۲۴ رقم شماره شبا"
+              @input="updateIbanInput"
+            /> </span
+        ></label>
         <label class="form-field settings-extra"
           ><span>توضیحات پیش‌فرض فاکتور</span
           ><textarea v-model="settingsForm.defaultInvoiceNotes" maxlength="600" rows="3" /><small
@@ -424,7 +421,7 @@ import SearchSelect from '@/components/ui/SearchSelect.vue'
 import PersianDatePicker from '@/components/ui/PersianDatePicker.vue'
 import InvoicePaper from '@/components/InvoicePaper.vue'
 import { toast } from '@/lib/toast'
-import { date, number, parseNumber } from '@/lib/format'
+import { date, number, normalizeNumberText, parseNumber } from '@/lib/format'
 import MoneyInput from '@/components/ui/MoneyInput.vue'
 import NumberInput from '@/components/ui/NumberInput.vue'
 import { validateInvoiceLines } from '@/lib/invoice'
@@ -487,6 +484,13 @@ const settingsForm = reactive({
   iban: '',
   defaultInvoiceNotes: '',
 })
+const ibanDigits = computed(() => settingsForm.iban.replace(/^IR/i, ''))
+function updateIbanInput(event: Event) {
+  const input = event.target as HTMLInputElement
+  const digits = normalizeNumberText(input.value).replace(/\D/g, '').slice(0, 24)
+  input.value = digits
+  settingsForm.iban = digits ? `IR${digits}` : ''
+}
 const archiveFilters = reactive({
   customerId: undefined as number | undefined,
   buyer: '',
@@ -1408,6 +1412,22 @@ onMounted(load)
 }
 .settings-extra {
   margin-top: 18px;
+}
+.iban-input {
+  position: relative;
+  display: block;
+}
+.iban-input__prefix {
+  position: absolute;
+  left: 13px;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  font-weight: 700;
+  color: var(--foreground);
+}
+.iban-input input {
+  padding-left: 38px;
 }
 @container (max-width: 640px) {
   .editor-toolbar {

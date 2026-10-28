@@ -5,6 +5,7 @@ import { createServer } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import { h } from 'vue'
 import { renderToString } from 'vue/server-renderer'
+import { invoicePages } from '../src/lib/invoicePresentation.ts'
 
 test('invoice preview and print share the table footer on the final page', async () => {
   const server = await createServer({
@@ -15,7 +16,7 @@ test('invoice preview and print share the table footer on the final page', async
   })
   try {
     const { default: Paper } = await server.ssrLoadModule('/src/components/InvoicePaper.vue')
-    for (const count of [1, 10, 11, 21]) {
+    for (const count of [1, 13, 14, 33, 34, 53, 80]) {
       const invoice = {
         id: 114,
         number: '114',
@@ -65,7 +66,7 @@ test('invoice preview and print share the table footer on the final page', async
       assert.match(printFooter, /۹٬۹۶۸٬۰۰۰ ریال/)
       assert.match(printFooter, /توضیح(?:ات) مخصوص صفحه آخر/)
       assert.doesNotMatch(printFooter, /شماره شبا/)
-      const pages = Math.ceil(count / 10)
+      const pages = invoicePages(invoice.items).length
       assert.equal((html.match(/class="invoice-paper"/g) || []).length, pages)
       assert.equal((html.match(/class="paper-header"/g) || []).length, pages)
       assert.equal((html.match(/class="paper-parties"/g) || []).length, 1)
@@ -91,6 +92,8 @@ test('invoice preview and print share the table footer on the final page', async
       assert.match(html, /class="paper-currency"[^>]*>\(ریال\)<\/small>/)
       for (const header of html.matchAll(/<header[^]*?<\/header>/g)) {
         assert.doesNotMatch(header[0], /صفحه/)
+        assert.match(header[0], /<bdi dir="ltr"[^>]*>۱۱۴<\/bdi>/)
+        assert.match(header[0], /<bdi dir="ltr"[^>]*>۱۴۰۵\/۰۸\/۰۴<\/bdi>/)
       }
       for (const footer of html.matchAll(/<footer[^]*?<\/footer>/g)) {
         assert.match(footer[0], /paper-pagination/)

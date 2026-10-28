@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+  <meta charset="utf-8" />
+  <style>
+    #measurements {
+      display: none;
+    }
+  </style>
+  <body>
+    <div id="app"></div>
+    <pre id="measurements">pending</pre>
+    <script type="module">
+      import { createApp, h, nextTick, ref } from 'vue'
+      import Paper from '/src/components/InvoicePaper.vue'
+      import '/src/styles/main.css'
+      const invoice = {
+        id: 114,
+        number: '114',
+        currency: 'IRR',
+        issueDate: '2026-10-28',
+        createdAt: '2026-10-28',
+        buyerFirstName: 'خریدار',
+        buyerLastName: 'نمونه',
+        buyerAddress: 'تهران، خیابان نمونه، پلاک ۱۲',
+        buyerPhone: '02112345678',
+        buyerNationalId: '1234567890',
+        total: 9968000,
+        subtotal: 10000000,
+        discount: 32000,
+        settlement: 'CASH',
+        notes: 'کالاها پس از بررسی تحویل خریدار شد.',
+        items: Array.from({ length: 80 }, (_, i) => ({
+          id: i + 1,
+          productId: i + 1,
+          name: `شیر روشویی اهرمی کروم نمونه ${i + 1}`,
+          quantity: 2,
+          unit: 'عدد',
+          unitPrice: 1250000,
+          total: 2500000,
+        })),
+      }
+      const settings = {
+        name: 'فروشگاه ابراهیمی',
+        address: 'تهران، خیابان نمونه، پلاک ۱۰',
+        phone: '02187654321',
+        logoUrl: null,
+      }
+      const paper = ref()
+      let app = createApp({ render: () => h(Paper, { invoice, settings, ref: paper }) })
+      app.mount('#app')
+      await nextTick()
+      await document.fonts.ready
+      await new Promise((resolve) => setTimeout(resolve, 300))
+      const sheets = [...document.querySelectorAll('.invoice-paper')]
+      const prototypes = { first: sheets[0], middle: sheets[1], last: sheets.at(-1) }
+      const results = {}
+      for (const kind of ['single', 'first', 'middle', 'last']) {
+        const sheet = prototypes[kind === 'single' ? 'first' : kind].cloneNode(true)
+        document.body.append(sheet)
+        const content = sheet.querySelector('.paper-content')
+        content.style.transform = 'none'
+        if (kind === 'single') {
+          content.querySelector('.paper-continued')?.remove()
+          content.insertBefore(
+            prototypes.last.querySelector('.paper-bottom').cloneNode(true),
+            content.querySelector('.paper-page-footer'),
+          )
+        }
+        const body = content.querySelector('table:not(.paper-parties) tbody')
+        const row = body.firstElementChild.cloneNode(true)
+        const heights = []
+        for (let count = 1; count <= 40; count++) {
+          body.replaceChildren(...Array.from({ length: count }, () => row.cloneNode(true)))
+          heights.push({
+            count,
+            height: content.getBoundingClientRect().height,
+            fits: content.getBoundingClientRect().height <= sheet.clientHeight - 1,
+          })
+        }
+        const fitting = heights.filter((item) => item.fits).at(-1)
+        results[kind] = {
+          sheetHeight: sheet.clientHeight,
+          maximum: fitting,
+          next: heights.find((item) => item.count === fitting.count + 1),
+        }
+        sheet.remove()
+      }
+      app.unmount()
+      results.scenarios = []
+      const logo =
+        'data:image/svg+xml,' +
+        encodeURIComponent(
+          '<svg xmlns="http://www.w3.org/2000/svg" width="80" height="60"><rect width="80" height="60" fill="black"/></svg>',
+        )
+      const scenarios = [
+        { count: 1 },
+        { count: 13 },
+        { count: 14 },
+        { count: 32 },
+        { count: 33 },
+        { count: 34 },
+        { count: 80 },
+        { count: 51, discount: 0 },
+        { count: 51, logo: true },
+        { count: 51, longNotes: true },
+        { count: 51, longNames: true },
+        { count: 53 },
+      ]
+      for (const scenario of scenarios) {
+        const data = {
+          ...invoice,
+          items: invoice.items.slice(0, scenario.count),
+          discount: scenario.discount ?? 32000,
+        }
+        if (scenario.longNotes)
+          data.notes = 'توضیحات طولانی و شرایط تحویل کالا به خریدار. '.repeat(14).slice(0, 600)
+        if (scenario.longNames)
+          data.items = data.items.map((item) => ({
+            ...item,
+            name: 'شیر روشویی پایه بلند مدل ویژه با اتصالات و تجهیزات نصب و ضمانت فروشگاه '
+              .repeat(3)
+              .slice(0, 200),
+          }))
+        app = createApp({
+          render: () =>
+            h(Paper, {
+              invoice: data,
+              settings: { ...settings, logoUrl: scenario.logo ? logo : null },
+              ref: paper,
+            }),
+        })
+        app.mount('#app')
+        await paper.value.prepareForPrint()
+        const layouts = [...document.querySelectorAll('#app .invoice-paper')].map((sheet) => {
+          const content = sheet.querySelector('.paper-content')
+          return {
+            rows: content.querySelectorAll('.paper-items tbody tr').length,
+            sheetHeight: sheet.clientHeight,
+            rawHeight: content.offsetHeight,
+            displayedHeight: content.getBoundingClientRect().height,
+            scale: content.style.transform,
+            fits: content.getBoundingClientRect().height <= sheet.clientHeight + 0.5,
+          }
+        })
+        results.scenarios.push({
+          ...scenario,
+          layouts,
+          allFit: layouts.every((layout) => layout.fits),
+          totalRows: layouts.reduce((sum, layout) => sum + layout.rows, 0),
+        })
+        if (scenario !== scenarios.at(-1)) app.unmount()
+      }
+      document.querySelector('#measurements').textContent = JSON.stringify(results)
+    </script>
+  </body>
+</html>

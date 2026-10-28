@@ -1,0 +1,15 @@
+{
+  "date": "2026-10-28",
+  "sheetHeightCssPx": 510,
+  "paper": "A5 landscape",
+  "pageMarginMm": 6,
+  "results": {
+    "single": { "rows": 13, "height": 498.578125, "nextRowsHeight": 518.359375 },
+    "first": { "rows": 17, "height": 502.609375, "nextRowsHeight": 522.390625 },
+    "middle": { "rows": 20, "height": 503.984375, "nextRowsHeight": 523.765625 },
+    "last": { "rows": 16, "height": 499.953125, "nextRowsHeight": 519.734375 }
+  },
+  "browserScenarios": 12,
+  "allScenariosFit": true,
+  "allScenariosScale": 1
+}

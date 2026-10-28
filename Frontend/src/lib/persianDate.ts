@@ -1,3 +1,5 @@
+import { toPersianDigits } from './format.ts'
+
 const DAY = 86_400_000
 const formatter = new Intl.DateTimeFormat('en-US-u-ca-persian', {
   timeZone: 'UTC',
@@ -48,3 +50,10 @@ export const persianDateLabel = (iso: string) =>
     month: 'long',
     day: 'numeric',
   }).format(new Date(`${iso.slice(0, 10)}T12:00:00Z`))
+
+export function persianNumericDateLabel(iso: string): string {
+  const { year, month, day } = persianParts(iso)
+  return toPersianDigits(
+    `${year}/${String(month).padStart(2, '0')}/${String(day).padStart(2, '0')}`,
+  )
+}

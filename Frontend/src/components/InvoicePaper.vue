@@ -11,10 +11,15 @@
             <span>فاکتور فروش کالا</span>
           </div>
           <div class="paper-reference">
-            <b>{{ draft ? 'پیش‌نویس · ثبت نشده' : 'شماره فاکتور: ' + invoice.number }}</b>
+            <span v-if="draft">پیش‌نویس · ثبت نشده</span>
+            <span v-else
+              >شماره فاکتور: <bdi dir="ltr">{{ toPersianDigits(invoice.number) }}</bdi></span
+            >
             <span
               >تاریخ صدور:
-              {{ persianDateLabel((invoice.issueDate || invoice.createdAt).slice(0, 10)) }}</span
+              <bdi dir="ltr">{{
+                persianNumericDateLabel(invoice.issueDate || invoice.createdAt)
+              }}</bdi></span
             >
           </div>
         </header>
@@ -44,7 +49,7 @@
             </tr>
           </tbody>
         </table>
-        <table>
+        <table class="paper-items">
           <colgroup>
             <col class="row-col" />
             <col />
@@ -147,16 +152,25 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import type { Invoice, StoreSettings } from '@/types'
-import { number } from '@/lib/format'
-import { persianDateLabel } from '@/lib/persianDate'
-import { amountInWords, invoiceInRials, invoicePages, rial } from '@/lib/invoicePresentation'
+import { number, toPersianDigits } from '@/lib/format'
+import { persianNumericDateLabel } from '@/lib/persianDate'
+import {
+  amountInWords,
+  invoiceInRials,
+  invoicePages,
+  invoicePageCapacities,
+  rial,
+} from '@/lib/invoicePresentation'
 const props = defineProps<{ invoice: Invoice; settings: StoreSettings | null; draft?: boolean }>()
 const normalized = computed(() => invoiceInRials(props.invoice))
 const hasDiscount = computed(() => (normalized.value.discount ?? 0) > 0)
-const pages = computed(() => invoicePages(normalized.value.items))
+const capacities = ref({ ...invoicePageCapacities })
+const pages = computed(() => invoicePages(normalized.value.items, capacities.value))
 const sheets = ref<HTMLElement>()
 const scales = ref<number[]>([])
+let layoutRun = 0
 async function prepareForPrint() {
+  const run = ++layoutRun
   await nextTick()
   await document.fonts.ready
   await Promise.all(
@@ -164,17 +178,57 @@ async function prepareForPrint() {
       img.decode().catch(() => undefined),
     ),
   )
-  const elements = Array.from(sheets.value?.querySelectorAll<HTMLElement>('.invoice-paper') || [])
-  const measure = () =>
-    elements.map((sheet) => {
+  if (run !== layoutRun) return
+  capacities.value = { ...invoicePageCapacities }
+  scales.value = []
+  // Reflow using real DOM heights after fonts/images load. Long notes, addresses
+  // or wrapped product names reduce row counts rather than shrinking every sheet.
+  for (let attempt = 0; attempt < 20; attempt++) {
+    await nextTick()
+    if (run !== layoutRun) return
+    const elements = Array.from(sheets.value?.querySelectorAll<HTMLElement>('.invoice-paper') || [])
+    const next = { ...capacities.value }
+    let changed = false
+    elements.forEach((sheet, index) => {
       const content = sheet.querySelector<HTMLElement>('.paper-content')!
-      return Math.min(
-        1,
-        sheet.clientHeight / Math.max(content.scrollHeight, content.offsetHeight),
-        sheet.clientWidth / Math.max(content.scrollWidth, content.offsetWidth),
-      )
+      const excess = Math.max(content.scrollHeight, content.offsetHeight) - sheet.clientHeight
+      const count = pages.value[index]!.items.length
+      if (excess <= 0 || count <= 1) return
+      const kind =
+        elements.length === 1
+          ? 'single'
+          : index === 0
+            ? 'first'
+            : index === elements.length - 1
+              ? 'last'
+              : 'middle'
+      const rows = [...content.querySelectorAll<HTMLElement>('.paper-items tbody tr')]
+      const rowHeight = Math.max(1, Math.min(...rows.map((row) => row.offsetHeight)))
+      const limit = Math.max(1, count - Math.ceil(excess / rowHeight))
+      if (limit < next[kind]) {
+        next[kind] = limit
+        changed = true
+      }
     })
-  scales.value = measure()
+    if (changed) {
+      capacities.value = next
+      continue
+    }
+    break
+  }
+  await nextTick()
+  if (run !== layoutRun) return
+  // Retain a final safety fit even if an indivisible oversized block remains
+  // or the bounded reflow loop reaches its limit.
+  const elements = Array.from(sheets.value?.querySelectorAll<HTMLElement>('.invoice-paper') || [])
+  scales.value = elements.map((sheet) => {
+    const content = sheet.querySelector<HTMLElement>('.paper-content')!
+    return Math.min(
+      1,
+      sheet.clientHeight / Math.max(content.scrollHeight, content.offsetHeight),
+      sheet.clientWidth / Math.max(content.scrollWidth, content.offsetWidth),
+    )
+  })
   await nextTick()
 }
 watch(
@@ -274,11 +328,12 @@ const parties = computed(() => [
   display: grid;
   text-align: left;
   gap: 1mm 5mm;
-  font-size: 8px;
+  font-size: 9px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
 }
-.paper-reference b {
+.paper-reference > span {
   grid-column: 1 / -1;
-  font-size: 10px;
 }
 .paper-parties {
   text-align: start;
@@ -443,7 +498,7 @@ td:nth-child(n + 5) {
 .paper-continued {
   text-align: center;
   margin-top: auto;
-  padding-top: 5mm;
+  padding-top: 1mm;
   color: #555;
 }
 @media print {

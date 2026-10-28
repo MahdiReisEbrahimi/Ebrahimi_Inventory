@@ -485,6 +485,11 @@ watch(
   margin: 0;
   scrollbar-gutter: auto;
 }
+@media screen {
+  .page-content.page-content--invoices:has(.invoice-preview) {
+    overflow: hidden;
+  }
+}
 .page-content--invoices > * {
   max-width: none;
 }

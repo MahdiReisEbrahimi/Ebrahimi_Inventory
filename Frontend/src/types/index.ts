@@ -76,6 +76,7 @@ export interface Invoice {
   sellerPhone?: string | null
   sellerLogoUrl?: string | null
   sellerIban?: string | null
+  sellerIbanLabel?: string | null
   createdAt: string
   items: InvoiceItem[]
 }
@@ -86,6 +87,7 @@ export interface StoreSettings {
   phone: string
   logoUrl: string | null
   iban?: string
+  ibanLabel?: string
   defaultInvoiceNotes?: string
 }
 export interface Buyer {

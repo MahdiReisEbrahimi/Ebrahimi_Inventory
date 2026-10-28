@@ -186,6 +186,7 @@ export const InvoiceScalarFieldEnum = {
   sellerPhone: 'sellerPhone',
   sellerLogoUrl: 'sellerLogoUrl',
   sellerIban: 'sellerIban',
+  sellerIbanLabel: 'sellerIbanLabel',
   createdAt: 'createdAt'
 } as const
 
@@ -213,6 +214,7 @@ export const StoreSettingsScalarFieldEnum = {
   phone: 'phone',
   logoUrl: 'logoUrl',
   iban: 'iban',
+  ibanLabel: 'ibanLabel',
   defaultInvoiceNotes: 'defaultInvoiceNotes',
   updatedAt: 'updatedAt'
 } as const

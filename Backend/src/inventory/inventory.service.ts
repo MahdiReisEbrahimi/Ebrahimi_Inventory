@@ -252,6 +252,30 @@ export class InventoryService {
             : null;
           if (id && !previous) throw new NotFoundException('فاکتور پیدا نشد.');
           if (previous) {
+            const factor = previous.currency === 'IRR' ? 1 : 10;
+            const unchanged =
+              (data.customerId ?? null) === (previous.customerId ?? null) &&
+              dateText === previous.issueDate?.toISOString().slice(0, 10) &&
+              discount === previous.discount.toNumber() * factor &&
+              paidAmount === previous.paidAmount.toNumber() * factor &&
+              (data.settlement ?? 'CASH') === previous.settlement &&
+              (data.notes ?? previous.notes ?? '') === (previous.notes ?? '') &&
+              (data.customerId != null ||
+                ((data.buyerFirstName ?? '') === (previous.buyerFirstName ?? '') &&
+                  (data.buyerLastName ?? '') === (previous.buyerLastName ?? '') &&
+                  (data.buyerNationalId ?? '') === (previous.buyerNationalId ?? '') &&
+                  (data.buyerAddress ?? '') === (previous.buyerAddress ?? ''))) &&
+              data.items.length === previous.items.length &&
+              data.items.every((item, index) => {
+                const saved = previous.items[index]!;
+                return (
+                  item.productId === saved.productId &&
+                  item.quantity === saved.quantity &&
+                  item.unitPrice === saved.unitPrice.toNumber() * factor
+                );
+              });
+            if (unchanged)
+              throw new BadRequestException('تغییری در فاکتور ایجاد نشده است.');
             await tx.invoice.update({
               where: { id: previous.id },
               data: { number: previous.number },
@@ -325,6 +349,7 @@ export class InventoryService {
             sellerPhone: store?.phone,
             sellerLogoUrl: store?.logoUrl,
             sellerIban: store?.iban,
+            sellerIbanLabel: store?.ibanLabel,
             items: { create: items },
           };
           const invoice = previous

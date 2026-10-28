@@ -1,4 +1,27 @@
 type InvoiceLine = { productId: number; quantity: number; unitPrice: number }
+export interface InvoiceEdit {
+  customerId?: number
+  issueDate: string
+  discount: number
+  settlement: string
+  notes: string
+  items: InvoiceLine[]
+}
+
+export function invoiceEditKey(invoice: InvoiceEdit): string {
+  return JSON.stringify({
+    customerId: invoice.customerId ?? null,
+    issueDate: invoice.issueDate,
+    discount: invoice.discount,
+    settlement: invoice.settlement,
+    notes: invoice.notes,
+    items: invoice.items.map(({ productId, quantity, unitPrice }) => ({
+      productId,
+      quantity,
+      unitPrice,
+    })),
+  })
+}
 export const MAX_INVOICE_AMOUNT = 100_000_000_000
 
 /** Validate the draft before a request. The API remains the authority on stock. */

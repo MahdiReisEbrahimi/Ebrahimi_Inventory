@@ -39,16 +39,17 @@
             <tr v-for="party in parties" :key="party.label">
               <th scope="row" class="party-row-heading">{{ party.label }}</th>
               <td>
-                <b>نام شخص (حقیقی/حقوقی)</b><span>{{ party.name }}</span>
+                <b>نام شخص (حقیقی/حقوقی)</b><span>{{ toPersianDigits(party.name) }}</span>
               </td>
               <td>
-                <b>نشانی</b><span>{{ party.address }}</span>
+                <b>نشانی</b><span>{{ toPersianDigits(party.address) }}</span>
               </td>
               <td>
-                <b>تلفن</b><span dir="ltr">{{ party.phone }}</span>
+                <b>تلفن</b><span dir="ltr">{{ toPersianDigits(party.phone) }}</span>
               </td>
               <td>
-                <b>شماره ملی/شماره ثبت</b><span dir="ltr">{{ party.nationalId }}</span>
+                <b>شماره ملی/شماره ثبت</b
+                ><span dir="ltr">{{ toPersianDigits(party.nationalId) }}</span>
               </td>
             </tr>
           </tbody>
@@ -96,20 +97,14 @@
             </colgroup>
             <tbody>
               <tr>
-                <td>
+                <td colspan="2">
                   <div class="footer-sale-terms">
                     <b>شرایط فروش:</b>
                     <span>{{ invoice.settlement === 'INSTALLMENT' ? '☐' : '☑' }} نقدی</span>
                     <span>{{ invoice.settlement === 'INSTALLMENT' ? '☑' : '☐' }} غیرنقدی</span>
                   </div>
                 </td>
-                <td>
-                  <div v-if="seller.iban" class="footer-iban">
-                    <b>شماره شبا:</b>
-                    <bdi dir="ltr">{{ toPersianDigits(seller.iban) }}</bdi>
-                  </div>
-                </td>
-                <td v-if="!hasDiscount" rowspan="3" class="footer-payment-cell">
+                <td v-if="!hasDiscount" rowspan="2" class="footer-payment-cell">
                   <div class="footer-payment">
                     <div>
                       <b>مبلغ پرداختی</b><span>{{ amountInWords(normalized.total) }}</span>
@@ -125,25 +120,39 @@
                 </td>
               </tr>
               <tr>
-                <td class="footer-signature"><b>مهر و امضا فروشنده:</b></td>
-                <td class="footer-signature"><b>مهر و امضا خریدار:</b></td>
+                <td colspan="2">
+                  <div v-if="seller.iban" class="footer-iban">
+                    <b>شماره شبا:</b>
+                    <bdi dir="ltr">{{ toPersianDigits(seller.iban) }}</bdi>
+                    <span v-if="seller.ibanLabel" class="footer-iban-label">{{
+                      seller.ibanLabel
+                    }}</span>
+                  </div>
+                </td>
                 <td v-if="hasDiscount">
                   <div class="footer-amount-row">
                     <b>تخفیف</b><span>{{ rial(normalized.discount || 0) }}</span>
                   </div>
                 </td>
               </tr>
-              <tr>
+              <tr v-if="hasDiscount">
                 <td colspan="2" class="footer-notes">
                   <b>توضیحات: </b>{{ invoice.notes || '…………………………………………' }}
                 </td>
-                <td v-if="hasDiscount">
+                <td rowspan="2" class="footer-payment-cell">
                   <div class="footer-payment">
                     <div>
                       <b>مبلغ پرداختی</b><span>{{ amountInWords(normalized.total) }}</span>
                     </div>
                     <strong>{{ rial(normalized.total) }}</strong>
                   </div>
+                </td>
+              </tr>
+              <tr>
+                <td class="footer-signature"><b>مهر و امضا فروشنده:</b></td>
+                <td class="footer-signature"><b>مهر و امضا خریدار:</b></td>
+                <td v-if="!hasDiscount" class="footer-notes">
+                  <b>توضیحات: </b>{{ invoice.notes || '…………………………………………' }}
                 </td>
               </tr>
             </tbody>
@@ -164,23 +173,27 @@ import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import type { Invoice, StoreSettings } from '@/types'
 import { number, toPersianDigits } from '@/lib/format'
 import { persianNumericDateLabel } from '@/lib/persianDate'
-import {
-  amountInWords,
-  invoiceInRials,
-  invoicePages,
-  invoicePageCapacities,
-  rial,
-} from '@/lib/invoicePresentation'
+import { amountInWords, invoiceInRials, invoicePages, rial } from '@/lib/invoicePresentation'
 const props = defineProps<{ invoice: Invoice; settings: StoreSettings | null; draft?: boolean }>()
 const normalized = computed(() => invoiceInRials(props.invoice))
 const hasDiscount = computed(() => (normalized.value.discount ?? 0) > 0)
-const capacities = ref({ ...invoicePageCapacities })
-const pages = computed(() => invoicePages(normalized.value.items, capacities.value))
+const pageCounts = ref<number[]>()
+const pages = computed(() => {
+  if (!pageCounts.value) return invoicePages(normalized.value.items)
+  let offset = 0
+  return pageCounts.value.map((count) => {
+    const page = { items: normalized.value.items.slice(offset, offset + count), offset }
+    offset += count
+    return page
+  })
+})
 const sheets = ref<HTMLElement>()
 const scales = ref<number[]>([])
 let layoutRun = 0
 async function prepareForPrint() {
   const run = ++layoutRun
+  pageCounts.value = undefined
+  scales.value = []
   await nextTick()
   await document.fonts.ready
   await Promise.all(
@@ -189,47 +202,67 @@ async function prepareForPrint() {
     ),
   )
   if (run !== layoutRun) return
-  capacities.value = { ...invoicePageCapacities }
-  scales.value = []
-  // Reflow using real DOM heights after fonts/images load. Long notes, addresses
-  // or wrapped product names reduce row counts rather than shrinking every sheet.
-  for (let attempt = 0; attempt < 20; attempt++) {
-    await nextTick()
-    if (run !== layoutRun) return
-    const elements = Array.from(sheets.value?.querySelectorAll<HTMLElement>('.invoice-paper') || [])
-    const next = { ...capacities.value }
-    let changed = false
-    elements.forEach((sheet, index) => {
-      const content = sheet.querySelector<HTMLElement>('.paper-content')!
-      const excess = Math.max(content.scrollHeight, content.offsetHeight) - sheet.clientHeight
-      const count = pages.value[index]!.items.length
-      if (excess <= 0 || count <= 1) return
-      const kind =
-        elements.length === 1
-          ? 'single'
-          : index === 0
-            ? 'first'
-            : index === elements.length - 1
-              ? 'last'
-              : 'middle'
-      const rows = [...content.querySelectorAll<HTMLElement>('.paper-items tbody tr')]
-      const rowHeight = Math.max(1, Math.min(...rows.map((row) => row.offsetHeight)))
-      const limit = Math.max(1, count - Math.ceil(excess / rowHeight))
-      if (limit < next[kind]) {
-        next[kind] = limit
-        changed = true
-      }
-    })
-    if (changed) {
-      capacities.value = next
-      continue
+  const initialSheets = [...(sheets.value?.querySelectorAll<HTMLElement>('.invoice-paper') || [])]
+  if (!initialSheets.length) return
+  const rows = initialSheets.flatMap((sheet) => [
+    ...sheet.querySelectorAll<HTMLTableRowElement>('.paper-items tbody tr'),
+  ])
+  const bottom = initialSheets.at(-1)!.querySelector('.paper-bottom')!
+  const probe = initialSheets[0]!.cloneNode(true) as HTMLElement
+  probe.setAttribute('aria-hidden', 'true')
+  Object.assign(probe.style, {
+    position: 'fixed',
+    left: '-100000px',
+    top: '0',
+    visibility: 'hidden',
+    pointerEvents: 'none',
+  })
+  sheets.value!.append(probe)
+  try {
+    const content = probe.querySelector<HTMLElement>('.paper-content')!
+    content.style.transform = 'none'
+    const tbody = content.querySelector('.paper-items tbody')!
+    const footer = content.querySelector('.paper-page-footer')!
+    const continued = footer.cloneNode(false) as HTMLElement
+    continued.className = 'paper-continued'
+    continued.textContent = 'ادامه اقلام در صفحه بعد'
+    const counts: number[] = []
+    let offset = 0
+    // Measure the actual rows on each sheet independently. A long item on one
+    // page must not reduce the capacity of every other page.
+    const fits = (count: number) => {
+      tbody.replaceChildren(...rows.slice(offset, offset + count).map((row) => row.cloneNode(true)))
+      return content.getBoundingClientRect().height <= probe.clientHeight
     }
-    break
+    do {
+      if (offset > 0) content.querySelector('.paper-parties')?.remove()
+      content.querySelector('.paper-bottom')?.remove()
+      content.querySelector('.paper-continued')?.remove()
+      content.insertBefore(bottom.cloneNode(true), footer)
+      const remaining = rows.length - offset
+      if (fits(remaining) || remaining === 0) {
+        counts.push(remaining)
+        break
+      }
+      content.querySelector('.paper-bottom')!.remove()
+      content.insertBefore(continued.cloneNode(true), footer)
+      let low = 1
+      let high = remaining
+      while (low < high) {
+        const count = Math.ceil((low + high) / 2)
+        if (fits(count)) low = count
+        else high = count - 1
+      }
+      counts.push(low)
+      offset += low
+    } while (true)
+    pageCounts.value = counts
+  } finally {
+    probe.remove()
   }
   await nextTick()
   if (run !== layoutRun) return
-  // Retain a final safety fit even if an indivisible oversized block remains
-  // or the bounded reflow loop reaches its limit.
+  // Retain a safety fit only for an indivisible oversized row or footer.
   const elements = Array.from(sheets.value?.querySelectorAll<HTMLElement>('.invoice-paper') || [])
   scales.value = elements.map((sheet) => {
     const content = sheet.querySelector<HTMLElement>('.paper-content')!
@@ -255,6 +288,12 @@ const seller = computed(() => ({
   address: props.invoice.sellerAddress ?? props.settings?.address,
   phone: props.invoice.sellerPhone ?? props.settings?.phone,
   iban: props.invoice.sellerIban?.trim() || props.settings?.iban?.trim(),
+  ibanLabel:
+    props.invoice.sellerIbanLabel ??
+    (!props.invoice.sellerIban?.trim() ||
+    props.invoice.sellerIban.trim() === props.settings?.iban?.trim()
+      ? props.settings?.ibanLabel
+      : ''),
 }))
 const parties = computed(() => [
   {
@@ -463,7 +502,8 @@ td:nth-child(n + 5) {
 .paper-footer-table .footer-payment-cell {
   vertical-align: middle;
 }
-.paper-footer-table--simple tr:not(:first-child) > :last-child {
+.paper-footer-table--simple tr:nth-child(2) > :last-child,
+.paper-footer-table tr:last-child > .footer-signature:last-child {
   border-inline-end: var(--paper-border);
 }
 .footer-sale-terms,
@@ -479,7 +519,14 @@ td:nth-child(n + 5) {
 }
 .footer-iban {
   gap: 1mm;
+  flex-wrap: wrap;
+}
+.footer-iban > b,
+.footer-iban > bdi {
   white-space: nowrap;
+}
+.footer-iban-label {
+  overflow-wrap: anywhere;
 }
 .footer-amount-row {
   justify-content: space-between;
@@ -495,6 +542,9 @@ td:nth-child(n + 5) {
 .paper-footer-table .footer-signature {
   height: 10mm;
   font-size: 8px;
+}
+.paper-footer-table--simple .footer-signature {
+  height: 13.33mm;
 }
 .footer-payment {
   display: flex;

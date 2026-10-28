@@ -12,7 +12,15 @@
     <script type="module">
       import { createApp, h, nextTick, ref } from 'vue'
       import Paper from '/src/components/InvoicePaper.vue'
+      import App from '/src/App.vue'
+      import InvoicesView from '/src/views/InvoicesView.vue'
+      import { createRouter, createMemoryHistory } from 'vue-router'
       import '/src/styles/main.css'
+      window.addEventListener('unhandledrejection', (event) => {
+        document.querySelector('#measurements').textContent = JSON.stringify({
+          error: String(event.reason?.stack || event.reason),
+        })
+      })
       const invoice = {
         id: 114,
         number: '114',
@@ -94,16 +102,21 @@
         )
       const scenarios = [
         { count: 1 },
+        { count: 12 },
         { count: 13 },
         { count: 14 },
         { count: 32 },
+        { count: 31 },
         { count: 33 },
         { count: 34 },
         { count: 80 },
+        { count: 50 },
+        { count: 51, ibanLabel: 'علی ابراهیمی ـ بانک ملت' },
         { count: 51, discount: 0 },
         { count: 51, logo: true },
         { count: 51, longNotes: true },
         { count: 51, longNames: true },
+        { count: 51, mixedNames: true },
         { count: 53 },
       ]
       for (const scenario of scenarios) {
@@ -114,42 +127,187 @@
         }
         if (scenario.longNotes)
           data.notes = 'توضیحات طولانی و شرایط تحویل کالا به خریدار. '.repeat(14).slice(0, 600)
-        if (scenario.longNames)
-          data.items = data.items.map((item) => ({
+        if (scenario.longNames || scenario.mixedNames)
+          data.items = data.items.map((item, index) => ({
             ...item,
-            name: 'شیر روشویی پایه بلند مدل ویژه با اتصالات و تجهیزات نصب و ضمانت فروشگاه '
-              .repeat(3)
-              .slice(0, 200),
+            name:
+              scenario.mixedNames && index % 5 !== 0
+                ? item.name
+                : 'شیر روشویی پایه بلند مدل ویژه با اتصالات و تجهیزات نصب و ضمانت فروشگاه '
+                    .repeat(3)
+                    .slice(0, 200),
           }))
         app = createApp({
           render: () =>
             h(Paper, {
               invoice: data,
-              settings: { ...settings, logoUrl: scenario.logo ? logo : null },
+              settings: {
+                ...settings,
+                logoUrl: scenario.logo ? logo : null,
+                iban: scenario.ibanLabel ? 'IR000000000000000000000000' : '',
+                ibanLabel: scenario.ibanLabel || '',
+              },
               ref: paper,
             }),
         })
         app.mount('#app')
         await paper.value.prepareForPrint()
-        const layouts = [...document.querySelectorAll('#app .invoice-paper')].map((sheet) => {
-          const content = sheet.querySelector('.paper-content')
-          return {
-            rows: content.querySelectorAll('.paper-items tbody tr').length,
-            sheetHeight: sheet.clientHeight,
-            rawHeight: content.offsetHeight,
-            displayedHeight: content.getBoundingClientRect().height,
-            scale: content.style.transform,
-            fits: content.getBoundingClientRect().height <= sheet.clientHeight + 0.5,
-          }
-        })
+        const layouts = [...document.querySelectorAll('#app .invoice-paper')].map(
+          (sheet, index, sheets) => {
+            const content = sheet.querySelector('.paper-content')
+            const nextRow = sheets[index + 1]?.querySelector('.paper-items tbody tr')
+            const remaining = sheets
+              .slice(index + 1)
+              .reduce((sum, next) => sum + next.querySelectorAll('.paper-items tbody tr').length, 0)
+            let packed = true
+            if (nextRow && remaining > 0) {
+              const extra = nextRow.cloneNode(true)
+              content.querySelector('.paper-items tbody').append(extra)
+              packed = content.getBoundingClientRect().height > sheet.clientHeight
+              extra.remove()
+            }
+            return {
+              packed,
+              rows: content.querySelectorAll('.paper-items tbody tr').length,
+              sheetHeight: sheet.clientHeight,
+              rawHeight: content.offsetHeight,
+              displayedHeight: content.getBoundingClientRect().height,
+              scale: content.style.transform,
+              fits: content.getBoundingClientRect().height <= sheet.clientHeight + 0.5,
+            }
+          },
+        )
+        const signatureBox = document
+          .querySelector('#app .footer-signature')
+          .getBoundingClientRect()
+        const notesBox = document.querySelector('#app .footer-notes').getBoundingClientRect()
+        const paymentBox = document
+          .querySelector('#app .footer-payment-cell')
+          .getBoundingClientRect()
+        const footerAligned = data.discount
+          ? notesBox.bottom <= signatureBox.top + 0.5
+          : Math.abs(notesBox.top - signatureBox.top) <= 0.5 &&
+            Math.abs(paymentBox.bottom - signatureBox.top) <= 0.5 &&
+            signatureBox.height >= 50
         results.scenarios.push({
+          footerAligned,
           ...scenario,
           layouts,
           allFit: layouts.every((layout) => layout.fits),
+          allPacked: layouts.every((layout) => layout.packed),
           totalRows: layouts.reduce((sum, layout) => sum + layout.rows, 0),
         })
         if (scenario !== scenarios.at(-1)) app.unmount()
       }
+      app.unmount()
+      // Exercise the real preview and editor in the application shell using disposable responses.
+      const sample = { ...invoice, customerId: 1, paidAmount: 0 }
+      const nativeFetch = window.fetch.bind(window)
+      const writes = []
+      window.fetch = async (url, options = {}) => {
+        const path = new URL(String(url), location.href).pathname
+        if (!path.startsWith('/api/v1/')) return nativeFetch(url, options)
+        if (options.method && options.method !== 'GET') writes.push(options.method)
+        const body = path.endsWith('/store-settings')
+          ? settings
+          : path.endsWith('/buyers')
+            ? [{ id: 1, firstName: 'خریدار', lastName: 'نمونه', nationalId: '1234567890' }]
+            : path.endsWith('/products')
+              ? {
+                  data: invoice.items.map((item) => ({
+                    id: item.productId,
+                    name: item.name,
+                    unit: item.unit,
+                    stock: 100,
+                    sellPrice: item.unitPrice / 10,
+                    isActive: true,
+                    categoryId: 1,
+                    category: { id: 1, name: 'نمونه' },
+                  })),
+                }
+              : path.endsWith('/invoices')
+                ? [sample]
+                : sample
+        return new Response(JSON.stringify(body), {
+          headers: { 'Content-Type': 'application/json' },
+        })
+      }
+      const router = createRouter({
+        history: createMemoryHistory(),
+        routes: [{ path: '/invoices', component: InvoicesView, meta: { title: 'فاکتورهای فروش' } }],
+      })
+      await router.push('/invoices')
+      app = createApp(App).use(router)
+      app.mount('#app')
+      const flush = async () => {
+        await nextTick()
+        await new Promise((resolve) => setTimeout(resolve, 30))
+        await nextTick()
+      }
+      const click = async (text) => {
+        const button = [...document.querySelectorAll('button')].find(
+          (button) => button.textContent.trim() === text,
+        )
+        if (!button) throw new Error('Missing button: ' + text)
+        button.click()
+        await flush()
+      }
+      await flush()
+      await click('بایگانی فاکتورها')
+      await click('مشاهده')
+      await document.fonts.ready
+      await flush()
+      const scroller = document.querySelector('.invoice-preview .invoice-sheets')
+      const toolbar = document.querySelector('.paper-toolbar')
+      const main = document.querySelector('.page-content')
+      const topBefore = toolbar.getBoundingClientRect().top
+      scroller.scrollTop = 800
+      await flush()
+      results.viewer = {
+        scrollTop: scroller.scrollTop,
+        toolbarStayed: toolbar.getBoundingClientRect().top === topBefore,
+        mainScrollTop: main.scrollTop,
+        mainDoesNotOverflow: main.scrollHeight <= main.clientHeight + 1,
+        documentDoesNotOverflow: document.documentElement.scrollHeight <= innerHeight + 1,
+      }
+      await click('ویرایش')
+      const save = [...document.querySelectorAll('button')].find(
+        (button) => button.textContent.trim() === 'ذخیره تغییرات',
+      )
+      results.edit = { initiallyDisabled: save.disabled }
+      const quantity = document.querySelector('input[data-product-id]')
+      const initial = quantity.value
+      quantity.value = '3'
+      quantity.dispatchEvent(new Event('input', { bubbles: true }))
+      await flush()
+      results.edit.enabledAfterChange = !save.disabled
+      quantity.value = initial
+      quantity.dispatchEvent(new Event('input', { bubbles: true }))
+      await flush()
+      results.edit.disabledAfterRevert = save.disabled
+      save.click()
+      await flush()
+      results.edit.writeRequests = writes.length
+      results.passed =
+        results.scenarios.every(
+          (scenario) =>
+            scenario.allFit &&
+            scenario.allPacked &&
+            scenario.footerAligned &&
+            scenario.totalRows === scenario.count,
+        ) &&
+        results.viewer.scrollTop > 0 &&
+        results.viewer.toolbarStayed &&
+        results.viewer.mainScrollTop === 0 &&
+        results.viewer.mainDoesNotOverflow &&
+        results.viewer.documentDoesNotOverflow &&
+        results.edit.initiallyDisabled &&
+        results.edit.enabledAfterChange &&
+        results.edit.disabledAfterRevert &&
+        results.edit.writeRequests === 0
+      // Leave the preview visible for screenshot inspection.
+      await click('پیش‌نمایش')
+      window.fetch = nativeFetch
       document.querySelector('#measurements').textContent = JSON.stringify(results)
     </script>
   </body>

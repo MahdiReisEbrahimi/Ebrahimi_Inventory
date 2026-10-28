@@ -63,6 +63,23 @@ describe('Invoice amount limits and API amounts', () => {
   });
 
   for (const editing of [false, true]) {
+    it(`snapshots the account holder and bank on ${editing ? 'edit' : 'create'}`, async () => {
+      tx.storeSettings.findUnique.mockResolvedValue({
+        name: 'فروشگاه',
+        iban: 'IR000000000000000000000000',
+        ibanLabel: 'علی ابراهیمی ـ بانک ملت',
+      });
+      if (editing) await service.updateInvoice(9, data);
+      else await service.createInvoice(data);
+      const write = editing
+        ? tx.invoice.update.mock.calls[1][0]
+        : tx.invoice.create.mock.calls[0][0];
+      expect(write.data).toMatchObject({
+        sellerIban: 'IR000000000000000000000000',
+        sellerIbanLabel: 'علی ابراهیمی ـ بانک ملت',
+      });
+    });
+
     it(`accepts exactly 100 billion rials on ${editing ? 'edit' : 'create'} and returns JSON numbers`, async () => {
       const result = editing
         ? await service.updateInvoice(9, data)
@@ -86,6 +103,28 @@ describe('Invoice amount limits and API amounts', () => {
       });
     });
   }
+
+  it('rejects unchanged edits before touching stock or invoice records', async () => {
+    tx.invoice.findUnique.mockResolvedValue({
+      ...record,
+      customerId: 1,
+      currency: 'IRR',
+      issueDate: new Date('2026-10-28T00:00:00Z'),
+      settlement: 'INSTALLMENT',
+      notes: '',
+    });
+    await expect(service.updateInvoice(9, {
+      ...data,
+      customerId: 1,
+      issueDate: '2026-10-28',
+      settlement: 'INSTALLMENT',
+      notes: '',
+    })).rejects.toThrow('تغییری در فاکتور ایجاد نشده');
+    expect(tx.invoice.update).not.toHaveBeenCalled();
+    expect(tx.product.update).not.toHaveBeenCalled();
+    expect(tx.inventoryTransaction.deleteMany).not.toHaveBeenCalled();
+    expect(tx.invoiceItem.deleteMany).not.toHaveBeenCalled();
+  });
 
   it('allows a single item at the cap and rejects a unit price above it', async () => {
     const single = {

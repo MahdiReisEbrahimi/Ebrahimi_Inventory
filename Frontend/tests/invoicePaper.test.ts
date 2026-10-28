@@ -30,7 +30,7 @@ test('invoice preview and print share the table footer on the final page', async
         sellerIban: '',
         buyerFirstName: 'خریدار',
         buyerLastName: 'نمونه',
-        buyerAddress: 'نشانی خریدار',
+        buyerAddress: 'نشانی خریدار، پلاک 34',
         buyerPhone: '02112345678',
         buyerNationalId: '1234567890',
         notes: 'توضیحات مخصوص صفحه آخر',
@@ -48,19 +48,22 @@ test('invoice preview and print share the table footer on the final page', async
           invoice,
           settings: {
             name: 'فروشگاه نمونه',
-            address: 'نشانی فروشنده',
+            address: 'نشانی فروشنده، پلاک 12',
             phone: '02187654321',
             logoUrl: '/test-logo.png',
             iban: 'IR000000000000000000000000',
+            ibanLabel: 'علی ابراهیمی ـ بانک ملت',
           },
         }),
       )
       const printFooter = html.match(/<table class="paper-footer-table"[^]*?<\/table>/)?.[0]
       assert.ok(printFooter)
-      assert.equal((printFooter.match(/<tr\b[^>]*>/g) || []).length, 3)
+      assert.equal((printFooter.match(/<tr\b[^>]*>/g) || []).length, 4)
       const footerRows = [...printFooter.matchAll(/<tr\b[^>]*>([^]*?)<\/tr>/g)]
-      assert.match(footerRows[1]![1]!, /footer-signature/)
+      assert.match(footerRows[1]![1]!, /شماره شبا:/)
+      assert.match(footerRows[1]![1]!, /علی ابراهیمی ـ بانک ملت/)
       assert.match(footerRows[2]![1]!, /footer-notes/)
+      assert.match(footerRows[3]![1]!, /footer-signature/)
       assert.match(printFooter, /شرایط فروش:/)
       assert.match(printFooter, /☐ نقدی/)
       assert.match(printFooter, /☑ غیرنقدی/)
@@ -72,12 +75,11 @@ test('invoice preview and print share the table footer on the final page', async
       const saleTermsRow = printFooter.match(/<tr\b[^>]*>([^]*?)<\/tr>/)?.[1]
       assert.ok(saleTermsRow)
       const saleCells = [...saleTermsRow.matchAll(/<td\b([^>]*?)>([^]*?)<\/td>/g)]
-      assert.equal(saleCells.length, 3)
-      assert.doesNotMatch(saleCells[0]![1]!, /colspan/)
-      assert.doesNotMatch(saleCells[1]![1]!, /colspan/)
+      assert.equal(saleCells.length, 2)
+      assert.match(saleCells[0]![1]!, /colspan="2"/)
       assert.match(saleCells[0]![2]!, /شرایط فروش:/)
-      assert.match(saleCells[1]![2]!, /شماره شبا:/)
-      assert.match(saleCells[1]![2]!, /<bdi dir="ltr"[^>]*>IR۰۰۰۰۰۰۰۰۰۰۰۰۰۰۰۰۰۰۰۰۰۰۰۰<\/bdi>/)
+      assert.doesNotMatch(saleTermsRow, /شماره شبا:/)
+      assert.match(footerRows[1]![1]!, /<bdi dir="ltr"[^>]*>IR۰۰۰۰۰۰۰۰۰۰۰۰۰۰۰۰۰۰۰۰۰۰۰۰<\/bdi>/)
       const pages = invoicePages(invoice.items).length
       assert.equal((html.match(/class="invoice-paper"/g) || []).length, pages)
       assert.equal((html.match(/class="paper-header"/g) || []).length, pages)
@@ -100,7 +102,11 @@ test('invoice preview and print share the table footer on the final page', async
         assert.match(row[1]!, /<th scope="row" class="party-row-heading"/)
       assert.match(partyRows[0]![1]!, /نشانی فروشنده/)
       assert.match(partyRows[1]![1]!, /نشانی خریدار/)
-      assert.match(partyRows[1]![1]!, /1234567890/)
+      assert.match(partyRows[1]![1]!, /۱۲۳۴۵۶۷۸۹۰/)
+      assert.match(partyRows[0]![1]!, /۰۲۱۸۷۶۵۴۳۲۱/)
+      assert.match(partyRows[0]![1]!, /پلاک ۱۲/)
+      assert.match(partyRows[1]![1]!, /پلاک ۳۴/)
+      assert.doesNotMatch(parties.replace(/<[^>]*>/g, ''), /[0-9٠-٩]/)
       assert.doesNotMatch(parties, /—/)
       assert.match(html, /class="paper-currency"[^>]*>\(ریال\)<\/small>/)
       for (const header of html.matchAll(/<header[^]*?<\/header>/g)) {
@@ -135,10 +141,12 @@ test('invoice preview and print share the table footer on the final page', async
       assert.match(cashFooter, /☐ غیرنقدی/)
       assert.doesNotMatch(cashFooter, /شماره شبا/)
       assert.doesNotMatch(cashFooter, /تخفیف|جمع کل فاکتور/)
-      assert.match(cashFooter, /rowspan="3"/)
+      assert.match(cashFooter, /rowspan="2"/)
       const cashRows = [...cashFooter.matchAll(/<tr\b[^>]*>([^]*?)<\/tr>/g)]
-      assert.match(cashRows[1]![1]!, /footer-signature/)
+      assert.match(cashRows[2]![1]!, /footer-signature/)
+      assert.equal(cashRows.length, 3)
       assert.match(cashRows[2]![1]!, /footer-notes/)
+      assert.equal((cashRows[2]![1]!.match(/<td\b/g) || []).length, 3)
       assert.equal((cashFooter.match(/class="footer-payment"/g) || []).length, 1)
       assert.match(cashFooter, /نه میلیون و نهصد و شصت و هشت هزار ریال/)
     }

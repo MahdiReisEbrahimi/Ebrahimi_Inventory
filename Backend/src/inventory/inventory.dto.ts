@@ -74,5 +74,6 @@ export class UpdateStoreSettingsDto {
   @IsString()
   @Matches(/^(?:IR\d{24})?$/, { message: 'شماره شبا باید IR و ۲۴ رقم باشد.' })
   iban?: string;
+  @IsOptional() @IsString() @MaxLength(120) ibanLabel?: string;
   @IsOptional() @IsString() @MaxLength(600) defaultInvoiceNotes?: string;
 }

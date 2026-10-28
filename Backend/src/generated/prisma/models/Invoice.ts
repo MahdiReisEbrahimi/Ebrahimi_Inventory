@@ -66,6 +66,7 @@ export type InvoiceMinAggregateOutputType = {
   sellerPhone: string | null
   sellerLogoUrl: string | null
   sellerIban: string | null
+  sellerIbanLabel: string | null
   createdAt: Date | null
 }
 
@@ -91,6 +92,7 @@ export type InvoiceMaxAggregateOutputType = {
   sellerPhone: string | null
   sellerLogoUrl: string | null
   sellerIban: string | null
+  sellerIbanLabel: string | null
   createdAt: Date | null
 }
 
@@ -116,6 +118,7 @@ export type InvoiceCountAggregateOutputType = {
   sellerPhone: number
   sellerLogoUrl: number
   sellerIban: number
+  sellerIbanLabel: number
   createdAt: number
   _all: number
 }
@@ -161,6 +164,7 @@ export type InvoiceMinAggregateInputType = {
   sellerPhone?: true
   sellerLogoUrl?: true
   sellerIban?: true
+  sellerIbanLabel?: true
   createdAt?: true
 }
 
@@ -186,6 +190,7 @@ export type InvoiceMaxAggregateInputType = {
   sellerPhone?: true
   sellerLogoUrl?: true
   sellerIban?: true
+  sellerIbanLabel?: true
   createdAt?: true
 }
 
@@ -211,6 +216,7 @@ export type InvoiceCountAggregateInputType = {
   sellerPhone?: true
   sellerLogoUrl?: true
   sellerIban?: true
+  sellerIbanLabel?: true
   createdAt?: true
   _all?: true
 }
@@ -323,6 +329,7 @@ export type InvoiceGroupByOutputType = {
   sellerPhone: string | null
   sellerLogoUrl: string | null
   sellerIban: string | null
+  sellerIbanLabel: string | null
   createdAt: Date
   _count: InvoiceCountAggregateOutputType | null
   _avg: InvoiceAvgAggregateOutputType | null
@@ -371,6 +378,7 @@ export type InvoiceWhereInput = {
   sellerPhone?: Prisma.StringNullableFilter<"Invoice"> | string | null
   sellerLogoUrl?: Prisma.StringNullableFilter<"Invoice"> | string | null
   sellerIban?: Prisma.StringNullableFilter<"Invoice"> | string | null
+  sellerIbanLabel?: Prisma.StringNullableFilter<"Invoice"> | string | null
   createdAt?: Prisma.DateTimeFilter<"Invoice"> | Date | string
   customer?: Prisma.XOR<Prisma.BuyerNullableScalarRelationFilter, Prisma.BuyerWhereInput> | null
   items?: Prisma.InvoiceItemListRelationFilter
@@ -399,6 +407,7 @@ export type InvoiceOrderByWithRelationInput = {
   sellerPhone?: Prisma.SortOrderInput | Prisma.SortOrder
   sellerLogoUrl?: Prisma.SortOrderInput | Prisma.SortOrder
   sellerIban?: Prisma.SortOrderInput | Prisma.SortOrder
+  sellerIbanLabel?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   customer?: Prisma.BuyerOrderByWithRelationInput
   items?: Prisma.InvoiceItemOrderByRelationAggregateInput
@@ -430,6 +439,7 @@ export type InvoiceWhereUniqueInput = Prisma.AtLeast<{
   sellerPhone?: Prisma.StringNullableFilter<"Invoice"> | string | null
   sellerLogoUrl?: Prisma.StringNullableFilter<"Invoice"> | string | null
   sellerIban?: Prisma.StringNullableFilter<"Invoice"> | string | null
+  sellerIbanLabel?: Prisma.StringNullableFilter<"Invoice"> | string | null
   createdAt?: Prisma.DateTimeFilter<"Invoice"> | Date | string
   customer?: Prisma.XOR<Prisma.BuyerNullableScalarRelationFilter, Prisma.BuyerWhereInput> | null
   items?: Prisma.InvoiceItemListRelationFilter
@@ -458,6 +468,7 @@ export type InvoiceOrderByWithAggregationInput = {
   sellerPhone?: Prisma.SortOrderInput | Prisma.SortOrder
   sellerLogoUrl?: Prisma.SortOrderInput | Prisma.SortOrder
   sellerIban?: Prisma.SortOrderInput | Prisma.SortOrder
+  sellerIbanLabel?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   _count?: Prisma.InvoiceCountOrderByAggregateInput
   _avg?: Prisma.InvoiceAvgOrderByAggregateInput
@@ -491,6 +502,7 @@ export type InvoiceScalarWhereWithAggregatesInput = {
   sellerPhone?: Prisma.StringNullableWithAggregatesFilter<"Invoice"> | string | null
   sellerLogoUrl?: Prisma.StringNullableWithAggregatesFilter<"Invoice"> | string | null
   sellerIban?: Prisma.StringNullableWithAggregatesFilter<"Invoice"> | string | null
+  sellerIbanLabel?: Prisma.StringNullableWithAggregatesFilter<"Invoice"> | string | null
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"Invoice"> | Date | string
 }
 
@@ -514,6 +526,7 @@ export type InvoiceCreateInput = {
   sellerPhone?: string | null
   sellerLogoUrl?: string | null
   sellerIban?: string | null
+  sellerIbanLabel?: string | null
   createdAt?: Date | string
   customer?: Prisma.BuyerCreateNestedOneWithoutInvoicesInput
   items?: Prisma.InvoiceItemCreateNestedManyWithoutInvoiceInput
@@ -542,6 +555,7 @@ export type InvoiceUncheckedCreateInput = {
   sellerPhone?: string | null
   sellerLogoUrl?: string | null
   sellerIban?: string | null
+  sellerIbanLabel?: string | null
   createdAt?: Date | string
   items?: Prisma.InvoiceItemUncheckedCreateNestedManyWithoutInvoiceInput
   transactions?: Prisma.InventoryTransactionUncheckedCreateNestedManyWithoutInvoiceInput
@@ -567,6 +581,7 @@ export type InvoiceUpdateInput = {
   sellerPhone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   sellerLogoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   sellerIban?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  sellerIbanLabel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   customer?: Prisma.BuyerUpdateOneWithoutInvoicesNestedInput
   items?: Prisma.InvoiceItemUpdateManyWithoutInvoiceNestedInput
@@ -595,6 +610,7 @@ export type InvoiceUncheckedUpdateInput = {
   sellerPhone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   sellerLogoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   sellerIban?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  sellerIbanLabel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   items?: Prisma.InvoiceItemUncheckedUpdateManyWithoutInvoiceNestedInput
   transactions?: Prisma.InventoryTransactionUncheckedUpdateManyWithoutInvoiceNestedInput
@@ -622,6 +638,7 @@ export type InvoiceCreateManyInput = {
   sellerPhone?: string | null
   sellerLogoUrl?: string | null
   sellerIban?: string | null
+  sellerIbanLabel?: string | null
   createdAt?: Date | string
 }
 
@@ -645,6 +662,7 @@ export type InvoiceUpdateManyMutationInput = {
   sellerPhone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   sellerLogoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   sellerIban?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  sellerIbanLabel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -670,6 +688,7 @@ export type InvoiceUncheckedUpdateManyInput = {
   sellerPhone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   sellerLogoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   sellerIban?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  sellerIbanLabel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -710,6 +729,7 @@ export type InvoiceCountOrderByAggregateInput = {
   sellerPhone?: Prisma.SortOrder
   sellerLogoUrl?: Prisma.SortOrder
   sellerIban?: Prisma.SortOrder
+  sellerIbanLabel?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
 }
 
@@ -744,6 +764,7 @@ export type InvoiceMaxOrderByAggregateInput = {
   sellerPhone?: Prisma.SortOrder
   sellerLogoUrl?: Prisma.SortOrder
   sellerIban?: Prisma.SortOrder
+  sellerIbanLabel?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
 }
 
@@ -769,6 +790,7 @@ export type InvoiceMinOrderByAggregateInput = {
   sellerPhone?: Prisma.SortOrder
   sellerLogoUrl?: Prisma.SortOrder
   sellerIban?: Prisma.SortOrder
+  sellerIbanLabel?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
 }
 
@@ -886,6 +908,7 @@ export type InvoiceCreateWithoutCustomerInput = {
   sellerPhone?: string | null
   sellerLogoUrl?: string | null
   sellerIban?: string | null
+  sellerIbanLabel?: string | null
   createdAt?: Date | string
   items?: Prisma.InvoiceItemCreateNestedManyWithoutInvoiceInput
   transactions?: Prisma.InventoryTransactionCreateNestedManyWithoutInvoiceInput
@@ -912,6 +935,7 @@ export type InvoiceUncheckedCreateWithoutCustomerInput = {
   sellerPhone?: string | null
   sellerLogoUrl?: string | null
   sellerIban?: string | null
+  sellerIbanLabel?: string | null
   createdAt?: Date | string
   items?: Prisma.InvoiceItemUncheckedCreateNestedManyWithoutInvoiceInput
   transactions?: Prisma.InventoryTransactionUncheckedCreateNestedManyWithoutInvoiceInput
@@ -968,6 +992,7 @@ export type InvoiceScalarWhereInput = {
   sellerPhone?: Prisma.StringNullableFilter<"Invoice"> | string | null
   sellerLogoUrl?: Prisma.StringNullableFilter<"Invoice"> | string | null
   sellerIban?: Prisma.StringNullableFilter<"Invoice"> | string | null
+  sellerIbanLabel?: Prisma.StringNullableFilter<"Invoice"> | string | null
   createdAt?: Prisma.DateTimeFilter<"Invoice"> | Date | string
 }
 
@@ -991,6 +1016,7 @@ export type InvoiceCreateWithoutTransactionsInput = {
   sellerPhone?: string | null
   sellerLogoUrl?: string | null
   sellerIban?: string | null
+  sellerIbanLabel?: string | null
   createdAt?: Date | string
   customer?: Prisma.BuyerCreateNestedOneWithoutInvoicesInput
   items?: Prisma.InvoiceItemCreateNestedManyWithoutInvoiceInput
@@ -1018,6 +1044,7 @@ export type InvoiceUncheckedCreateWithoutTransactionsInput = {
   sellerPhone?: string | null
   sellerLogoUrl?: string | null
   sellerIban?: string | null
+  sellerIbanLabel?: string | null
   createdAt?: Date | string
   items?: Prisma.InvoiceItemUncheckedCreateNestedManyWithoutInvoiceInput
 }
@@ -1058,6 +1085,7 @@ export type InvoiceUpdateWithoutTransactionsInput = {
   sellerPhone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   sellerLogoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   sellerIban?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  sellerIbanLabel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   customer?: Prisma.BuyerUpdateOneWithoutInvoicesNestedInput
   items?: Prisma.InvoiceItemUpdateManyWithoutInvoiceNestedInput
@@ -1085,6 +1113,7 @@ export type InvoiceUncheckedUpdateWithoutTransactionsInput = {
   sellerPhone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   sellerLogoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   sellerIban?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  sellerIbanLabel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   items?: Prisma.InvoiceItemUncheckedUpdateManyWithoutInvoiceNestedInput
 }
@@ -1109,6 +1138,7 @@ export type InvoiceCreateWithoutItemsInput = {
   sellerPhone?: string | null
   sellerLogoUrl?: string | null
   sellerIban?: string | null
+  sellerIbanLabel?: string | null
   createdAt?: Date | string
   customer?: Prisma.BuyerCreateNestedOneWithoutInvoicesInput
   transactions?: Prisma.InventoryTransactionCreateNestedManyWithoutInvoiceInput
@@ -1136,6 +1166,7 @@ export type InvoiceUncheckedCreateWithoutItemsInput = {
   sellerPhone?: string | null
   sellerLogoUrl?: string | null
   sellerIban?: string | null
+  sellerIbanLabel?: string | null
   createdAt?: Date | string
   transactions?: Prisma.InventoryTransactionUncheckedCreateNestedManyWithoutInvoiceInput
 }
@@ -1176,6 +1207,7 @@ export type InvoiceUpdateWithoutItemsInput = {
   sellerPhone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   sellerLogoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   sellerIban?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  sellerIbanLabel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   customer?: Prisma.BuyerUpdateOneWithoutInvoicesNestedInput
   transactions?: Prisma.InventoryTransactionUpdateManyWithoutInvoiceNestedInput
@@ -1203,6 +1235,7 @@ export type InvoiceUncheckedUpdateWithoutItemsInput = {
   sellerPhone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   sellerLogoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   sellerIban?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  sellerIbanLabel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   transactions?: Prisma.InventoryTransactionUncheckedUpdateManyWithoutInvoiceNestedInput
 }
@@ -1228,6 +1261,7 @@ export type InvoiceCreateManyCustomerInput = {
   sellerPhone?: string | null
   sellerLogoUrl?: string | null
   sellerIban?: string | null
+  sellerIbanLabel?: string | null
   createdAt?: Date | string
 }
 
@@ -1251,6 +1285,7 @@ export type InvoiceUpdateWithoutCustomerInput = {
   sellerPhone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   sellerLogoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   sellerIban?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  sellerIbanLabel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   items?: Prisma.InvoiceItemUpdateManyWithoutInvoiceNestedInput
   transactions?: Prisma.InventoryTransactionUpdateManyWithoutInvoiceNestedInput
@@ -1277,6 +1312,7 @@ export type InvoiceUncheckedUpdateWithoutCustomerInput = {
   sellerPhone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   sellerLogoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   sellerIban?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  sellerIbanLabel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   items?: Prisma.InvoiceItemUncheckedUpdateManyWithoutInvoiceNestedInput
   transactions?: Prisma.InventoryTransactionUncheckedUpdateManyWithoutInvoiceNestedInput
@@ -1303,6 +1339,7 @@ export type InvoiceUncheckedUpdateManyWithoutCustomerInput = {
   sellerPhone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   sellerLogoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   sellerIban?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  sellerIbanLabel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -1368,6 +1405,7 @@ export type InvoiceSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs 
   sellerPhone?: boolean
   sellerLogoUrl?: boolean
   sellerIban?: boolean
+  sellerIbanLabel?: boolean
   createdAt?: boolean
   customer?: boolean | Prisma.Invoice$customerArgs<ExtArgs>
   items?: boolean | Prisma.Invoice$itemsArgs<ExtArgs>
@@ -1397,6 +1435,7 @@ export type InvoiceSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Exten
   sellerPhone?: boolean
   sellerLogoUrl?: boolean
   sellerIban?: boolean
+  sellerIbanLabel?: boolean
   createdAt?: boolean
   customer?: boolean | Prisma.Invoice$customerArgs<ExtArgs>
 }, ExtArgs["result"]["invoice"]>
@@ -1423,6 +1462,7 @@ export type InvoiceSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Exten
   sellerPhone?: boolean
   sellerLogoUrl?: boolean
   sellerIban?: boolean
+  sellerIbanLabel?: boolean
   createdAt?: boolean
   customer?: boolean | Prisma.Invoice$customerArgs<ExtArgs>
 }, ExtArgs["result"]["invoice"]>
@@ -1449,10 +1489,11 @@ export type InvoiceSelectScalar = {
   sellerPhone?: boolean
   sellerLogoUrl?: boolean
   sellerIban?: boolean
+  sellerIbanLabel?: boolean
   createdAt?: boolean
 }
 
-export type InvoiceOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "number" | "buyerFirstName" | "buyerLastName" | "buyerNationalId" | "buyerAddress" | "buyerPhone" | "customerId" | "notes" | "total" | "subtotal" | "discount" | "paidAmount" | "settlement" | "currency" | "issueDate" | "sellerName" | "sellerAddress" | "sellerPhone" | "sellerLogoUrl" | "sellerIban" | "createdAt", ExtArgs["result"]["invoice"]>
+export type InvoiceOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "number" | "buyerFirstName" | "buyerLastName" | "buyerNationalId" | "buyerAddress" | "buyerPhone" | "customerId" | "notes" | "total" | "subtotal" | "discount" | "paidAmount" | "settlement" | "currency" | "issueDate" | "sellerName" | "sellerAddress" | "sellerPhone" | "sellerLogoUrl" | "sellerIban" | "sellerIbanLabel" | "createdAt", ExtArgs["result"]["invoice"]>
 export type InvoiceInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   customer?: boolean | Prisma.Invoice$customerArgs<ExtArgs>
   items?: boolean | Prisma.Invoice$itemsArgs<ExtArgs>
@@ -1495,6 +1536,7 @@ export type $InvoicePayload<ExtArgs extends runtime.Types.Extensions.InternalArg
     sellerPhone: string | null
     sellerLogoUrl: string | null
     sellerIban: string | null
+    sellerIbanLabel: string | null
     createdAt: Date
   }, ExtArgs["result"]["invoice"]>
   composites: {}
@@ -1943,6 +1985,7 @@ export interface InvoiceFieldRefs {
   readonly sellerPhone: Prisma.FieldRef<"Invoice", 'String'>
   readonly sellerLogoUrl: Prisma.FieldRef<"Invoice", 'String'>
   readonly sellerIban: Prisma.FieldRef<"Invoice", 'String'>
+  readonly sellerIbanLabel: Prisma.FieldRef<"Invoice", 'String'>
   readonly createdAt: Prisma.FieldRef<"Invoice", 'DateTime'>
 }
     

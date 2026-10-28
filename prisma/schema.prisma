@@ -140,6 +140,7 @@ model Invoice {
   sellerPhone    String?
   sellerLogoUrl  String?
   sellerIban     String?
+  sellerIbanLabel String?
   items          InvoiceItem[]
   transactions   InventoryTransaction[]
   createdAt      DateTime                 @default(now())
@@ -167,6 +168,7 @@ model StoreSettings {
   phone     String   @default("")
   logoUrl   String?
   iban      String   @default("")
+  ibanLabel String   @default("")
   defaultInvoiceNotes String @default("")
   updatedAt DateTime @updatedAt
 }

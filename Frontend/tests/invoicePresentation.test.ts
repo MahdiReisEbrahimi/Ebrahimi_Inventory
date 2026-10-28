@@ -26,7 +26,7 @@ test('A5 page types respect individual capacities and preserve every row and off
   for (let count = 0; count <= 300; count++) {
     const items = Array.from({ length: count }, (_, i) => i + 1)
     const pages = invoicePages(items)
-    const expectedPages = count <= 13 ? 1 : 2 + Math.max(0, Math.ceil((count - 33) / 20))
+    const expectedPages = count <= 12 ? 1 : 2 + Math.max(0, Math.ceil((count - 31) / 19))
     assert.equal(pages.length, expectedPages)
     assert.deepEqual(
       pages.flatMap((page) => page.items),
@@ -44,7 +44,7 @@ test('A5 page types respect individual capacities and preserve every row and off
               : invoicePageCapacities.middle
       assert.equal(page.offset, offset)
       assert.ok(page.items.length <= limit)
-      if (count) assert.ok(page.items.length > 0)
+      if (count && index < pages.length - 1) assert.ok(page.items.length > 0)
       offset += page.items.length
     })
   }
@@ -61,6 +61,20 @@ test('smaller measured capacities produce additional sheets without losing rows'
   assert.deepEqual(invoicePages([], { single: 1, first: 1, middle: 1, last: 1 }), [
     { items: [], offset: 0 },
   ])
+})
+
+test('invoice pages fill sequentially instead of distributing rows evenly', () => {
+  for (const [count, expected] of [
+    [13, [13, 0]],
+    [31, [16, 15]],
+    [32, [16, 16, 0]],
+    [80, [16, 19, 19, 19, 7]],
+  ] as const) {
+    assert.deepEqual(
+      invoicePages(Array.from({ length: count })).map((page) => page.items.length),
+      expected,
+    )
+  }
 })
 
 test('legacy toman invoices convert once and rial invoices never multiply again', () => {

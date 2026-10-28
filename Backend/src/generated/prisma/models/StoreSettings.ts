@@ -41,6 +41,7 @@ export type StoreSettingsMinAggregateOutputType = {
   phone: string | null
   logoUrl: string | null
   iban: string | null
+  ibanLabel: string | null
   defaultInvoiceNotes: string | null
   updatedAt: Date | null
 }
@@ -52,6 +53,7 @@ export type StoreSettingsMaxAggregateOutputType = {
   phone: string | null
   logoUrl: string | null
   iban: string | null
+  ibanLabel: string | null
   defaultInvoiceNotes: string | null
   updatedAt: Date | null
 }
@@ -63,6 +65,7 @@ export type StoreSettingsCountAggregateOutputType = {
   phone: number
   logoUrl: number
   iban: number
+  ibanLabel: number
   defaultInvoiceNotes: number
   updatedAt: number
   _all: number
@@ -84,6 +87,7 @@ export type StoreSettingsMinAggregateInputType = {
   phone?: true
   logoUrl?: true
   iban?: true
+  ibanLabel?: true
   defaultInvoiceNotes?: true
   updatedAt?: true
 }
@@ -95,6 +99,7 @@ export type StoreSettingsMaxAggregateInputType = {
   phone?: true
   logoUrl?: true
   iban?: true
+  ibanLabel?: true
   defaultInvoiceNotes?: true
   updatedAt?: true
 }
@@ -106,6 +111,7 @@ export type StoreSettingsCountAggregateInputType = {
   phone?: true
   logoUrl?: true
   iban?: true
+  ibanLabel?: true
   defaultInvoiceNotes?: true
   updatedAt?: true
   _all?: true
@@ -204,6 +210,7 @@ export type StoreSettingsGroupByOutputType = {
   phone: string
   logoUrl: string | null
   iban: string
+  ibanLabel: string
   defaultInvoiceNotes: string
   updatedAt: Date
   _count: StoreSettingsCountAggregateOutputType | null
@@ -238,6 +245,7 @@ export type StoreSettingsWhereInput = {
   phone?: Prisma.StringFilter<"StoreSettings"> | string
   logoUrl?: Prisma.StringNullableFilter<"StoreSettings"> | string | null
   iban?: Prisma.StringFilter<"StoreSettings"> | string
+  ibanLabel?: Prisma.StringFilter<"StoreSettings"> | string
   defaultInvoiceNotes?: Prisma.StringFilter<"StoreSettings"> | string
   updatedAt?: Prisma.DateTimeFilter<"StoreSettings"> | Date | string
 }
@@ -249,6 +257,7 @@ export type StoreSettingsOrderByWithRelationInput = {
   phone?: Prisma.SortOrder
   logoUrl?: Prisma.SortOrderInput | Prisma.SortOrder
   iban?: Prisma.SortOrder
+  ibanLabel?: Prisma.SortOrder
   defaultInvoiceNotes?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -263,6 +272,7 @@ export type StoreSettingsWhereUniqueInput = Prisma.AtLeast<{
   phone?: Prisma.StringFilter<"StoreSettings"> | string
   logoUrl?: Prisma.StringNullableFilter<"StoreSettings"> | string | null
   iban?: Prisma.StringFilter<"StoreSettings"> | string
+  ibanLabel?: Prisma.StringFilter<"StoreSettings"> | string
   defaultInvoiceNotes?: Prisma.StringFilter<"StoreSettings"> | string
   updatedAt?: Prisma.DateTimeFilter<"StoreSettings"> | Date | string
 }, "id">
@@ -274,6 +284,7 @@ export type StoreSettingsOrderByWithAggregationInput = {
   phone?: Prisma.SortOrder
   logoUrl?: Prisma.SortOrderInput | Prisma.SortOrder
   iban?: Prisma.SortOrder
+  ibanLabel?: Prisma.SortOrder
   defaultInvoiceNotes?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   _count?: Prisma.StoreSettingsCountOrderByAggregateInput
@@ -293,6 +304,7 @@ export type StoreSettingsScalarWhereWithAggregatesInput = {
   phone?: Prisma.StringWithAggregatesFilter<"StoreSettings"> | string
   logoUrl?: Prisma.StringNullableWithAggregatesFilter<"StoreSettings"> | string | null
   iban?: Prisma.StringWithAggregatesFilter<"StoreSettings"> | string
+  ibanLabel?: Prisma.StringWithAggregatesFilter<"StoreSettings"> | string
   defaultInvoiceNotes?: Prisma.StringWithAggregatesFilter<"StoreSettings"> | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"StoreSettings"> | Date | string
 }
@@ -304,6 +316,7 @@ export type StoreSettingsCreateInput = {
   phone?: string
   logoUrl?: string | null
   iban?: string
+  ibanLabel?: string
   defaultInvoiceNotes?: string
   updatedAt?: Date | string
 }
@@ -315,6 +328,7 @@ export type StoreSettingsUncheckedCreateInput = {
   phone?: string
   logoUrl?: string | null
   iban?: string
+  ibanLabel?: string
   defaultInvoiceNotes?: string
   updatedAt?: Date | string
 }
@@ -326,6 +340,7 @@ export type StoreSettingsUpdateInput = {
   phone?: Prisma.StringFieldUpdateOperationsInput | string
   logoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   iban?: Prisma.StringFieldUpdateOperationsInput | string
+  ibanLabel?: Prisma.StringFieldUpdateOperationsInput | string
   defaultInvoiceNotes?: Prisma.StringFieldUpdateOperationsInput | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -337,6 +352,7 @@ export type StoreSettingsUncheckedUpdateInput = {
   phone?: Prisma.StringFieldUpdateOperationsInput | string
   logoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   iban?: Prisma.StringFieldUpdateOperationsInput | string
+  ibanLabel?: Prisma.StringFieldUpdateOperationsInput | string
   defaultInvoiceNotes?: Prisma.StringFieldUpdateOperationsInput | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -348,6 +364,7 @@ export type StoreSettingsCreateManyInput = {
   phone?: string
   logoUrl?: string | null
   iban?: string
+  ibanLabel?: string
   defaultInvoiceNotes?: string
   updatedAt?: Date | string
 }
@@ -359,6 +376,7 @@ export type StoreSettingsUpdateManyMutationInput = {
   phone?: Prisma.StringFieldUpdateOperationsInput | string
   logoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   iban?: Prisma.StringFieldUpdateOperationsInput | string
+  ibanLabel?: Prisma.StringFieldUpdateOperationsInput | string
   defaultInvoiceNotes?: Prisma.StringFieldUpdateOperationsInput | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -370,6 +388,7 @@ export type StoreSettingsUncheckedUpdateManyInput = {
   phone?: Prisma.StringFieldUpdateOperationsInput | string
   logoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   iban?: Prisma.StringFieldUpdateOperationsInput | string
+  ibanLabel?: Prisma.StringFieldUpdateOperationsInput | string
   defaultInvoiceNotes?: Prisma.StringFieldUpdateOperationsInput | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -381,6 +400,7 @@ export type StoreSettingsCountOrderByAggregateInput = {
   phone?: Prisma.SortOrder
   logoUrl?: Prisma.SortOrder
   iban?: Prisma.SortOrder
+  ibanLabel?: Prisma.SortOrder
   defaultInvoiceNotes?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -396,6 +416,7 @@ export type StoreSettingsMaxOrderByAggregateInput = {
   phone?: Prisma.SortOrder
   logoUrl?: Prisma.SortOrder
   iban?: Prisma.SortOrder
+  ibanLabel?: Prisma.SortOrder
   defaultInvoiceNotes?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -407,6 +428,7 @@ export type StoreSettingsMinOrderByAggregateInput = {
   phone?: Prisma.SortOrder
   logoUrl?: Prisma.SortOrder
   iban?: Prisma.SortOrder
+  ibanLabel?: Prisma.SortOrder
   defaultInvoiceNotes?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -424,6 +446,7 @@ export type StoreSettingsSelect<ExtArgs extends runtime.Types.Extensions.Interna
   phone?: boolean
   logoUrl?: boolean
   iban?: boolean
+  ibanLabel?: boolean
   defaultInvoiceNotes?: boolean
   updatedAt?: boolean
 }, ExtArgs["result"]["storeSettings"]>
@@ -435,6 +458,7 @@ export type StoreSettingsSelectCreateManyAndReturn<ExtArgs extends runtime.Types
   phone?: boolean
   logoUrl?: boolean
   iban?: boolean
+  ibanLabel?: boolean
   defaultInvoiceNotes?: boolean
   updatedAt?: boolean
 }, ExtArgs["result"]["storeSettings"]>
@@ -446,6 +470,7 @@ export type StoreSettingsSelectUpdateManyAndReturn<ExtArgs extends runtime.Types
   phone?: boolean
   logoUrl?: boolean
   iban?: boolean
+  ibanLabel?: boolean
   defaultInvoiceNotes?: boolean
   updatedAt?: boolean
 }, ExtArgs["result"]["storeSettings"]>
@@ -457,11 +482,12 @@ export type StoreSettingsSelectScalar = {
   phone?: boolean
   logoUrl?: boolean
   iban?: boolean
+  ibanLabel?: boolean
   defaultInvoiceNotes?: boolean
   updatedAt?: boolean
 }
 
-export type StoreSettingsOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "name" | "address" | "phone" | "logoUrl" | "iban" | "defaultInvoiceNotes" | "updatedAt", ExtArgs["result"]["storeSettings"]>
+export type StoreSettingsOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "name" | "address" | "phone" | "logoUrl" | "iban" | "ibanLabel" | "defaultInvoiceNotes" | "updatedAt", ExtArgs["result"]["storeSettings"]>
 
 export type $StoreSettingsPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "StoreSettings"
@@ -473,6 +499,7 @@ export type $StoreSettingsPayload<ExtArgs extends runtime.Types.Extensions.Inter
     phone: string
     logoUrl: string | null
     iban: string
+    ibanLabel: string
     defaultInvoiceNotes: string
     updatedAt: Date
   }, ExtArgs["result"]["storeSettings"]>
@@ -904,6 +931,7 @@ export interface StoreSettingsFieldRefs {
   readonly phone: Prisma.FieldRef<"StoreSettings", 'String'>
   readonly logoUrl: Prisma.FieldRef<"StoreSettings", 'String'>
   readonly iban: Prisma.FieldRef<"StoreSettings", 'String'>
+  readonly ibanLabel: Prisma.FieldRef<"StoreSettings", 'String'>
   readonly defaultInvoiceNotes: Prisma.FieldRef<"StoreSettings", 'String'>
   readonly updatedAt: Prisma.FieldRef<"StoreSettings", 'DateTime'>
 }

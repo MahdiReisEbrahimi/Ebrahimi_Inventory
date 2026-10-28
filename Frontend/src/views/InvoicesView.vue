@@ -139,9 +139,6 @@
                     :disabled="saving"
                   />
                 </div>
-                <small v-if="!draft.length" class="adder-hint"
-                  >کالا را جست‌وجو کنید یا دسته‌بندی را تغییر دهید.</small
-                >
               </td>
               <td v-for="column in 4" :key="column" aria-hidden="true"></td>
             </tr>
@@ -200,7 +197,13 @@
           </div>
           <div class="editor-actions">
             <Button
-              :disabled="saving || !draft.length || !selectedBuyer || !!loadError"
+              :disabled="
+                saving ||
+                !draft.length ||
+                !selectedBuyer ||
+                !!loadError ||
+                (!!editingInvoiceId && !hasInvoiceChanges)
+              "
               :aria-describedby="saveHintId"
               @click="save"
               ><Check :size="17" />{{
@@ -222,9 +225,6 @@
             <template v-if="loadError"
               >برای ثبت فاکتور، دریافت اطلاعات را دوباره امتحان کنید.</template
             >
-            <template v-else-if="!draft.length">برای ثبت فاکتور، ابتدا کالا اضافه کنید.</template>
-            <template v-else-if="!selectedBuyer">برای ثبت فاکتور، خریدار را انتخاب کنید.</template>
-            <template v-else>با ذخیره فاکتور، موجودی کالاها به‌روز می‌شود.</template>
           </p>
         </div>
         <label v-show="notesExpanded" :id="notesFieldId" class="form-field invoice-notes">
@@ -393,6 +393,14 @@
             /> </span
         ></label>
         <label class="form-field settings-extra"
+          ><span>نام صاحب حساب و بانک <small>اختیاری</small></span>
+          <input
+            v-model="settingsForm.ibanLabel"
+            maxlength="120"
+            placeholder="مثلاً علی ابراهیمی ـ بانک ملت"
+          />
+        </label>
+        <label class="form-field settings-extra"
           ><span>توضیحات پیش‌فرض فاکتور</span
           ><textarea v-model="settingsForm.defaultInvoiceNotes" maxlength="600" rows="3" /><small
             >در فاکتورهای جدید درج می‌شود و برای هر فاکتور قابل ویرایش است.</small
@@ -424,7 +432,7 @@ import { toast } from '@/lib/toast'
 import { date, number, normalizeNumberText, parseNumber } from '@/lib/format'
 import MoneyInput from '@/components/ui/MoneyInput.vue'
 import NumberInput from '@/components/ui/NumberInput.vue'
-import { validateInvoiceLines } from '@/lib/invoice'
+import { invoiceEditKey, validateInvoiceLines } from '@/lib/invoice'
 import { amountInWords, invoiceInRials, rial } from '@/lib/invoicePresentation'
 import { todayInTehran } from '@/lib/persianDate'
 import { productsApi } from '@/services/products'
@@ -451,6 +459,7 @@ let pendingProductFocus: number | undefined
 const editingInvoiceId = ref<number>(),
   editingInvoiceNumber = ref('')
 const originalItems = ref<InvoiceItem[]>([])
+const originalEditKey = ref('')
 const issueDate = ref(todayInTehran()),
   notes = ref(''),
   notesTouched = ref(false)
@@ -482,6 +491,7 @@ const settingsForm = reactive({
   phone: '',
   logoUrl: '',
   iban: '',
+  ibanLabel: '',
   defaultInvoiceNotes: '',
 })
 const ibanDigits = computed(() => settingsForm.iban.replace(/^IR/i, ''))
@@ -541,6 +551,21 @@ const draftSubtotal = computed(() =>
 )
 const discount = computed(() => (discountText.value.trim() ? parseNumber(discountText.value) : 0))
 const draftTotal = computed(() => draftSubtotal.value - discount.value)
+const invoicePayload = computed(() => ({
+  customerId: selectedBuyerId.value,
+  issueDate: issueDate.value,
+  discount: discount.value,
+  settlement: settlement.value,
+  notes: notes.value,
+  items: draft.value.map(({ productId, quantity, unitPrice }) => ({
+    productId,
+    quantity,
+    unitPrice,
+  })),
+}))
+const hasInvoiceChanges = computed(
+  () => invoiceEditKey(invoicePayload.value) !== originalEditKey.value,
+)
 const draftInvoice = computed<Invoice>(() => ({
   id: editingInvoiceId.value || 0,
   number: editingInvoiceNumber.value || 'پس از ثبت',
@@ -634,6 +659,7 @@ async function load() {
       phone: s.phone,
       logoUrl: s.logoUrl || '',
       iban: s.iban || '',
+      ibanLabel: s.ibanLabel || '',
       defaultInvoiceNotes: s.defaultInvoiceNotes || '',
     })
     if (!notesTouched.value && !editingInvoiceId.value) notes.value = s.defaultInvoiceNotes || ''
@@ -677,6 +703,7 @@ function validateDraft() {
 }
 async function save() {
   if (saving.value) return
+  if (editingInvoiceId.value && !hasInvoiceChanges.value) return
   const error = validateDraft()
   if (error) {
     toast.error(error)
@@ -684,18 +711,7 @@ async function save() {
   }
   saving.value = true
   try {
-    const payload = {
-      customerId: selectedBuyerId.value,
-      issueDate: issueDate.value,
-      discount: discount.value,
-      settlement: settlement.value,
-      notes: notes.value,
-      items: draft.value.map(({ productId, quantity, unitPrice }) => ({
-        productId,
-        quantity,
-        unitPrice,
-      })),
-    }
+    const payload = invoicePayload.value
     activeInvoice.value = editingInvoiceId.value
       ? await inventoryApi.updateInvoice(editingInvoiceId.value, payload)
       : await inventoryApi.createInvoice(payload)
@@ -730,6 +746,7 @@ function resetDraft() {
   originalItems.value = []
   editingInvoiceId.value = undefined
   editingInvoiceNumber.value = ''
+  originalEditKey.value = ''
   selectedBuyerId.value = undefined
   selectedCategoryId.value = 0
   issueDate.value = todayInTehran()
@@ -770,6 +787,7 @@ async function editInvoice() {
   settlement.value = invoice.settlement || 'CASH'
   notes.value = invoice.notes || ''
   notesTouched.value = true
+  originalEditKey.value = invoiceEditKey(invoicePayload.value)
   activeInvoice.value = null
   activeTab.value = 'new'
 }
@@ -1372,6 +1390,29 @@ onMounted(load)
 .paper-toolbar {
   justify-content: space-between;
   margin-bottom: 20px;
+}
+@media screen {
+  .invoice-page:has(> .invoice-preview) {
+    overflow: hidden;
+  }
+  .invoice-preview {
+    display: flex;
+    flex: 1;
+    min-height: 0;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .invoice-preview .paper-toolbar {
+    flex-shrink: 0;
+    margin-bottom: 12px;
+  }
+  .invoice-preview :deep(.invoice-sheets) {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+    overscroll-behavior: contain;
+    align-content: start;
+  }
 }
 .archive-filters {
   display: grid;

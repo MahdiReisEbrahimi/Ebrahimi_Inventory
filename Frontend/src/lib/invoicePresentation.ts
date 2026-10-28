@@ -76,12 +76,12 @@ export interface InvoicePageCapacities {
 }
 
 // Measured in Chrome with the A5 landscape template, Vazirmatn and ordinary rows.
-// InvoicePaper lowers these limits when actual text requires more vertical space.
+// Initial render only; InvoicePaper measures actual rows to fill each page.
 export const invoicePageCapacities: Readonly<InvoicePageCapacities> = {
-  single: 13,
-  first: 17,
-  middle: 20,
-  last: 16,
+  single: 12,
+  first: 16,
+  middle: 19,
+  last: 15,
 }
 
 export function invoicePages<T>(
@@ -98,19 +98,14 @@ export function invoicePages<T>(
     ...Array<number>(middlePages).fill(capacities.middle),
     capacities.last,
   ]
-  // Balance occupancy to avoid a nearly empty trailing/middle sheet.
+  // Fill pages in order. The final totals may need their own sheet.
   let remaining = items.length
-  let available = limits.reduce((sum, limit) => sum + limit, 0)
   let offset = 0
   return limits.map((limit, index) => {
-    const count =
-      index === limits.length - 1
-        ? remaining
-        : Math.min(limit, Math.max(1, Math.round((remaining * limit) / available)))
+    const count = index === limits.length - 1 ? remaining : Math.min(limit, remaining)
     const page = { items: items.slice(offset, offset + count), offset }
     offset += count
     remaining -= count
-    available -= limit
     return page
   })
 }

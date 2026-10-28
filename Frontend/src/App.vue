@@ -1,10 +1,10 @@
 <template>
   <div class="app-shell">
     <a class="skip-link" href="#main-content">رفتن به محتوای صفحه</a>
-    <aside class="sidebar">
+    <aside id="desktop-sidebar" class="sidebar" :class="{ 'is-collapsed': sidebarCollapsed }">
       <RouterLink to="/" class="brand" aria-label="انبارک، صفحه اصلی">
         <span class="brand-symbol"><Boxes :size="25" :stroke-width="1.6" /></span>
-        <span
+        <span class="brand-copy"
           ><b>انبارک<span class="brand-dot">.</span></b
           ><small>همراه هر روز فروشگاه شما</small></span
         >
@@ -17,8 +17,12 @@
           :to="item.to"
           class="nav-link"
           :class="{ 'is-active': isActive(item.to) }"
+          :aria-label="item.text"
+          :title="sidebarCollapsed ? item.text : undefined"
         >
-          <component :is="item.icon" :size="20" :stroke-width="1.7" /><span>{{ item.text }}</span>
+          <component :is="item.icon" :size="20" :stroke-width="1.7" /><span class="nav-label">{{
+            item.text
+          }}</span>
           <span v-if="isActive(item.to)" class="nav-dot" />
         </RouterLink>
       </nav>
@@ -28,9 +32,14 @@
       <header class="topbar no-print" :class="{ 'topbar--invoices': route.path === '/invoices' }">
         <div class="topbar-context">
           <button
-            class="icon-button mobile-menu"
-            aria-label="باز کردن منوی اصلی"
-            @click="mobileOpen = true"
+            type="button"
+            class="icon-button menu-toggle"
+            :aria-label="menuLabel"
+            :title="menuLabel"
+            :aria-expanded="smallScreen ? mobileOpen : !sidebarCollapsed"
+            :aria-controls="smallScreen ? 'mobile-sidebar' : 'desktop-sidebar'"
+            :aria-haspopup="smallScreen ? 'dialog' : undefined"
+            @click="toggleNavigation"
           >
             <Menu :size="22" />
           </button>
@@ -124,10 +133,15 @@
       </main>
     </div>
 
-    <DialogRoot v-model:open="mobileOpen">
+    <DialogRoot v-if="smallScreen" v-model:open="mobileOpen">
       <DialogPortal>
         <DialogOverlay class="sidebar-overlay" />
-        <DialogContent class="mobile-sidebar" :aria-describedby="undefined" dir="rtl">
+        <DialogContent
+          id="mobile-sidebar"
+          class="mobile-sidebar"
+          :aria-describedby="undefined"
+          dir="rtl"
+        >
           <div class="mobile-sidebar__heading">
             <DialogTitle>انبارک · منوی اصلی</DialogTitle
             ><DialogClose class="icon-button" aria-label="بستن منو"><X :size="20" /></DialogClose>
@@ -151,7 +165,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import {
   ArrowLeft,
@@ -196,6 +210,30 @@ const today = new Intl.DateTimeFormat('fa-IR', {
 }).format(new Date())
 const { isDark, toggleTheme } = useTheme()
 const mobileOpen = ref(false)
+const sidebarCollapsed = ref(false)
+const smallScreen = ref(false)
+const menuLabel = computed(() =>
+  smallScreen.value
+    ? 'باز کردن منوی اصلی'
+    : sidebarCollapsed.value
+      ? 'نمایش کامل منو'
+      : 'کوچک کردن منو',
+)
+let sidebarMedia: MediaQueryList | undefined
+function syncSidebarViewport() {
+  smallScreen.value = !!sidebarMedia?.matches
+  if (!smallScreen.value) mobileOpen.value = false
+}
+function toggleNavigation() {
+  if (smallScreen.value) mobileOpen.value = !mobileOpen.value
+  else sidebarCollapsed.value = !sidebarCollapsed.value
+}
+onMounted(() => {
+  sidebarMedia = window.matchMedia('(max-width: 820px)')
+  syncSidebarViewport()
+  sidebarMedia.addEventListener('change', syncSidebarViewport)
+})
+onUnmounted(() => sidebarMedia?.removeEventListener('change', syncSidebarViewport))
 const alertsOpen = ref(false)
 const alertsLoading = ref(false)
 const alertsError = ref('')
@@ -250,6 +288,25 @@ watch(
   overflow-y: auto;
   overscroll-behavior: contain;
   scrollbar-gutter: stable;
+}
+.sidebar.is-collapsed {
+  width: 84px;
+  flex-basis: 84px;
+  padding-inline: 12px;
+  scrollbar-gutter: auto;
+}
+.sidebar.is-collapsed .brand {
+  justify-content: center;
+  padding-inline: 0;
+}
+.sidebar.is-collapsed .brand-copy,
+.sidebar.is-collapsed .nav-label,
+.sidebar.is-collapsed .nav-dot {
+  display: none;
+}
+.sidebar.is-collapsed .nav-link {
+  justify-content: center;
+  padding-inline: 12px;
 }
 .brand {
   display: flex;
@@ -518,8 +575,8 @@ watch(
   width: 100%;
   margin-top: 12px;
 }
-.mobile-menu {
-  display: none;
+.menu-toggle {
+  display: inline-grid;
 }
 .sidebar-overlay {
   position: fixed;
@@ -583,9 +640,6 @@ watch(
 @media (max-width: 820px) {
   .sidebar {
     display: none;
-  }
-  .mobile-menu {
-    display: inline-grid;
   }
   .topbar {
     padding-inline: 16px;

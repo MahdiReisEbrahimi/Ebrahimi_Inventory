@@ -100,6 +100,31 @@ test('numeric fields accept localized typing, paste and composition with numeric
     assert.equal(input.props.type, 'text')
     assert.equal(input.props.required, true)
     assert.equal(input.props.inputmode, 'numeric')
+    for (const eventName of ['onInput', 'onChange', 'onCompositionend']) {
+      for (const [raw, expected] of [
+        ['0155', '155'],
+        ['012', '12'],
+        ['۰۰۱۲', '۱۲'],
+        ['٠٠١٢', '١٢'],
+      ]) {
+        input.value = raw
+        input.selectionStart = raw!.length
+        input.selectionEnd = raw!.length
+        input.props[eventName]({ target: input })
+        assert.equal(input.value, expected)
+        assert.equal(input.selectionStart, expected!.length)
+        assert.equal(amount.value, Number(expected === '155' ? 155 : 12))
+        await nextTick()
+        assert.equal(input.value, expected)
+      }
+    }
+    input.value = '00155'
+    input.selectionStart = 3
+    input.selectionEnd = 4
+    input.props.onInput({ target: input })
+    assert.equal(input.selectionStart, 1)
+    assert.equal(input.selectionEnd, 2)
+    await nextTick()
     for (const digits of ['۱۲۳۴', '١٢٣٤', '1234']) {
       for (const isComposing of [false, true]) {
         input.value = ''

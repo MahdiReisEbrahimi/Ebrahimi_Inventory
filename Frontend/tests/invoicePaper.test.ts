@@ -28,6 +28,9 @@ test('invoice preview and print share the table footer on the final page', async
         settlement: 'INSTALLMENT',
         buyerFirstName: 'خریدار',
         buyerLastName: 'نمونه',
+        buyerAddress: 'نشانی خریدار',
+        buyerPhone: '02112345678',
+        buyerNationalId: '1234567890',
         notes: 'توضیحات مخصوص صفحه آخر',
         items: Array.from({ length: count }, (_, i) => ({
           id: i + 1,
@@ -43,6 +46,8 @@ test('invoice preview and print share the table footer on the final page', async
           invoice,
           settings: {
             name: 'فروشگاه نمونه',
+            address: 'نشانی فروشنده',
+            phone: '02187654321',
             logoUrl: '/test-logo.png',
             iban: 'IR000000000000000000000000',
           },
@@ -72,6 +77,18 @@ test('invoice preview and print share the table footer on the final page', async
       assert.equal((html.match(/class="paper-footer-table"/g) || []).length, 1)
       assert.match(html, /تخفیف/)
       assert.match(html, /جمع کل فاکتور/)
+      const parties = html.match(/<table class="paper-parties"[^]*?<\/table>/)?.[0]
+      assert.ok(parties)
+      const partyRows = [...parties.matchAll(/<tr\b[^>]*>([^]*?)<\/tr>/g)]
+      assert.equal(partyRows.length, 2)
+      for (const row of partyRows) assert.equal((row[1]!.match(/<td\b/g) || []).length, 4)
+      for (const row of partyRows)
+        assert.match(row[1]!, /<th scope="row" class="party-row-heading"/)
+      assert.match(partyRows[0]![1]!, /نشانی فروشنده/)
+      assert.match(partyRows[1]![1]!, /نشانی خریدار/)
+      assert.match(partyRows[1]![1]!, /1234567890/)
+      assert.doesNotMatch(parties, /—/)
+      assert.match(html, /class="paper-currency"[^>]*>\(ریال\)<\/small>/)
       for (const header of html.matchAll(/<header[^]*?<\/header>/g)) {
         assert.doesNotMatch(header[0], /صفحه/)
       }
@@ -95,14 +112,14 @@ test('invoice preview and print share the table footer on the final page', async
         }),
       )
       const cashFooter = renderedWithoutDiscount.match(
-        /<table class="paper-footer-table"[^]*?<\/table>/,
+        /<table class="[^"]*\bpaper-footer-table\b[^"]*"[^]*?<\/table>/,
       )?.[0]
-      assert.ok(cashFooter)
+      assert.ok(cashFooter, renderedWithoutDiscount.match(/<table[^>]*>/g)?.join('\n'))
       assert.match(cashFooter, /☑ نقدی/)
       assert.match(cashFooter, /☐ غیرنقدی/)
-      assert.match(cashFooter, /تخفیف/)
-      assert.match(cashFooter, /۰ ریال/)
-      assert.match(cashFooter, /جمع کل فاکتور/)
+      assert.doesNotMatch(cashFooter, /تخفیف|جمع کل فاکتور/)
+      assert.match(cashFooter, /rowspan="3"/)
+      assert.equal((cashFooter.match(/class="footer-payment"/g) || []).length, 1)
       assert.match(cashFooter, /نه میلیون و نهصد و شصت و هشت هزار ریال/)
     }
   } finally {

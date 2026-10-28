@@ -13,7 +13,7 @@
 <script setup lang="ts">
 import { ref, watch, watchEffect } from 'vue'
 import { toPersianDigits } from '@/lib/format'
-import { numberInputError, parseNumberInput } from '@/lib/numberInput'
+import { numberInputError, parseNumberInput, stripNumberInputLeadingZeros } from '@/lib/numberInput'
 
 const props = withDefaults(
   defineProps<{
@@ -28,7 +28,11 @@ const props = withDefaults(
 const emit = defineEmits<{ 'update:modelValue': [value: number] }>()
 const localize = (value: string) => (props.persianDigits ? toPersianDigits(value) : value)
 const displayValue = (value: number | string) =>
-  localize(typeof value === 'number' && !Number.isFinite(value) ? '' : String(value))
+  localize(
+    stripNumberInputLeadingZeros(
+      typeof value === 'number' && !Number.isFinite(value) ? '' : String(value),
+    ),
+  )
 const text = ref(displayValue(props.modelValue))
 const input = ref<HTMLInputElement>()
 
@@ -49,10 +53,15 @@ function onInput(event: Event) {
   const element = event.target as HTMLInputElement
   const start = element.selectionStart
   const end = element.selectionEnd
-  text.value = localize(element.value)
+  const original = element.value
+  text.value = localize(stripNumberInputLeadingZeros(original))
   if (element.value !== text.value) {
     element.value = text.value
-    if (start !== null && end !== null) element.setSelectionRange(start, end)
+    const removed = original.length - text.value.length
+    const signLength = original.startsWith('-') ? 1 : 0
+    const adjust = (position: number) =>
+      position - Math.min(removed, Math.max(0, position - signLength))
+    if (start !== null && end !== null) element.setSelectionRange(adjust(start), adjust(end))
   }
   validate()
   emit('update:modelValue', parseNumberInput(text.value))

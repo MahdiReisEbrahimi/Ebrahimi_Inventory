@@ -1,7 +1,29 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { numberInputError } from '../src/lib/numberInput.ts'
+import { numberInputError, stripNumberInputLeadingZeros } from '../src/lib/numberInput.ts'
 import { parseNumber, toPersianDigits } from '../src/lib/format.ts'
+
+test('numeric fields remove leading zeros without changing decimals, zero or invalid text', () => {
+  for (const [input, expected] of [
+    ['0155', '155'],
+    ['012', '12'],
+    ['000', '0'],
+    ['۰۱۵۵', '۱۵۵'],
+    ['٠١٢', '١٢'],
+    ['0۰٠12', '12'],
+    ['-0012', '-12'],
+    ['00.12', '0.12'],
+    ['۰۰٫۱۲', '۰٫۱۲'],
+    ['0.12', '0.12'],
+    ['0', '0'],
+    ['', ''],
+    ['-', '-'],
+    ['0.', '0.'],
+    ['012x', '012x'],
+    ['0x10', '0x10'],
+  ])
+    assert.equal(stripNumberInputLeadingZeros(input!), expected)
+})
 
 test('localized numbers preserve quantities, decimals and validation constraints', () => {
   for (const text of ['۱۲۳', '١٢٣', '123', '۱٢3']) {

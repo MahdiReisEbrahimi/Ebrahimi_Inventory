@@ -76,8 +76,8 @@
               <th>نام کالا</th>
               <th>تعداد</th>
               <th>واحد</th>
-              <th>فی · ریال</th>
-              <th>جمع · ریال</th>
+              <th>فی <small class="invoice-currency">(ریال)</small></th>
+              <th>جمع <small class="invoice-currency">(ریال)</small></th>
             </tr>
           </thead>
           <tbody>
@@ -515,7 +515,9 @@ const categoryOptions = computed(() => [
 const productOptions = computed(() =>
   products.value
     .filter(
-      (product) => !selectedCategoryId.value || product.categoryId === selectedCategoryId.value,
+      (product) =>
+        (!selectedCategoryId.value || product.categoryId === selectedCategoryId.value) &&
+        !draft.value.some((line) => line.productId === product.id),
     )
     .map((product) => ({
       value: product.id,
@@ -585,19 +587,18 @@ function addProduct(id: number) {
   if (!product || (selectedCategoryId.value && product.categoryId !== selectedCategoryId.value))
     return
   const line = draft.value.find((item) => item.productId === id)
-  if ((line?.quantity || 0) + 1 > stockOf(id)) return toast.warning('موجودی این کالا کافی نیست.')
-  if (line) line.quantity++
-  else
-    draft.value.push({
-      id: 0,
-      productId: id,
-      name: product.name,
-      unit: product.unit,
-      quantity: 1,
-      unitPrice: product.sellPrice * 10,
-      priceText: number(product.sellPrice * 10),
-      total: product.sellPrice * 10,
-    })
+  if (line) return
+  if (stockOf(id) < 1) return toast.warning('موجودی این کالا کافی نیست.')
+  draft.value.push({
+    id: 0,
+    productId: id,
+    name: product.name,
+    unit: product.unit,
+    quantity: 1,
+    unitPrice: product.sellPrice * 10,
+    priceText: number(product.sellPrice * 10),
+    total: product.sellPrice * 10,
+  })
   pendingProductFocus = id
 }
 async function focusAddedLine(event: Event) {
@@ -850,6 +851,7 @@ onMounted(load)
 .invoice-page {
   display: flex;
   flex-direction: column;
+  width: 100%;
   height: 100%;
   min-height: 0;
   gap: 12px;
@@ -981,10 +983,12 @@ onMounted(load)
 }
 .invoice-lines-scroll {
   flex: 1;
+  width: 100%;
+  min-width: 0;
   min-height: 160px;
   overflow: auto;
   overscroll-behavior: contain;
-  scrollbar-gutter: stable;
+  scrollbar-gutter: auto;
   scroll-padding-block: 36px 80px;
   border-block: 1px solid var(--border);
 }
@@ -1072,6 +1076,10 @@ onMounted(load)
   font-size: 11px;
   color: var(--table-header-foreground);
   background: var(--table-header-background);
+}
+.invoice-lines th .invoice-currency {
+  font-size: 0.8em;
+  font-weight: 400;
 }
 .invoice-lines td {
   padding: 3px 8px;

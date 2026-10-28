@@ -1,5 +1,11 @@
 import { normalizeNumberText, parseNumber } from './format.ts'
 
+export function stripNumberInputLeadingZeros(text: string): string {
+  // Keep incomplete decimal edits and invalid text available for validation.
+  if (!/^-?[0-9۰-۹٠-٩]*(?:[.٫][0-9۰-۹٠-٩]*)?$/.test(text)) return text
+  return text.replace(/^(-?)[0۰٠]+(?=[0-9۰-۹٠-٩])/, '$1')
+}
+
 export function parseNumberInput(text: string | number): number {
   return /^-?\d*(?:\.\d*)?$/.test(normalizeNumberText(text)) ? parseNumber(text) : Number.NaN
 }

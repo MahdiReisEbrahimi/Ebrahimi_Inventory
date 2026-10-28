@@ -18,20 +18,32 @@
             >
           </div>
         </header>
-        <div v-if="pageIndex === 0" class="paper-parties">
-          <section>
-            <b>فروشنده: {{ seller.name }}</b>
-            <p>{{ seller.address || '—' }}</p>
-            <p>تلفن: {{ seller.phone || '—' }}</p>
-          </section>
-          <section>
-            <b>خریدار: {{ invoice.buyerFirstName }} {{ invoice.buyerLastName }}</b>
-            <p>{{ invoice.buyerAddress || '—' }}</p>
-            <p>
-              کد ملی: {{ invoice.buyerNationalId || '—' }} · تلفن: {{ invoice.buyerPhone || '—' }}
-            </p>
-          </section>
-        </div>
+        <table v-if="pageIndex === 0" class="paper-parties" aria-label="مشخصات فروشنده و خریدار">
+          <colgroup>
+            <col style="width: 9%" />
+            <col style="width: 27%" />
+            <col style="width: 31%" />
+            <col style="width: 15%" />
+            <col style="width: 18%" />
+          </colgroup>
+          <tbody>
+            <tr v-for="party in parties" :key="party.label">
+              <th scope="row" class="party-row-heading">{{ party.label }}</th>
+              <td>
+                <b>نام شخص (حقیقی/حقوقی)</b><span>{{ party.name }}</span>
+              </td>
+              <td>
+                <b>نشانی</b><span>{{ party.address }}</span>
+              </td>
+              <td>
+                <b>تلفن</b><span dir="ltr">{{ party.phone }}</span>
+              </td>
+              <td>
+                <b>شماره ملی/شماره ثبت</b><span dir="ltr">{{ party.nationalId }}</span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
         <table>
           <colgroup>
             <col class="row-col" />
@@ -47,8 +59,8 @@
               <th>نام کالا</th>
               <th>تعداد</th>
               <th>واحد</th>
-              <th>فی · ریال</th>
-              <th>جمع · ریال</th>
+              <th>فی <small class="paper-currency">(ریال)</small></th>
+              <th>جمع <small class="paper-currency">(ریال)</small></th>
             </tr>
           </thead>
           <tbody>
@@ -63,11 +75,15 @@
           </tbody>
         </table>
         <div v-if="pageIndex === pages.length - 1" class="paper-bottom">
-          <table class="paper-footer-table" aria-label="خلاصه و امضاهای فاکتور">
+          <table
+            class="paper-footer-table"
+            :class="{ 'paper-footer-table--simple': !hasDiscount }"
+            aria-label="خلاصه و امضاهای فاکتور"
+          >
             <colgroup>
-              <col style="width: 25%" />
-              <col style="width: 25%" />
-              <col style="width: 50%" />
+              <col />
+              <col />
+              <col class="footer-amount-col" />
             </colgroup>
             <tbody>
               <tr>
@@ -78,7 +94,15 @@
                     <span>{{ invoice.settlement === 'INSTALLMENT' ? '☑' : '☐' }} غیرنقدی</span>
                   </div>
                 </td>
-                <td>
+                <td v-if="!hasDiscount" rowspan="3" class="footer-payment-cell">
+                  <div class="footer-payment">
+                    <div>
+                      <b>مبلغ پرداختی</b><span>{{ amountInWords(normalized.total) }}</span>
+                    </div>
+                    <strong>{{ rial(normalized.total) }}</strong>
+                  </div>
+                </td>
+                <td v-else>
                   <div class="footer-amount-row">
                     <b>جمع کل فاکتور</b
                     ><span>{{ rial(normalized.subtotal ?? normalized.total) }}</span>
@@ -89,7 +113,7 @@
                 <td colspan="2" class="footer-notes">
                   <b>توضیحات: </b>{{ invoice.notes || '…………………………………………' }}
                 </td>
-                <td>
+                <td v-if="hasDiscount">
                   <div class="footer-amount-row">
                     <b>تخفیف</b><span>{{ rial(normalized.discount || 0) }}</span>
                   </div>
@@ -98,7 +122,7 @@
               <tr>
                 <td class="footer-signature"><b>مهر و امضا فروشنده:</b></td>
                 <td class="footer-signature"><b>مهر و امضا خریدار:</b></td>
-                <td>
+                <td v-if="hasDiscount">
                   <div class="footer-payment">
                     <div>
                       <b>مبلغ پرداختی</b><span>{{ amountInWords(normalized.total) }}</span>
@@ -128,6 +152,7 @@ import { persianDateLabel } from '@/lib/persianDate'
 import { amountInWords, invoiceInRials, invoicePages, rial } from '@/lib/invoicePresentation'
 const props = defineProps<{ invoice: Invoice; settings: StoreSettings | null; draft?: boolean }>()
 const normalized = computed(() => invoiceInRials(props.invoice))
+const hasDiscount = computed(() => (normalized.value.discount ?? 0) > 0)
 const pages = computed(() => invoicePages(normalized.value.items))
 const sheets = ref<HTMLElement>()
 const scales = ref<number[]>([])
@@ -168,6 +193,23 @@ const seller = computed(() => ({
   logoUrl: props.invoice.sellerLogoUrl ?? props.settings?.logoUrl,
   iban: props.invoice.sellerIban ?? props.settings?.iban,
 }))
+const parties = computed(() => [
+  {
+    label: 'فروشنده',
+    name: props.invoice.sellerName ?? props.settings?.name ?? '',
+    address: seller.value.address ?? '',
+    phone: seller.value.phone ?? '',
+    // Seller identification is not collected by the current store settings model.
+    nationalId: '',
+  },
+  {
+    label: 'خریدار',
+    name: [props.invoice.buyerFirstName, props.invoice.buyerLastName].filter(Boolean).join(' '),
+    address: props.invoice.buyerAddress ?? '',
+    phone: props.invoice.buyerPhone ?? '',
+    nationalId: props.invoice.buyerNationalId ?? '',
+  },
+])
 </script>
 <style scoped>
 .invoice-sheets {
@@ -177,15 +219,22 @@ const seller = computed(() => ({
   padding: 4px;
 }
 .invoice-paper {
+  --paper-unit-width: 20mm;
+  --paper-price-width: 32mm;
+  --paper-total-width: 40mm;
+  --paper-payment-width: calc(
+    var(--paper-unit-width) + var(--paper-price-width) + var(--paper-total-width)
+  );
+  --paper-border-width: 1px;
+  --paper-border: var(--paper-border-width) solid #000;
   --foreground: #111;
   --muted-foreground: #444;
-  --border: #c9c9c9;
+  --border: #000;
   background: #fff;
   color: #111;
   width: 198mm;
   height: 135mm;
   margin-inline: auto;
-  outline: 1px solid #ddd;
   overflow: hidden;
   font-size: 9px;
   line-height: 1.5;
@@ -193,8 +242,7 @@ const seller = computed(() => ({
 }
 .paper-content {
   width: 198mm;
-  padding: 3mm;
-  border: 1px solid #111;
+  border: var(--paper-border);
   display: flex;
   flex-direction: column;
   transform-origin: top right;
@@ -203,9 +251,8 @@ const seller = computed(() => ({
   display: grid;
   grid-template-columns: 1fr 1.4fr 1fr;
   align-items: center;
-  border-bottom: 1.5px solid #333;
-  padding-bottom: 2mm;
-  margin-bottom: 2mm;
+  border-bottom: var(--paper-border);
+  padding: 2mm 3mm;
   gap: 3mm;
 }
 .paper-brand {
@@ -234,25 +281,41 @@ const seller = computed(() => ({
   font-size: 10px;
 }
 .paper-parties {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 1mm;
-  margin-bottom: 2mm;
-  border: 1px solid #ccc;
-  padding: 1.5mm 2mm;
+  text-align: start;
 }
-.paper-parties section {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0 3mm;
+.paper-parties td {
+  height: auto;
+  border-inline: 0;
+  vertical-align: top;
+  text-align: start;
   overflow-wrap: anywhere;
+  padding: 0.7mm 1.5mm;
+  line-height: 1.35;
+  white-space: normal;
 }
-.paper-parties section + section {
-  border-top: 1px solid #ddd;
-  padding-top: 1mm;
+.paper-parties .party-row-heading {
+  border-inline: 0;
+  padding: 0.7mm 1mm;
+  background: #eaeaea;
+  color: #000;
+  vertical-align: middle;
+  text-align: center;
+  font-size: 9px;
+  font-weight: 700;
 }
-.paper-parties p {
-  margin: 0;
+.paper-parties tr:first-child > * {
+  border-top: 0;
+}
+.paper-parties b,
+.paper-parties span {
+  display: block;
+}
+.paper-parties b {
+  font-size: 7px;
+  margin-bottom: 0.3mm;
+}
+.paper-parties span {
+  min-height: 1.2em;
 }
 table {
   width: 100%;
@@ -268,23 +331,40 @@ table {
   width: 13mm;
 }
 .unit-col {
-  width: 20mm;
+  width: var(--paper-unit-width);
 }
 .price-col {
-  width: 32mm;
+  width: var(--paper-price-width);
 }
 .total-col {
-  width: 40mm;
+  width: var(--paper-total-width);
+}
+.footer-amount-col {
+  width: var(--paper-payment-width);
 }
 th,
 td {
-  border: 1px solid #bbb;
+  border: var(--paper-border);
   padding: 0.7mm 1.5mm;
   height: 4.5mm;
+}
+/* The surrounding frame owns the outside edges; adjacent sections share a line. */
+tr > :first-child {
+  border-inline-start: 0;
+}
+tr > :last-child {
+  border-inline-end: 0;
+}
+thead tr:first-child th {
+  border-top: 0;
 }
 th {
   background: #f0f0f0;
   font-size: 8px;
+}
+.paper-currency {
+  font-size: 0.8em;
+  font-weight: 400;
 }
 th:nth-child(2),
 td:nth-child(2) {
@@ -298,19 +378,24 @@ td:nth-child(n + 5) {
   margin-top: 0;
 }
 .paper-page-footer {
-  margin-top: 1mm;
+  padding: 1mm 2mm;
   font-size: 8px;
   text-align: center;
 }
 .paper-footer-table {
-  margin-top: -1px;
+  margin-top: calc(-1 * var(--paper-border-width));
 }
 .paper-footer-table td {
-  border-color: #111;
   padding: 1mm 1.5mm;
   text-align: start;
   vertical-align: top;
   white-space: normal;
+}
+.paper-footer-table .footer-payment-cell {
+  vertical-align: middle;
+}
+.paper-footer-table--simple tr:not(:first-child) > :last-child {
+  border-inline-end: var(--paper-border);
 }
 .footer-sale-terms,
 .footer-amount-row {

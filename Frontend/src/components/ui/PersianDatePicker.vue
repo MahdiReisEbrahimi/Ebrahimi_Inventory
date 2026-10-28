@@ -1,7 +1,14 @@
 <template>
   <PopoverRoot v-model:open="open">
-    <PopoverTrigger class="date-picker-trigger" :disabled="disabled" aria-label="انتخاب تاریخ صدور">
-      <CalendarDays :size="17" /><span>{{ persianDateLabel(modelValue) }}</span>
+    <PopoverTrigger
+      type="button"
+      class="date-picker-trigger"
+      :disabled="disabled"
+      :aria-label="label"
+    >
+      <CalendarDays :size="17" /><span>{{
+        modelValue ? persianDateLabel(modelValue) : placeholder
+      }}</span>
     </PopoverTrigger>
     <PopoverPortal>
       <PopoverContent
@@ -61,6 +68,14 @@
         >
           امروز · {{ persianDateLabel(today) }}
         </button>
+        <button
+          v-if="clearable && modelValue"
+          type="button"
+          class="button button--ghost calendar-today"
+          @click="choose('')"
+        >
+          پاک‌کردن تاریخ
+        </button>
       </PopoverContent>
     </PopoverPortal>
   </PopoverRoot>
@@ -78,12 +93,21 @@ import {
   todayInTehran,
 } from '@/lib/persianDate'
 import { number } from '@/lib/format'
-const props = defineProps<{ modelValue: string; disabled?: boolean }>()
+const props = withDefaults(
+  defineProps<{
+    modelValue: string
+    disabled?: boolean
+    label?: string
+    placeholder?: string
+    clearable?: boolean
+  }>(),
+  { label: 'انتخاب تاریخ', placeholder: 'انتخاب تاریخ', clearable: false },
+)
 const emit = defineEmits<{ 'update:modelValue': [value: string] }>()
 const open = ref(false)
 const grid = ref<HTMLElement>()
 const today = todayInTehran()
-const cursor = ref(monthStart(props.modelValue))
+const cursor = ref(monthStart(props.modelValue || today))
 const parts = computed(() => persianParts(cursor.value))
 const months = [
   'فروردین',
@@ -111,7 +135,7 @@ const days = computed(() => {
   })
 })
 watch(open, (value) => {
-  if (value) cursor.value = monthStart(props.modelValue)
+  if (value) cursor.value = monthStart(props.modelValue || today)
 })
 function choose(value: string) {
   emit('update:modelValue', value)

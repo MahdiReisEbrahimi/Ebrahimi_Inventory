@@ -4,6 +4,7 @@
       <DialogOverlay class="dialog-overlay" />
       <DialogContent
         class="dialog-content"
+        :class="contentClass"
         dir="rtl"
         :aria-describedby="undefined"
         :style="{ maxWidth: /^\d+$/.test(width) ? `${width}px` : width }"
@@ -31,7 +32,10 @@ import {
   DialogTitle,
 } from 'reka-ui'
 
-withDefaults(defineProps<{ open: boolean; title: string; width?: string }>(), { width: '560px' })
+withDefaults(
+  defineProps<{ open: boolean; title: string; width?: string; contentClass?: string }>(),
+  { width: '560px' },
+)
 const emit = defineEmits<{ 'update:open': [value: boolean] }>()
 provide(dialogFooterKey, useTemplateRef<HTMLDivElement>('footer'))
 </script>

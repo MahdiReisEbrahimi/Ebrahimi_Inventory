@@ -486,7 +486,7 @@ watch(
   scrollbar-gutter: auto;
 }
 @media screen {
-  .page-content.page-content--invoices:has(.invoice-preview) {
+  .page-content.page-content--invoices:has(.invoice-archive) {
     overflow: hidden;
   }
 }

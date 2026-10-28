@@ -16,6 +16,7 @@
       import InvoicesView from '/src/views/InvoicesView.vue'
       import { createRouter, createMemoryHistory } from 'vue-router'
       import '/src/styles/main.css'
+      import { addPersianMonths, todayInTehran } from '/src/lib/persianDate.ts'
       window.addEventListener('unhandledrejection', (event) => {
         document.querySelector('#measurements').textContent = JSON.stringify({
           error: String(event.reason?.stack || event.reason),
@@ -204,10 +205,14 @@
       const sample = { ...invoice, customerId: 1, paidAmount: 0 }
       const nativeFetch = window.fetch.bind(window)
       const writes = []
+      const archiveRequests = []
+      let delayArchiveResponse = false
       window.fetch = async (url, options = {}) => {
         const path = new URL(String(url), location.href).pathname
         if (!path.startsWith('/api/v1/')) return nativeFetch(url, options)
         if (options.method && options.method !== 'GET') writes.push(options.method)
+        if (path.endsWith('/invoices'))
+          archiveRequests.push(new URL(String(url), location.href).searchParams)
         const body = path.endsWith('/store-settings')
           ? settings
           : path.endsWith('/buyers')
@@ -226,11 +231,23 @@
                   })),
                 }
               : path.endsWith('/invoices')
-                ? [sample]
+                ? Array.from({ length: 40 }, (_, index) => ({
+                    ...sample,
+                    id: 114 + index,
+                    number: String(114 + index),
+                  }))
                 : sample
-        return new Response(JSON.stringify(body), {
-          headers: { 'Content-Type': 'application/json' },
-        })
+        const stale =
+          delayArchiveResponse &&
+          path.endsWith('/invoices') &&
+          new URL(String(url), location.href).searchParams.get('customerId') === '1'
+        if (stale) await new Promise((resolve) => setTimeout(resolve, 200))
+        return new Response(
+          JSON.stringify(stale ? body.map((item) => ({ ...item, number: 'STALE' })) : body),
+          {
+            headers: { 'Content-Type': 'application/json' },
+          },
+        )
       }
       const router = createRouter({
         history: createMemoryHistory(),
@@ -254,22 +271,128 @@
       }
       await flush()
       await click('بایگانی فاکتورها')
+      const defaultSummary = document.querySelector('.archive-summary').textContent.trim()
+      const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
+      const textInput = document.querySelector('.archive-filters input')
+      const initialRequests = archiveRequests.length
+      textInput.value = 'علی'
+      textInput.dispatchEvent(new Event('input', { bubbles: true }))
+      await flush()
+      await delay(650)
+      textInput.value = 'علی ابراهیمی'
+      textInput.dispatchEvent(new Event('input', { bubbles: true }))
+      await flush()
+      await delay(650)
+      results.archive = { debounceWaited: archiveRequests.length === initialRequests }
+      results.archive.summaryWaited =
+        document.querySelector('.archive-summary').textContent.trim() === defaultSummary
+      results.archive.defaultSummary =
+        defaultSummary === 'فاکتورهای یک ماه اخیر نمایش داده می‌شوند.' &&
+        archiveRequests[0].get('from') === addPersianMonths(todayInTehran(), -1) &&
+        !archiveRequests[0].has('to')
+      await delay(450)
+      await flush()
+      results.archive.textAppliedOnce =
+        archiveRequests.length === initialRequests + 1 &&
+        archiveRequests.at(-1).get('buyer') === 'علی ابراهیمی'
+      results.archive.textSummary = document
+        .querySelector('.archive-summary')
+        .textContent.includes('علی ابراهیمی')
+      const buyerFilter = document.querySelector('.archive-filters select')
+      buyerFilter.value = '1'
+      buyerFilter.dispatchEvent(new Event('change', { bubbles: true }))
+      await flush()
+      results.archive.selectImmediate = archiveRequests.at(-1).get('customerId') === '1'
+      results.archive.noNativeDateInputs = !document.querySelector('input[type="date"]')
+      await document.querySelector('.archive-filters [aria-label="از تاریخ صدور"]').click()
+      await flush()
+      const day = document.querySelector('.calendar-grid button[data-date]')
+      const chosenDate = day.dataset.date
+      day.click()
+      await flush()
+      results.archive.persianDateApplied =
+        archiveRequests.at(-1).get('from') === chosenDate &&
+        /[۰-۹]/.test(
+          document.querySelector('.archive-filters [aria-label="از تاریخ صدور"]').textContent,
+        )
+      const summary = document.querySelector('.archive-summary').textContent
+      results.archive.dateSummary =
+        summary.includes('تاریخ صدور') &&
+        summary.includes(
+          document
+            .querySelector('.archive-filters [aria-label="از تاریخ صدور"]')
+            .textContent.trim(),
+        )
+      document.querySelector('.archive-filters [aria-label="از تاریخ صدور"]').click()
+      await flush()
+      await click('پاک‌کردن تاریخ')
+      results.archive.dateCleared = !archiveRequests.at(-1).has('from')
+      await click('پاک‌کردن فیلترها')
+      const resetRequests = archiveRequests.length
+      await delay(1100)
+      results.archive.resetOnce =
+        archiveRequests.at(-1).size === 0 && archiveRequests.length === resetRequests
+      results.archive.summaryReset =
+        document.querySelector('.archive-summary').textContent.trim() ===
+        'همهٔ فاکتورها نمایش داده می‌شوند.'
+      delayArchiveResponse = true
+      buyerFilter.value = '1'
+      buyerFilter.dispatchEvent(new Event('change', { bubbles: true }))
+      await flush()
+      buyerFilter.selectedIndex = 0
+      buyerFilter.dispatchEvent(new Event('change', { bubbles: true }))
+      await flush()
+      await delay(250)
+      results.archive.latestResponseWins = !document
+        .querySelector('.archive-grid')
+        .textContent.includes('STALE')
+      const archiveScroller = document.querySelector('.archive-results')
+      const filterTop = document.querySelector('.archive-filters').getBoundingClientRect().top
+      archiveScroller.scrollTop = 500
+      await flush()
+      results.archive.cardsScroll =
+        archiveScroller.scrollTop > 0 &&
+        document.querySelector('.archive-filters').getBoundingClientRect().top === filterTop &&
+        document.querySelector('.page-content').scrollTop === 0
+      results.archive.pageFits =
+        document.querySelector('.page-content').scrollHeight <=
+        document.querySelector('.page-content').clientHeight + 1
       await click('مشاهده')
       await document.fonts.ready
       await flush()
-      const scroller = document.querySelector('.invoice-preview .invoice-sheets')
-      const toolbar = document.querySelector('.paper-toolbar')
+      const scroller = document.querySelector('.invoice-preview-dialog .invoice-sheets')
+      const toolbar = document.querySelector('.invoice-preview-dialog .dialog-footer')
       const main = document.querySelector('.page-content')
       const topBefore = toolbar.getBoundingClientRect().top
       scroller.scrollTop = 800
       await flush()
       results.viewer = {
+        modal: !!document.querySelector('[role="dialog"].invoice-preview-dialog'),
+        actionsBelowPaper:
+          toolbar.getBoundingClientRect().top >= scroller.getBoundingClientRect().bottom,
+        backgroundPreserved: !!document.querySelector('.invoice-archive'),
         scrollTop: scroller.scrollTop,
         toolbarStayed: toolbar.getBoundingClientRect().top === topBefore,
         mainScrollTop: main.scrollTop,
         mainDoesNotOverflow: main.scrollHeight <= main.clientHeight + 1,
         documentDoesNotOverflow: document.documentElement.scrollHeight <= innerHeight + 1,
       }
+      // Apply the actual print rules temporarily to verify portal content remains printable.
+      const printRules = [...document.styleSheets]
+        .flatMap((sheet) => [...sheet.cssRules])
+        .filter((rule) => rule instanceof CSSMediaRule && rule.conditionText === 'print')
+      printRules.forEach((rule) => {
+        rule.media.mediaText = 'all'
+      })
+      results.viewer.printableModal =
+        getComputedStyle(document.querySelector('.invoice-preview-dialog')).display !== 'none' &&
+        getComputedStyle(toolbar).display === 'none' &&
+        getComputedStyle(scroller).overflow === 'visible' &&
+        document.querySelector('.invoice-preview-dialog .invoice-paper').getBoundingClientRect()
+          .height > 0
+      printRules.forEach((rule) => {
+        rule.media.mediaText = 'print'
+      })
       await click('ویرایش')
       const save = [...document.querySelectorAll('button')].find(
         (button) => button.textContent.trim() === 'ذخیره تغییرات',
@@ -288,7 +411,18 @@
       save.click()
       await flush()
       results.edit.writeRequests = writes.length
+      const draftRows = document.querySelectorAll('.invoice-editor input[data-product-id]').length
+      await click('پیش‌نمایش')
+      results.viewer.draftModal =
+        !!document.querySelector('.invoice-preview-dialog') &&
+        !!document.querySelector('.invoice-editor')
+      await click('ادامه ویرایش')
+      results.viewer.draftPreserved =
+        draftRows > 0 &&
+        !document.querySelector('.invoice-preview-dialog') &&
+        document.querySelectorAll('.invoice-editor input[data-product-id]').length === draftRows
       results.passed =
+        Object.values(results.archive).every(Boolean) &&
         results.scenarios.every(
           (scenario) =>
             scenario.allFit &&
@@ -298,6 +432,12 @@
         ) &&
         results.viewer.scrollTop > 0 &&
         results.viewer.toolbarStayed &&
+        results.viewer.modal &&
+        results.viewer.actionsBelowPaper &&
+        results.viewer.backgroundPreserved &&
+        results.viewer.printableModal &&
+        results.viewer.draftModal &&
+        results.viewer.draftPreserved &&
         results.viewer.mainScrollTop === 0 &&
         results.viewer.mainDoesNotOverflow &&
         results.viewer.documentDoesNotOverflow &&
@@ -305,8 +445,8 @@
         results.edit.enabledAfterChange &&
         results.edit.disabledAfterRevert &&
         results.edit.writeRequests === 0
-      // Leave the preview visible for screenshot inspection.
-      await click('پیش‌نمایش')
+      // Leave the archive visible for screenshot inspection.
+      await click('بایگانی فاکتورها')
       window.fetch = nativeFetch
       document.querySelector('#measurements').textContent = JSON.stringify(results)
     </script>

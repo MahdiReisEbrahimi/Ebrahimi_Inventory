@@ -28,6 +28,15 @@ export function addDays(iso: string, count: number) {
 export function monthStart(iso: string) {
   return addDays(iso, 1 - persianParts(iso).day)
 }
+export function addPersianMonths(iso: string, count: number): string {
+  const parts = persianParts(iso)
+  const index = parts.year * 12 + parts.month - 1 + count
+  const year = Math.floor(index / 12)
+  const month = index - year * 12 + 1
+  const nextMonth = month === 12 ? persianToIso(year + 1, 1, 1) : persianToIso(year, month + 1, 1)
+  const lastDay = persianParts(addDays(nextMonth, -1)).day
+  return persianToIso(year, month, Math.min(parts.day, lastDay))
+}
 export function persianToIso(year: number, month: number, day: number) {
   let lo = Math.floor(Date.UTC(year + 621, 0, 1) / DAY)
   let hi = Math.floor(Date.UTC(year + 623, 0, 1) / DAY)

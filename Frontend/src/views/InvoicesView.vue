@@ -21,7 +21,7 @@
       در حال دریافت اطلاعات…
     </div>
     <section
-      v-else-if="activeTab === 'new' && !activeInvoice && !previewDraft"
+      v-else-if="activeTab === 'new'"
       class="panel invoice-editor no-print"
       :aria-busy="saving"
     >
@@ -41,7 +41,7 @@
           {{ editingInvoiceId ? 'ویرایش فاکتور ' + editingInvoiceNumber : 'فاکتور جدید' }}
         </h1>
         <div class="editor-tools">
-          <PersianDatePicker v-model="issueDate" :disabled="saving" />
+          <PersianDatePicker v-model="issueDate" label="انتخاب تاریخ صدور" :disabled="saving" />
           <button
             type="button"
             class="icon-button store-settings-button"
@@ -240,12 +240,12 @@
         </label>
       </div>
     </section>
-    <section v-if="activeTab === 'archive' && !activeInvoice" class="panel no-print">
+    <section v-if="activeTab === 'archive'" class="panel invoice-archive no-print">
       <div class="panel-heading">
         <h2>بایگانی فاکتورها</h2>
         <Button variant="ghost" size="sm" @click="clearFilters">پاک‌کردن فیلترها</Button>
       </div>
-      <form class="archive-filters panel-body" @submit.prevent="loadInvoices">
+      <div class="archive-filters panel-body">
         <label class="form-field"
           ><span>خریدار</span
           ><select v-model.number="archiveFilters.customerId">
@@ -262,59 +262,85 @@
           ><span>نام کالا</span><input v-model="archiveFilters.product"
         /></label>
         <label class="form-field"
-          ><span>از تاریخ صدور</span><input v-model="archiveFilters.from" type="date"
+          ><span>از تاریخ صدور</span
+          ><PersianDatePicker
+            v-model="archiveFilters.from"
+            label="از تاریخ صدور"
+            placeholder="از تاریخ"
+            clearable
         /></label>
         <label class="form-field"
-          ><span>تا تاریخ صدور</span><input v-model="archiveFilters.to" type="date"
+          ><span>تا تاریخ صدور</span
+          ><PersianDatePicker
+            v-model="archiveFilters.to"
+            label="تا تاریخ صدور"
+            placeholder="تا تاریخ"
+            clearable
         /></label>
-        <Button type="submit" :disabled="archiveLoading"><Search :size="16" />جست‌وجو</Button>
-      </form>
-      <p v-if="archiveError" class="notice notice--error" role="alert">{{ archiveError }}</p>
-      <div v-if="archiveLoading" class="table-loading">در حال دریافت…</div>
-      <div v-else-if="invoices.length" class="archive-grid">
-        <article v-for="invoice in invoices" :key="invoice.id" class="archive-card">
-          <div>
-            <b>فاکتور {{ invoice.number }}</b
-            ><time>{{ date(invoice.issueDate || invoice.createdAt) }}</time>
-          </div>
-          <p>{{ invoice.buyerFirstName }} {{ invoice.buyerLastName }}</p>
-          <strong>{{ rial(invoiceInRials(invoice).total) }}</strong>
-          <div class="archive-actions">
-            <Button variant="outline" size="sm" @click="openInvoice(invoice)">مشاهده</Button
-            ><Button variant="ghost" size="sm" @click="openInvoice(invoice, true)"
-              ><Printer :size="15" />چاپ</Button
-            >
-          </div>
-        </article>
       </div>
-      <EmptyState
-        v-else-if="!archiveError"
-        title="فاکتوری پیدا نشد"
-        description="فیلترها را تغییر دهید یا فاکتور جدیدی ثبت کنید."
-      />
-    </section>
-    <section v-if="activeInvoice || previewDraft" ref="paperSection" class="invoice-preview">
-      <div class="paper-toolbar no-print">
-        <span class="badge" :class="activeInvoice ? 'badge--success' : 'badge--warning'">{{
-          activeInvoice ? 'فاکتور ثبت‌شده' : 'پیش‌نویس · ثبت نشده'
-        }}</span>
-        <div>
-          <Button variant="outline" @click="printCurrent"><Printer :size="17" />چاپ A5 افقی</Button>
-          <Button v-if="activeInvoice" variant="outline" @click="editInvoice"
-            ><Pencil :size="16" />ویرایش</Button
-          >
-          <Button v-if="activeInvoice" @click="newDraft"><Plus :size="16" />فاکتور جدید</Button>
-          <Button v-if="activeInvoice" variant="ghost" @click="activeInvoice = null">بازگشت</Button>
-          <Button v-else variant="ghost" @click="previewDraft = false">ادامه ویرایش</Button>
+      <p v-if="!archiveLoading && !archiveError" class="archive-summary" role="status">
+        {{ archiveSummary }}
+      </p>
+      <div
+        class="archive-results"
+        role="region"
+        aria-label="فهرست فاکتورها"
+        tabindex="0"
+        :aria-busy="archiveLoading"
+      >
+        <p v-if="archiveError" class="notice notice--error" role="alert">{{ archiveError }}</p>
+        <div v-if="archiveLoading" class="table-loading">در حال دریافت…</div>
+        <div v-else-if="invoices.length" class="archive-grid">
+          <article v-for="invoice in invoices" :key="invoice.id" class="archive-card">
+            <div>
+              <b>فاکتور {{ invoice.number }}</b
+              ><time>{{ date(invoice.issueDate || invoice.createdAt) }}</time>
+            </div>
+            <p>{{ invoice.buyerFirstName }} {{ invoice.buyerLastName }}</p>
+            <strong>{{ rial(invoiceInRials(invoice).total) }}</strong>
+            <div class="archive-actions">
+              <Button variant="outline" size="sm" @click="openInvoice(invoice)">مشاهده</Button
+              ><Button variant="ghost" size="sm" @click="openInvoice(invoice, true)"
+                ><Printer :size="15" />چاپ</Button
+              >
+            </div>
+          </article>
         </div>
+        <EmptyState
+          v-else-if="!archiveError"
+          title="فاکتوری پیدا نشد"
+          description="فیلترها را تغییر دهید یا فاکتور جدیدی ثبت کنید."
+        />
       </div>
+    </section>
+    <AppDialog
+      v-if="activeInvoice || previewDraft"
+      :open="true"
+      title="پیش‌نمایش فاکتور"
+      width="210mm"
+      content-class="invoice-preview-dialog"
+      @update:open="!$event && closePreview()"
+    >
       <InvoicePaper
         ref="paperRenderer"
         :invoice="activeInvoice || draftInvoice"
         :settings="settings"
         :draft="!activeInvoice"
       />
-    </section>
+      <DialogActions>
+        <span class="badge" :class="activeInvoice ? 'badge--success' : 'badge--warning'">{{
+          activeInvoice ? 'فاکتور ثبت‌شده' : 'پیش‌نویس · ثبت نشده'
+        }}</span>
+        <Button variant="outline" @click="printCurrent"><Printer :size="17" />چاپ A5 افقی</Button>
+        <Button v-if="activeInvoice" variant="outline" @click="editInvoice"
+          ><Pencil :size="16" />ویرایش</Button
+        >
+        <Button v-if="activeInvoice" @click="newDraft"><Plus :size="16" />فاکتور جدید</Button>
+        <Button variant="ghost" @click="closePreview()">{{
+          activeInvoice ? 'بازگشت' : 'ادامه ویرایش'
+        }}</Button>
+      </DialogActions>
+    </AppDialog>
     <AppDialog
       v-model:open="leaveOpen"
       title="فاکتور هنوز ثبت نشده است"
@@ -418,9 +444,9 @@
   </div>
 </template>
 <script setup lang="ts">
-import { computed, nextTick, onMounted, reactive, ref, useId } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, reactive, ref, useId, watch } from 'vue'
 import { onBeforeRouteLeave } from 'vue-router'
-import { Check, ChevronDown, Pencil, Plus, Printer, Search, Store, Trash2 } from '@lucide/vue'
+import { Check, ChevronDown, Pencil, Plus, Printer, Store, Trash2 } from '@lucide/vue'
 import EmptyState from '@/components/ui/EmptyState.vue'
 import Button from '@/components/ui/Button.vue'
 import DialogActions from '@/components/ui/DialogActions.vue'
@@ -429,12 +455,12 @@ import SearchSelect from '@/components/ui/SearchSelect.vue'
 import PersianDatePicker from '@/components/ui/PersianDatePicker.vue'
 import InvoicePaper from '@/components/InvoicePaper.vue'
 import { toast } from '@/lib/toast'
-import { date, number, normalizeNumberText, parseNumber } from '@/lib/format'
+import { date, number, normalizeNumberText, parseNumber, toPersianDigits } from '@/lib/format'
 import MoneyInput from '@/components/ui/MoneyInput.vue'
 import NumberInput from '@/components/ui/NumberInput.vue'
 import { invoiceEditKey, validateInvoiceLines } from '@/lib/invoice'
 import { amountInWords, invoiceInRials, rial } from '@/lib/invoicePresentation'
-import { todayInTehran } from '@/lib/persianDate'
+import { addPersianMonths, persianDateLabel, todayInTehran } from '@/lib/persianDate'
 import { productsApi } from '@/services/products'
 import { inventoryApi } from '@/services/inventory'
 import type { Buyer, Invoice, InvoiceItem, Product, StoreSettings } from '@/types'
@@ -470,8 +496,11 @@ const loading = ref(true),
   loadError = ref('')
 const archiveLoading = ref(false),
   archiveError = ref(''),
-  previewDraft = ref(false),
-  paperSection = ref<HTMLElement>()
+  previewDraft = ref(false)
+function closePreview() {
+  activeInvoice.value = null
+  previewDraft.value = false
+}
 const buyerOpen = ref(false),
   buyerSaving = ref(false),
   editingBuyerId = ref<number | null>(null)
@@ -501,12 +530,82 @@ function updateIbanInput(event: Event) {
   input.value = digits
   settingsForm.iban = digits ? `IR${digits}` : ''
 }
+const archiveToday = todayInTehran()
 const archiveFilters = reactive({
   customerId: undefined as number | undefined,
   buyer: '',
   product: '',
-  from: '',
+  from: addPersianMonths(archiveToday, -1),
   to: '',
+})
+const appliedArchiveText = reactive({ buyer: '', product: '' })
+const displayedArchiveFilters = ref({ ...archiveFilters })
+const archiveSummary = computed(() => {
+  const filters = displayedArchiveFilters.value
+  if (
+    !filters.customerId &&
+    !filters.buyer.trim() &&
+    !filters.product.trim() &&
+    filters.from === addPersianMonths(archiveToday, -1) &&
+    !filters.to
+  )
+    return 'فاکتورهای یک ماه اخیر نمایش داده می‌شوند.'
+  const buyer = buyers.value.find((item) => item.id === filters.customerId)
+  const subject = buyer
+    ? `فاکتورهای خریدار «${[buyer.firstName, buyer.lastName].filter(Boolean).join(' ')}»`
+    : 'فاکتورهایی'
+  const conditions: string[] = []
+  if (filters.buyer.trim())
+    conditions.push(`نام یا کد ملی خریدار آن‌ها شامل «${filters.buyer.trim()}» است`)
+  if (filters.product.trim()) conditions.push(`شامل کالای «${filters.product.trim()}» هستند`)
+  if (filters.from && filters.to) {
+    conditions.push(
+      `تاریخ صدور آن‌ها از ${persianDateLabel(filters.from)} تا ${persianDateLabel(filters.to)} است`,
+    )
+  } else if (filters.from) {
+    conditions.push(`تاریخ صدور آن‌ها از ${persianDateLabel(filters.from)} به بعد است`)
+  } else if (filters.to) {
+    conditions.push(`تاریخ صدور آن‌ها تا ${persianDateLabel(filters.to)} است`)
+  }
+  if (!buyer && !conditions.length) return 'همهٔ فاکتورها نمایش داده می‌شوند.'
+  return toPersianDigits(
+    conditions.length
+      ? `${subject} که ${conditions.join(' و ')}، نمایش داده می‌شوند.`
+      : `${subject} نمایش داده می‌شوند.`,
+  )
+})
+let archiveTextTimer: ReturnType<typeof setTimeout> | undefined
+let archiveRequest = 0
+watch(
+  () => [archiveFilters.buyer, archiveFilters.product],
+  () => {
+    clearTimeout(archiveTextTimer)
+    if (
+      archiveFilters.buyer === appliedArchiveText.buyer &&
+      archiveFilters.product === appliedArchiveText.product
+    )
+      return
+    archiveTextTimer = setTimeout(() => {
+      appliedArchiveText.buyer = archiveFilters.buyer
+      appliedArchiveText.product = archiveFilters.product
+    }, 1000)
+  },
+)
+watch(
+  () => [
+    archiveFilters.customerId,
+    archiveFilters.from,
+    archiveFilters.to,
+    appliedArchiveText.buyer,
+    appliedArchiveText.product,
+  ],
+  () => {
+    void loadInvoices()
+  },
+)
+onUnmounted(() => {
+  clearTimeout(archiveTextTimer)
+  archiveRequest++
 })
 const selectedBuyer = computed(() =>
   buyers.value.find((buyer) => buyer.id === selectedBuyerId.value),
@@ -671,6 +770,7 @@ async function load() {
   }
 }
 async function loadInvoices() {
+  const request = ++archiveRequest
   archiveLoading.value = true
   archiveError.value = ''
   try {
@@ -678,16 +778,22 @@ async function loadInvoices() {
       archiveError.value = 'تاریخ شروع باید قبل از پایان باشد.'
       return
     }
-    invoices.value = await inventoryApi.invoices(archiveFilters)
+    const filters = { ...archiveFilters, ...appliedArchiveText }
+    const result = await inventoryApi.invoices(filters)
+    if (request === archiveRequest) {
+      invoices.value = result
+      displayedArchiveFilters.value = filters
+    }
   } catch {
-    archiveError.value = 'دریافت فاکتورها انجام نشد.'
+    if (request === archiveRequest) archiveError.value = 'دریافت فاکتورها انجام نشد.'
   } finally {
-    archiveLoading.value = false
+    if (request === archiveRequest) archiveLoading.value = false
   }
 }
 function clearFilters() {
+  clearTimeout(archiveTextTimer)
+  Object.assign(appliedArchiveText, { buyer: '', product: '' })
   Object.assign(archiveFilters, { customerId: undefined, buyer: '', product: '', from: '', to: '' })
-  void loadInvoices()
 }
 function validateDraft() {
   const error = validateInvoiceLines(draft.value, stockOf)
@@ -722,7 +828,6 @@ async function save() {
     toast.success('فاکتور ذخیره شد و موجودی به‌روز شد.')
     await load()
     await nextTick()
-    paperSection.value?.scrollIntoView({ block: 'start' })
   } catch (e) {
     toast.error(e instanceof Error ? e.message : 'ذخیره فاکتور انجام نشد.')
   } finally {
@@ -734,7 +839,6 @@ async function openInvoice(invoice: Invoice, print = false) {
     activeInvoice.value = await inventoryApi.invoice(invoice.id)
     previewDraft.value = false
     await nextTick()
-    paperSection.value?.scrollIntoView({ block: 'start' })
     if (print) await printCurrent()
   } catch (e) {
     toast.error(e instanceof Error ? e.message : 'دریافت فاکتور انجام نشد.')
@@ -799,7 +903,6 @@ async function printDraft() {
   }
   previewDraft.value = true
   await nextTick()
-  paperSection.value?.scrollIntoView({ block: 'start' })
 }
 async function printCurrent() {
   await nextTick()
@@ -1374,9 +1477,7 @@ onMounted(load)
   white-space: nowrap;
   border: 0;
 }
-.editor-actions,
-.paper-toolbar,
-.paper-toolbar > div {
+.editor-actions {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
@@ -1387,32 +1488,40 @@ onMounted(load)
   padding: 5px 10px;
   font-size: 12px;
 }
-.paper-toolbar {
-  justify-content: space-between;
-  margin-bottom: 20px;
-}
 @media screen {
-  .invoice-page:has(> .invoice-preview) {
+  .invoice-page:has(> .invoice-archive) {
     overflow: hidden;
   }
-  .invoice-preview {
-    display: flex;
-    flex: 1;
-    min-height: 0;
-    flex-direction: column;
-    overflow: hidden;
-  }
-  .invoice-preview .paper-toolbar {
-    flex-shrink: 0;
-    margin-bottom: 12px;
-  }
-  .invoice-preview :deep(.invoice-sheets) {
-    flex: 1;
-    min-height: 0;
-    overflow: auto;
-    overscroll-behavior: contain;
-    align-content: start;
-  }
+}
+.invoice-archive {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+.invoice-archive > .panel-heading,
+.archive-filters {
+  flex-shrink: 0;
+}
+.archive-results {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+.archive-summary {
+  flex-shrink: 0;
+  margin: 0;
+  padding: 12px 24px;
+  border-bottom: 1px solid var(--border);
+  color: var(--muted-foreground);
+  font-size: 13px;
+  line-height: 1.9;
+  overflow-wrap: anywhere;
+}
+.archive-filters :deep(.date-picker-trigger) {
+  width: 100%;
 }
 .archive-filters {
   display: grid;
@@ -1503,7 +1612,9 @@ onMounted(load)
     padding-inline: 14px;
   }
   .archive-filters {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    padding: 12px;
   }
 }
 @container (max-width: 680px) {
@@ -1561,6 +1672,62 @@ onMounted(load)
   }
   .invoice-tabs button {
     flex: 1;
+  }
+}
+</style>
+<style>
+.invoice-preview-dialog {
+  height: min(calc(100dvh - 32px), 900px);
+}
+.invoice-preview-dialog .dialog-body {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+  padding: 8px;
+}
+.invoice-preview-dialog .invoice-sheets {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  align-content: start;
+}
+.invoice-preview-dialog .form-actions {
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.invoice-preview-dialog .form-actions .badge {
+  margin-inline-end: auto;
+}
+@media print {
+  .dialog-content.invoice-preview-dialog {
+    display: block !important;
+    position: static;
+    transform: none;
+    width: 198mm;
+    max-width: none !important;
+    height: auto;
+    max-height: none;
+    overflow: visible;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    background: #fff;
+  }
+  .invoice-preview-dialog .dialog-heading,
+  .invoice-preview-dialog .dialog-footer {
+    display: none !important;
+  }
+  .invoice-preview-dialog .dialog-body,
+  .invoice-preview-dialog .invoice-sheets {
+    display: block;
+    height: auto;
+    max-height: none;
+    overflow: visible;
+    padding: 0;
   }
 }
 </style>

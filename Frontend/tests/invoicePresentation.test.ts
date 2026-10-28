@@ -8,6 +8,7 @@ import {
 } from '../src/lib/invoicePresentation.ts'
 import {
   addDays,
+  addPersianMonths,
   monthStart,
   persianParts,
   persianToIso,
@@ -74,6 +75,29 @@ test('invoice pages fill sequentially instead of distributing rows evenly', () =
       invoicePages(Array.from({ length: count })).map((page) => page.items.length),
       expected,
     )
+  }
+})
+
+test('Persian month offsets preserve the day and clamp at month and year boundaries', () => {
+  for (const [source, expected] of [
+    [
+      [1405, 8, 6],
+      [1405, 7, 6],
+    ],
+    [
+      [1405, 1, 31],
+      [1404, 12, 29],
+    ],
+    [
+      [1404, 1, 31],
+      [1403, 12, 30],
+    ],
+    [
+      [1405, 7, 30],
+      [1405, 6, 30],
+    ],
+  ] as const) {
+    assert.equal(addPersianMonths(persianToIso(...source), -1), persianToIso(...expected))
   }
 })
 

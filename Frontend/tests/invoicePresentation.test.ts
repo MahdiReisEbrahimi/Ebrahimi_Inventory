@@ -3,6 +3,9 @@ import assert from 'node:assert/strict'
 import {
   amountInWords,
   invoiceInRials,
+  invoiceInTomans,
+  amountInTomansWords,
+  invoiceSaleLabel,
   invoicePages,
   invoicePageCapacities,
 } from '../src/lib/invoicePresentation.ts'
@@ -130,4 +133,52 @@ test('Persian picker handles leap Esfand, Nowruz and month boundaries', () => {
   assert.deepEqual(persianParts('2026-10-26'), { year: 1405, month: 8, day: 4 })
   assert.equal(monthStart('2026-10-26'), '2026-10-23')
   assert.equal(addDays('2025-03-20', 1), '2025-03-21')
+})
+
+test('credit invoice conversion preserves unpriced items and converts only the deposit', () => {
+  const credit = invoiceInRials({
+    saleType: 'CREDIT',
+    currency: 'TOMAN',
+    total: 0,
+    paidAmount: 200,
+    items: [{ unitPrice: null, total: null }],
+  } as Invoice)
+  assert.equal(credit.paidAmount, 2000)
+  assert.equal(credit.items[0]?.unitPrice, null)
+  assert.equal(credit.items[0]?.total, null)
+})
+
+test('regular sales distinguish cash and installment while credit is a separate sale type', () => {
+  assert.equal(invoiceSaleLabel({ saleType: 'REGULAR', settlement: 'CASH' }), 'فروش عادی · نقدی')
+  assert.equal(
+    invoiceSaleLabel({ saleType: 'REGULAR', settlement: 'INSTALLMENT' }),
+    'فروش عادی · اقساطی',
+  )
+  assert.equal(invoiceSaleLabel({ saleType: 'CREDIT', settlement: 'INSTALLMENT' }), 'فروش نسیه')
+  assert.equal(invoiceSaleLabel({ settlement: 'INSTALLMENT' }), 'فروش عادی · اقساطی')
+  assert.equal(invoiceSaleLabel({}), 'فروش عادی · نقدی')
+})
+
+test('app amounts stay in tomans and only the invoice paper converts to rials', () => {
+  const saved = {
+    currency: 'TOMAN',
+    subtotal: 1000,
+    discount: 100,
+    total: 900,
+    paidAmount: 200,
+    items: [{ unitPrice: 500, total: 1000 }],
+  } as Invoice
+  assert.deepEqual(invoiceInTomans(saved), saved)
+  assert.deepEqual(invoiceInTomans(invoiceInRials(saved)), saved)
+  const paper = invoiceInRials(saved)
+  assert.equal(paper.total, 9000)
+  assert.equal(paper.discount, 1000)
+  assert.equal(paper.paidAmount, 2000)
+  assert.deepEqual(invoiceInRials(paper), paper)
+  assert.equal(amountInTomansWords(900), 'نهصد تومان')
+  const legacy = { ...paper, total: 9001, paidAmount: 2003 }
+  const editable = invoiceInTomans(legacy)
+  assert.equal(editable.total, 900.1)
+  assert.equal(editable.paidAmount, 200.3)
+  assert.deepEqual(invoiceInRials(editable), legacy)
 })

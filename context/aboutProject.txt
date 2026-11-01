@@ -83,6 +83,7 @@ Vue View/Component -> services/*.ts (fetch) -> NestJS Controller -> DTO/Service
 | /categories | CategoriesView.vue | مدیریت دسته‌بندی‌ها |
 | /transactions | TransactionsView.vue | مشاهده و فیلتر گردش موجودی |
 | /invoices | InvoicesView.vue | ویرایشگر و آرشیو فاکتور، مشتری، اطلاعات فروشگاه و چاپ |
+| /open-accounts | OpenAccountsView.vue | نسیه‌ها، فاکتورهای دارای بدهی و اصلاح مجموع پرداختی |
 | /settings | SettingsView.vue | تم، رنگ اصلی/منو و ترجیحات ظاهری |
 
 صفحه‌های /inventory و /reports حذف شده‌اند و view مستقل ندارند.
@@ -124,7 +125,7 @@ VITE_API_URL در فرانت می‌تواند آن را تغییر دهد.
 | قیمت گروهی | POST /products/bulk-price-update/preview و /products/bulk-price-update |
 | گردش | GET/POST /transactions |
 | مشتری | GET/POST /buyers؛ GET/PATCH/DELETE /buyers/:id |
-| فاکتور | GET/POST /invoices؛ GET/PATCH /invoices/:id |
+| فاکتور | GET/POST /invoices؛ GET/PATCH /invoices/:id؛ PATCH /invoices/:id/payment؛ GET /invoices/:id/finalization؛ POST /invoices/:id/finalize |
 | فروشگاه | GET/PUT /store-settings |
 
 ValidationPipe دارای transform، whitelist و forbidNonWhitelisted است؛ فیلدهای
@@ -141,3 +142,11 @@ ValidationPipe دارای transform، whitelist و forbidNonWhitelisted است؛
 محیط هدف، مغازه است؛ شیوه استقرار نهایی، دسترسی شبکه، پشتیبان‌گیری و بازیابی
 باید پیش از بهره‌برداری عملی تعیین و بررسی شوند. پشتیبانی آفلاین یا استقرار
 آماده تولید را از معماری فعلی فرض نکنید.
+
+فیلتر `openOnly=true` در GET /invoices حساب‌های باز را بدون محدودیت ۵۰۰ فاکتور
+بایگانی برمی‌گرداند؛ این بخش دفتر حسابداری کامل اشخاص نیست.
+
+واحد پول رابط یکسان است: همه فرم‌ها/فهرست‌ها تومان و فقط InvoicePaper برای
+پیش‌نمایش/چاپ ریال است. invoiceInTomans داده API را برای فرم آماده می‌کند.
+درخواست‌های ساخت/ویرایش/پرداخت/نهایی‌سازی از رابط currency=TOMAN می‌فرستند؛
+پاسخ‌ها currency خود را دارند تا اسناد قدیمی نیز بدون تغییر مبلغ نمایش داده شوند.

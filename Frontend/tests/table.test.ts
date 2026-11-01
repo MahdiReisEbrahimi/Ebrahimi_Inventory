@@ -9,6 +9,8 @@ import { renderToString } from 'vue/server-renderer'
 test('table headers remain visible with empty data, loading and errors', async () => {
   const server = await createServer({
     configFile: false,
+    // SSR tests must not replace the running development server's optimized dependencies.
+    cacheDir: fileURLToPath(new URL('../node_modules/.vite-tests/table', import.meta.url)),
     plugins: [vue()],
     server: { middlewareMode: true, watch: null },
     resolve: { alias: { '@': fileURLToPath(new URL('../src', import.meta.url)) } },

@@ -1,22 +1,37 @@
 import type { Invoice } from '../types/index.ts'
 import { number } from './format.ts'
 
+/** Credit sales have no price; payment terms subdivide regular sales only. */
+export function invoiceSaleLabel(invoice: Pick<Invoice, 'saleType' | 'settlement'>): string {
+  if (invoice.saleType === 'CREDIT') return 'فروش نسیه'
+  return invoice.settlement === 'INSTALLMENT' ? 'فروش عادی · اقساطی' : 'فروش عادی · نقدی'
+}
+
 export const rial = (value: number) => (Number.isFinite(value) ? `${number(value)} ریال` : '—')
-export function invoiceInRials(invoice: Invoice): Invoice {
-  const factor = invoice.currency === 'IRR' ? 1 : 10
+function invoiceInCurrency(invoice: Invoice, currency: 'IRR' | 'TOMAN'): Invoice {
+  const sourceFactor = invoice.currency === 'IRR' ? 1 : 10
+  const targetFactor = currency === 'IRR' ? 1 : 10
+  const convert = (value: number) => (value * sourceFactor) / targetFactor
   return {
     ...invoice,
-    currency: 'IRR',
-    subtotal: (invoice.subtotal ?? invoice.total) * factor,
-    total: invoice.total * factor,
-    discount: (invoice.discount ?? 0) * factor,
-    paidAmount: (invoice.paidAmount ?? 0) * factor,
+    currency,
+    subtotal: convert(invoice.subtotal ?? invoice.total),
+    total: convert(invoice.total),
+    discount: convert(invoice.discount ?? 0),
+    paidAmount: convert(invoice.paidAmount ?? 0),
     items: invoice.items.map((item) => ({
       ...item,
-      unitPrice: item.unitPrice * factor,
-      total: item.total * factor,
+      unitPrice: item.unitPrice == null ? null : convert(item.unitPrice),
+      total: item.total == null ? null : convert(item.total),
     })),
   }
+}
+export const invoiceInRials = (invoice: Invoice): Invoice => invoiceInCurrency(invoice, 'IRR')
+export const invoiceInTomans = (invoice: Invoice): Invoice => invoiceInCurrency(invoice, 'TOMAN')
+export function amountInTomansWords(value: number): string {
+  return Number.isSafeInteger(value)
+    ? amountInWords(value).replace(/ریال$/, 'تومان')
+    : `${number(value)} تومان`
 }
 const ones = [
   '',

@@ -157,8 +157,14 @@ describe.skipIf(process.env.RUN_INVOICE_DB_TESTS !== '1')(
         items: [{ productId, quantity: 1, unitPrice: 1000 }],
       };
       for (let attempt = 0; attempt < 2; attempt++) {
-        const invoice = await service.updateInvoice(invoiceId, data);
-        expect(invoice.total).toBe(1000);
+        if (attempt === 0) {
+          const invoice = await service.updateInvoice(invoiceId, data);
+          expect(invoice.total).toBe(1000);
+        } else {
+          await expect(service.updateInvoice(invoiceId, data)).rejects.toThrow(
+            'تغییری در فاکتور',
+          );
+        }
         expect(
           (await prisma.product.findUniqueOrThrow({ where: { id: productId } }))
             .stock,
@@ -417,7 +423,7 @@ describe.skipIf(process.env.RUN_INVOICE_DB_TESTS !== '1')(
               { productId: largeProduct.id, quantity: 1, unitPrice: 1 },
             ],
           }),
-        ).rejects.toThrow('۱۰۰ میلیارد ریال');
+        ).rejects.toThrow('۱۰ میلیارد تومان');
         expect((await service.invoice(created.id)).total).toBe(100_000_000_000);
         expect(
           (
@@ -435,6 +441,411 @@ describe.skipIf(process.env.RUN_INVOICE_DB_TESTS !== '1')(
         }
         await prisma.product.delete({ where: { id: largeProduct.id } });
       }
+    });
+
+    it('keeps credit invoices open with null prices, then closes a priced invoice after payment', async () => {
+      const before = await prisma.product.findUniqueOrThrow({
+        where: { id: secondProductId },
+      });
+      const credit = await service.createInvoice({
+        customerId: buyerId,
+        saleType: 'CREDIT',
+        paidAmount: 500,
+        issueDate: '2020-01-01',
+        items: [{ productId: secondProductId, quantity: 2 }],
+      });
+      expect(credit.items[0]).toMatchObject({
+        unitPrice: null,
+        total: null,
+        quantity: 2,
+      });
+      expect(credit.paidAmount).toBe(500);
+      expect(
+        (
+          await prisma.inventoryTransaction.findFirstOrThrow({
+            where: { invoiceId: credit.id },
+          })
+        ).unitPrice,
+      ).toBeNull();
+      const open = () =>
+        service.invoices({ customerId: buyerId, openOnly: 'true' });
+      expect((await open()).some((i) => i.id === credit.id)).toBe(true);
+      await service.updateInvoicePayment(credit.id, 100);
+      await service.updateInvoicePayment(credit.id, 100);
+      expect((await open()).find((i) => i.id === credit.id)?.paidAmount).toBe(
+        700,
+      );
+      const priced = await service.updateInvoice(credit.id, {
+        customerId: buyerId,
+        saleType: 'REGULAR',
+        paidAmount: 700,
+        discount: 100,
+        items: [{ productId: secondProductId, quantity: 2, unitPrice: 1000 }],
+      });
+      expect(priced.total).toBe(1900);
+      expect((await open()).some((i) => i.id === credit.id)).toBe(true);
+      expect(
+        (
+          await prisma.product.findUniqueOrThrow({
+            where: { id: secondProductId },
+          })
+        ).stock,
+      ).toBe(before.stock - 2);
+      await expect(
+        service.updateInvoicePayment(credit.id, 1201),
+      ).rejects.toThrow('بیشتر');
+      await service.updateInvoicePayment(credit.id, 500);
+      expect((await service.invoice(credit.id)).paidAmount).toBe(1200);
+      await service.updateInvoicePayment(credit.id, 700);
+      expect((await open()).some((i) => i.id === credit.id)).toBe(false);
+      expect(
+        (
+          await prisma.product.findUniqueOrThrow({
+            where: { id: secondProductId },
+          })
+        ).stock,
+      ).toBe(before.stock - 2);
+      await expect(service.updateInvoicePayment(credit.id, 0)).rejects.toThrow(
+        'بیشتر از صفر',
+      );
+      expect((await service.invoice(credit.id)).paidAmount).toBe(1900);
+    });
+
+    it('finalizes at current prices without moving stock, rejects stale quotes, and retains unpaid balances', async () => {
+      const before = await prisma.product.findUniqueOrThrow({
+        where: { id: secondProductId },
+      });
+      const credit = await service.createInvoice({
+        customerId: buyerId,
+        saleType: 'CREDIT',
+        paidAmount: 100,
+        items: [{ productId: secondProductId, quantity: 1 }],
+      });
+      const firstQuote = await service.invoiceFinalizationPreview(credit.id);
+      expect(firstQuote.invoice.total).toBe(before.sellPrice * 10);
+      expect((await service.invoice(credit.id)).saleType).toBe('CREDIT');
+      await prisma.product.update({
+        where: { id: secondProductId },
+        data: { sellPrice: before.sellPrice + 7 },
+      });
+      await expect(
+        service.finalizeInvoice(credit.id, {
+          token: firstQuote.token,
+          paymentAmount: 0,
+        }),
+      ).rejects.toThrow('پیش‌نمایش');
+      expect((await service.invoice(credit.id)).items[0].unitPrice).toBeNull();
+      const quote = await service.invoiceFinalizationPreview(credit.id);
+      const priced = await service.finalizeInvoice(credit.id, {
+        token: quote.token,
+        paymentAmount: 0,
+      });
+      expect(priced).toMatchObject({
+        saleType: 'REGULAR',
+        settlement: 'INSTALLMENT',
+        total: (before.sellPrice + 7) * 10,
+        paidAmount: 100,
+      });
+      expect(
+        (
+          await service.invoices({ openOnly: 'true', customerId: buyerId })
+        ).some((i) => i.id === credit.id),
+      ).toBe(true);
+      expect(
+        (
+          await prisma.product.findUniqueOrThrow({
+            where: { id: secondProductId },
+          })
+        ).stock,
+      ).toBe(before.stock - 1);
+      const sales = await prisma.inventoryTransaction.findMany({
+        where: { invoiceId: credit.id, type: 'SALE' },
+      });
+      expect(sales).toHaveLength(1);
+      expect(sales[0].unitPrice?.toNumber()).toBe(priced.total);
+      await prisma.product.update({
+        where: { id: secondProductId },
+        data: { sellPrice: before.sellPrice + 20 },
+      });
+      const regularQuote = await service.invoiceFinalizationPreview(credit.id);
+      expect(regularQuote.invoice.total).toBe(priced.total);
+      await expect(
+        service.finalizeInvoice(credit.id, {
+          token: regularQuote.token,
+          paymentAmount: priced.total,
+        }),
+      ).rejects.toThrow('مانده');
+      const closed = await service.finalizeInvoice(credit.id, {
+        token: regularQuote.token,
+        paymentAmount: priced.total - 100,
+      });
+      expect(closed.paidAmount).toBe(closed.total);
+      expect(
+        (
+          await service.invoices({ openOnly: 'true', customerId: buyerId })
+        ).some((i) => i.id === credit.id),
+      ).toBe(false);
+      await expect(
+        service.finalizeInvoice(credit.id, {
+          token: regularQuote.token,
+          paymentAmount: priced.total - 100,
+        }),
+      ).rejects.toThrow('پیش‌نمایش');
+      expect((await service.invoice(credit.id)).paidAmount).toBe(closed.total);
+      expect(
+        (
+          await prisma.product.findUniqueOrThrow({
+            where: { id: secondProductId },
+          })
+        ).stock,
+      ).toBe(before.stock - 1);
+    });
+
+    it('closes credit invoices covered by deposits and preserves surplus payments', async () => {
+      const product = await prisma.product.findUniqueOrThrow({
+        where: { id: secondProductId },
+      });
+      for (const surplus of [0, 50]) {
+        const invoice = await service.createInvoice({
+          customerId: buyerId,
+          saleType: 'CREDIT',
+          paidAmount: product.sellPrice * 10 + surplus,
+          items: [{ productId: secondProductId, quantity: 1 }],
+        });
+        const preview = await service.invoiceFinalizationPreview(invoice.id);
+        const result = await service.finalizeInvoice(invoice.id, {
+          token: preview.token,
+          paymentAmount: 0,
+        });
+        expect(result.saleType).toBe('REGULAR');
+        expect(result.settlement).toBe('CASH');
+        expect(result.paidAmount - result.total).toBe(surplus);
+        expect(
+          (
+            await service.invoices({ openOnly: 'true', customerId: buyerId })
+          ).some((i) => i.id === invoice.id),
+        ).toBe(false);
+      }
+    });
+
+    it('finalizes legacy toman invoices in rials and keeps their recorded discount and prices', async () => {
+      const created = await service.createInvoice({
+        customerId: buyerId,
+        discount: 100,
+        paidAmount: 200,
+        items: [{ productId: secondProductId, quantity: 1, unitPrice: 1000 }],
+      });
+      await prisma.invoice.update({
+        where: { id: created.id },
+        data: {
+          currency: 'TOMAN',
+          subtotal: 100,
+          discount: 10,
+          total: 90,
+          paidAmount: 20,
+        },
+      });
+      await prisma.invoiceItem.updateMany({
+        where: { invoiceId: created.id },
+        data: { unitPrice: 100, total: 100 },
+      });
+      await expect(
+        service.updateInvoicePayment(created.id, 11),
+      ).rejects.toThrow('مضربی');
+      await service.updateInvoicePayment(created.id, 100);
+      expect((await service.invoice(created.id)).paidAmount).toBe(30);
+      const preview = await service.invoiceFinalizationPreview(created.id);
+      expect(preview.invoice).toMatchObject({
+        currency: 'IRR',
+        subtotal: 1000,
+        discount: 100,
+        total: 900,
+        paidAmount: 300,
+      });
+      const result = await service.finalizeInvoice(created.id, {
+        token: preview.token,
+        paymentAmount: 600,
+      });
+      expect(result).toMatchObject({
+        currency: 'IRR',
+        total: 900,
+        paidAmount: 900,
+      });
+      expect(result.items[0].unitPrice).toBe(1000);
+    });
+
+    it('allows discounts only at credit finalization and prefills persisted discounts for later changes', async () => {
+      const product = await prisma.product.findUniqueOrThrow({
+        where: { id: secondProductId },
+      });
+      await expect(
+        service.createInvoice({
+          customerId: buyerId,
+          saleType: 'CREDIT',
+          discount: 1,
+          items: [{ productId: secondProductId, quantity: 1 }],
+        }),
+      ).rejects.toThrow('قیمت و تخفیف');
+      const created = await service.createInvoice({
+        customerId: buyerId,
+        saleType: 'CREDIT',
+        paidAmount: 100,
+        items: [{ productId: secondProductId, quantity: 1 }],
+      });
+      const quote = await service.invoiceFinalizationPreview(created.id);
+      expect(quote.invoice.discount).toBe(0);
+      for (const discount of [-1, 0.5, quote.invoice.subtotal + 1]) {
+        await expect(
+          service.finalizeInvoice(created.id, {
+            token: quote.token,
+            paymentAmount: 0,
+            discount,
+          }),
+        ).rejects.toThrow('تخفیف');
+      }
+      expect((await service.invoice(created.id)).saleType).toBe('CREDIT');
+      const first = await service.finalizeInvoice(created.id, {
+        token: quote.token,
+        paymentAmount: 100,
+        discount: 200,
+      });
+      expect(first).toMatchObject({
+        discount: 200,
+        total: product.sellPrice * 10 - 200,
+        paidAmount: 200,
+      });
+      const secondQuote = await service.invoiceFinalizationPreview(created.id);
+      expect(secondQuote.invoice.discount).toBe(200);
+      const changed = await service.finalizeInvoice(created.id, {
+        token: secondQuote.token,
+        paymentAmount: 0,
+        discount: 50,
+      });
+      expect(changed.total).toBe(product.sellPrice * 10 - 50);
+      expect(changed.discount).toBe(50);
+      const lastQuote = await service.invoiceFinalizationPreview(created.id);
+      const closed = await service.finalizeInvoice(created.id, {
+        token: lastQuote.token,
+        paymentAmount: 0,
+        discount: lastQuote.invoice.subtotal - 200,
+      });
+      expect(closed.total).toBe(200);
+      expect(closed.paidAmount).toBe(200);
+      expect(
+        (
+          await service.invoices({ openOnly: 'true', customerId: buyerId })
+        ).some((i) => i.id === created.id),
+      ).toBe(false);
+      const unchangedStock = await prisma.product.findUniqueOrThrow({
+        where: { id: secondProductId },
+      });
+      expect(unchangedStock.stock).toBe(product.stock - 1);
+    });
+
+    it('uses tomans for new invoices, payments and final discounts without multiplying stored values', async () => {
+      await service.createMovement({
+        type: 'PURCHASE',
+        productId: secondProductId,
+        quantity: 4,
+      });
+      const created = await service.createInvoice({
+        currency: 'TOMAN',
+        customerId: buyerId,
+        discount: 100,
+        paidAmount: 500,
+        items: [{ productId: secondProductId, quantity: 2, unitPrice: 1250 }],
+      });
+      expect(created).toMatchObject({
+        currency: 'TOMAN',
+        subtotal: 2500,
+        discount: 100,
+        total: 2400,
+        paidAmount: 500,
+      });
+      const movement = await prisma.inventoryTransaction.findFirstOrThrow({
+        where: { invoiceId: created.id, type: 'SALE' },
+      });
+      expect(movement.currency).toBe('TOMAN');
+      expect(movement.unitPrice?.toNumber()).toBe(1250);
+      await service.updateInvoicePayment(created.id, 200, 'TOMAN');
+      expect((await service.invoice(created.id)).paidAmount).toBe(700);
+      const quote = await service.invoiceFinalizationPreview(created.id);
+      expect(quote.invoice.total).toBe(24000);
+      const result = await service.finalizeInvoice(created.id, {
+        currency: 'TOMAN',
+        token: quote.token,
+        discount: 200,
+        paymentAmount: 1600,
+      });
+      expect(result).toMatchObject({
+        currency: 'TOMAN',
+        subtotal: 2500,
+        discount: 200,
+        total: 2300,
+        paidAmount: 2300,
+      });
+      const product = await prisma.product.findUniqueOrThrow({
+        where: { id: secondProductId },
+      });
+      const credit = await service.createInvoice({
+        currency: 'TOMAN',
+        customerId: buyerId,
+        saleType: 'CREDIT',
+        paidAmount: 100,
+        items: [{ productId: secondProductId, quantity: 1 }],
+      });
+      const creditQuote = await service.invoiceFinalizationPreview(credit.id);
+      const finalCredit = await service.finalizeInvoice(credit.id, {
+        currency: 'TOMAN',
+        token: creditQuote.token,
+        discount: 10,
+        paymentAmount: product.sellPrice - 110,
+      });
+      expect(finalCredit).toMatchObject({
+        currency: 'TOMAN',
+        total: product.sellPrice - 10,
+        paidAmount: product.sellPrice - 10,
+      });
+      expect(finalCredit.items[0].unitPrice).toBe(product.sellPrice);
+    });
+
+    it('preserves odd legacy rial amounts when edited or paid through toman inputs', async () => {
+      const created = await service.createInvoice({
+        currency: 'IRR',
+        customerId: buyerId,
+        discount: 1,
+        paidAmount: 101,
+        items: [{ productId: secondProductId, quantity: 1, unitPrice: 1251 }],
+      });
+      const edited = await service.updateInvoice(created.id, {
+        currency: 'TOMAN',
+        customerId: buyerId,
+        discount: 0.1,
+        paidAmount: 10.1,
+        notes: 'تغییر توضیح بدون تغییر مبلغ',
+        items: [{ productId: secondProductId, quantity: 1, unitPrice: 125.1 }],
+      });
+      expect(edited).toMatchObject({
+        currency: 'IRR',
+        total: 1250,
+        paidAmount: 101,
+        discount: 1,
+      });
+      await service.updateInvoicePayment(created.id, 10, 'TOMAN');
+      const quote = await service.invoiceFinalizationPreview(created.id);
+      const result = await service.finalizeInvoice(created.id, {
+        currency: 'TOMAN',
+        token: quote.token,
+        discount: 0.1,
+        paymentAmount: 104.9,
+      });
+      expect(result).toMatchObject({
+        currency: 'IRR',
+        total: 1250,
+        paidAmount: 1250,
+        discount: 1,
+      });
+      expect(result.items[0].unitPrice).toBe(1251);
     });
 
     it('archives invoiced products while preserving their invoice and stock', async () => {

@@ -8,6 +8,7 @@ describe('Invoice amount limits and API amounts', () => {
   const record = {
     id: 9,
     number: '009',
+    currency: 'IRR',
     subtotal: new Prisma.Decimal(MAX_INVOICE_AMOUNT),
     discount: new Prisma.Decimal(10_000_000_000),
     total: new Prisma.Decimal(90_000_000_000),
@@ -113,13 +114,15 @@ describe('Invoice amount limits and API amounts', () => {
       settlement: 'INSTALLMENT',
       notes: '',
     });
-    await expect(service.updateInvoice(9, {
-      ...data,
-      customerId: 1,
-      issueDate: '2026-10-28',
-      settlement: 'INSTALLMENT',
-      notes: '',
-    })).rejects.toThrow('تغییری در فاکتور ایجاد نشده');
+    await expect(
+      service.updateInvoice(9, {
+        ...data,
+        customerId: 1,
+        issueDate: '2026-10-28',
+        settlement: 'INSTALLMENT',
+        notes: '',
+      }),
+    ).rejects.toThrow('تغییری در فاکتور ایجاد نشده');
     expect(tx.invoice.update).not.toHaveBeenCalled();
     expect(tx.product.update).not.toHaveBeenCalled();
     expect(tx.inventoryTransaction.deleteMany).not.toHaveBeenCalled();
@@ -153,10 +156,10 @@ describe('Invoice amount limits and API amounts', () => {
       items: [...data.items, { productId: 1, quantity: 1, unitPrice: 1 }],
     };
     await expect(service.createInvoice(overLimit)).rejects.toThrow(
-      '۱۰۰ میلیارد ریال',
+      '۱۰ میلیارد تومان',
     );
     await expect(service.updateInvoice(9, overLimit)).rejects.toThrow(
-      '۱۰۰ میلیارد ریال',
+      '۱۰ میلیارد تومان',
     );
     expect(prisma.$transaction).not.toHaveBeenCalled();
   });
@@ -176,5 +179,98 @@ describe('Invoice amount limits and API amounts', () => {
       expect(typeof JSON.parse(JSON.stringify(invoice)).total).toBe('number');
     }
     expect(archived[0].customer).toEqual({ id: 1 });
+  });
+  it('creates unpriced credit lines and stock movements while retaining the deposit', async () => {
+    await service.createInvoice({
+      saleType: 'CREDIT',
+      paidAmount: 5000,
+      items: [{ productId: 1, quantity: 2 }],
+    });
+    expect(tx.invoice.create.mock.calls[0][0].data).toMatchObject({
+      saleType: 'CREDIT',
+      subtotal: 0,
+      total: 0,
+      discount: 0,
+      paidAmount: 5000,
+      items: {
+        create: [{ productId: 1, quantity: 2, unitPrice: null, total: null }],
+      },
+    });
+    expect(
+      tx.inventoryTransaction.create.mock.calls[0][0].data.unitPrice,
+    ).toBeNull();
+    expect(tx.product.updateMany.mock.calls[0][0].data.stock).toEqual({
+      decrement: 2,
+    });
+  });
+
+  it('rejects prices and discounts on credit invoices and missing prices on regular invoices', async () => {
+    await expect(
+      service.createInvoice({ saleType: 'CREDIT', items: data.items }),
+    ).rejects.toThrow('قیمت و تخفیف');
+    await expect(
+      service.createInvoice({
+        saleType: 'CREDIT',
+        discount: 1,
+        items: [{ productId: 1, quantity: 1 }],
+      }),
+    ).rejects.toThrow('قیمت و تخفیف');
+    await expect(
+      service.createInvoice({ items: [{ productId: 1, quantity: 1 }] }),
+    ).rejects.toThrow('اقلام');
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  it('updates a payment independently of stock and allows credit deposits above the unknown total', async () => {
+    tx.invoice.findUnique.mockResolvedValue({
+      ...record,
+      saleType: 'CREDIT',
+      total: new Prisma.Decimal(0),
+    });
+    await service.updateInvoicePayment(9, 5000);
+    expect(tx.invoice.update).toHaveBeenCalledWith({
+      where: { id: 9 },
+      data: { paidAmount: { increment: 5000 } },
+      include: { items: true },
+    });
+    expect(tx.product.updateMany).not.toHaveBeenCalled();
+    expect(tx.product.update).not.toHaveBeenCalled();
+    expect(tx.inventoryTransaction.create).not.toHaveBeenCalled();
+  });
+
+  it('rejects negative, fractional, excessive payments and regular overpayments', async () => {
+    for (const amount of [0, -1, 0.5, MAX_INVOICE_AMOUNT + 1])
+      await expect(service.updateInvoicePayment(9, amount)).rejects.toThrow(
+        'پرداخت جدید',
+      );
+    await expect(
+      service.updateInvoicePayment(9, 50_000_000_001),
+    ).rejects.toThrow('بیشتر');
+    expect(tx.invoice.update).not.toHaveBeenCalled();
+  });
+  it('stores explicit toman inputs without applying the print conversion', async () => {
+    await service.createInvoice({
+      currency: 'TOMAN',
+      discount: 100,
+      paidAmount: 200,
+      items: [{ productId: 1, quantity: 2, unitPrice: 1000 }],
+    });
+    expect(tx.invoice.create.mock.calls[0][0].data).toMatchObject({
+      currency: 'TOMAN',
+      subtotal: 2000,
+      total: 1900,
+      discount: 100,
+      paidAmount: 200,
+    });
+    expect(tx.inventoryTransaction.create.mock.calls[0][0].data).toMatchObject({
+      currency: 'TOMAN',
+      unitPrice: 1000,
+    });
+    await expect(
+      service.createInvoice({
+        currency: 'TOMAN',
+        items: [{ productId: 1, quantity: 2, unitPrice: 6_000_000_000 }],
+      }),
+    ).rejects.toThrow('۱۰ میلیارد تومان');
   });
 });

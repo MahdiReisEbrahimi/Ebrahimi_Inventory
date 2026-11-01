@@ -67,8 +67,8 @@
             <col class="name-col" />
             <col class="qty-col" />
             <col class="unit-col" />
-            <col class="price-col" />
-            <col class="total-col" />
+            <col v-if="!isCredit" class="price-col" />
+            <col v-if="!isCredit" class="total-col" />
           </colgroup>
           <thead>
             <tr>
@@ -76,8 +76,8 @@
               <th>نام کالا</th>
               <th>تعداد</th>
               <th>واحد</th>
-              <th>فی <small class="invoice-currency">(ریال)</small></th>
-              <th>جمع <small class="invoice-currency">(ریال)</small></th>
+              <th v-if="!isCredit">فی <small class="invoice-currency">(تومان)</small></th>
+              <th v-if="!isCredit">جمع <small class="invoice-currency">(تومان)</small></th>
             </tr>
           </thead>
           <tbody>
@@ -109,15 +109,15 @@
                 />
               </td>
               <td>{{ line.unit }}</td>
-              <td>
+              <td v-if="!isCredit">
                 <MoneyInput
                   v-model="line.priceText"
                   :disabled="saving"
-                  :aria-label="'فی ' + line.name + ' به ریال'"
+                  :aria-label="'فی ' + line.name + ' به تومان'"
                   @update:model-value="line.unitPrice = parseNumber($event)"
                 />
               </td>
-              <td>{{ number(line.quantity * line.unitPrice) }}</td>
+              <td v-if="!isCredit">{{ number(line.quantity * line.unitPrice) }}</td>
             </tr>
             <tr class="line-adder-row">
               <td class="adder-index">{{ number(draft.length + 1) }}</td>
@@ -140,45 +140,75 @@
                   />
                 </div>
               </td>
-              <td v-for="column in 4" :key="column" aria-hidden="true"></td>
+              <td v-for="column in isCredit ? 2 : 4" :key="column" aria-hidden="true"></td>
             </tr>
           </tbody>
         </table>
       </div>
       <div class="editor-bottom">
-        <section class="invoice-summary" aria-label="خلاصه مبالغ فاکتور">
+        <section v-if="!isCredit" class="invoice-summary" aria-label="خلاصه مبالغ فاکتور">
           <div class="subtotal">
             <span>جمع {{ number(draft.length) }} قلم کالا</span>
-            <b>{{ rial(draftSubtotal) }}</b>
+            <b>{{ money(draftSubtotal) }}</b>
           </div>
           <label class="discount-field">
-            <span>تخفیف <small>ریال</small></span>
+            <span>تخفیف <small>تومان</small></span>
             <MoneyInput
               v-model="discountText"
               :disabled="saving"
-              aria-label="تخفیف فاکتور به ریال"
+              aria-label="تخفیف فاکتور به تومان"
               placeholder="۰"
             />
           </label>
           <div class="grand-total">
             <div>
               <span>مبلغ نهایی</span
-              ><strong :title="amountInWords(draftTotal)">{{ rial(draftTotal) }}</strong>
+              ><strong :title="amountInTomansWords(draftTotal)">{{ money(draftTotal) }}</strong>
             </div>
-            <small>{{ amountInWords(draftTotal) }}</small>
+            <small>{{ amountInTomansWords(draftTotal) }}</small>
           </div>
         </section>
+        <label class="discount-field payment-field">
+          <span>{{ isCredit ? 'بیعانه' : 'مبلغ پرداختی مشتری' }} <small>تومان</small></span>
+          <MoneyInput v-model="paidText" :disabled="saving" aria-label="مبلغ پرداختی به تومان" />
+          <Button
+            v-if="!isCredit"
+            variant="ghost"
+            size="sm"
+            :disabled="saving"
+            @click="paidText = number(draftTotal)"
+            >پرداخت کامل</Button
+          >
+          <span>{{
+            isCredit
+              ? 'مبلغ نهایی پس از قیمت‌گذاری مشخص می‌شود.'
+              : 'مانده: ' + money(draftTotal - paidAmount)
+          }}</span>
+        </label>
         <div class="editor-footer">
           <div class="editor-options">
             <fieldset class="settlement" :disabled="saving">
-              <legend class="visually-hidden">روش تسویه</legend>
+              <legend>نوع فروش</legend>
               <div class="settlement-options">
-                <label :class="{ selected: settlement === 'CASH' }">
-                  <input v-model="settlement" type="radio" value="CASH" />
+                <label :class="{ selected: saleType === 'REGULAR' }">
+                  <input v-model="saleType" type="radio" value="REGULAR" />
+                  <span>فروش عادی</span>
+                </label>
+                <label :class="{ selected: saleType === 'CREDIT' }">
+                  <input v-model="saleType" type="radio" value="CREDIT" />
+                  <span>فروش نسیه</span>
+                </label>
+              </div>
+            </fieldset>
+            <fieldset v-if="!isCredit" class="settlement" :disabled="saving">
+              <legend>روش پرداخت فروش عادی</legend>
+              <div class="settlement-options">
+                <label :class="{ selected: regularSettlement === 'CASH' }">
+                  <input v-model="regularSettlement" type="radio" value="CASH" />
                   <span>نقدی</span>
                 </label>
-                <label :class="{ selected: settlement === 'INSTALLMENT' }">
-                  <input v-model="settlement" type="radio" value="INSTALLMENT" />
+                <label :class="{ selected: regularSettlement === 'INSTALLMENT' }">
+                  <input v-model="regularSettlement" type="radio" value="INSTALLMENT" />
                   <span>اقساطی</span>
                 </label>
               </div>
@@ -297,7 +327,14 @@
               ><time>{{ date(invoice.issueDate || invoice.createdAt) }}</time>
             </div>
             <p>{{ invoice.buyerFirstName }} {{ invoice.buyerLastName }}</p>
-            <strong>{{ rial(invoiceInRials(invoice).total) }}</strong>
+            <span class="badge">{{ invoiceSaleLabel(invoice) }}</span>
+            <strong>{{
+              invoice.saleType === 'CREDIT' ? 'بدون قیمت' : money(invoiceInTomans(invoice).total)
+            }}</strong>
+            <p>
+              {{ invoice.saleType === 'CREDIT' ? 'بیعانه: ' : 'پرداختی: '
+              }}{{ money(invoiceInTomans(invoice).paidAmount || 0) }}
+            </p>
             <div class="archive-actions">
               <Button variant="outline" size="sm" @click="openInvoice(invoice)">مشاهده</Button
               ><Button variant="ghost" size="sm" @click="openInvoice(invoice, true)"
@@ -445,7 +482,7 @@
 </template>
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, reactive, ref, useId, watch } from 'vue'
-import { onBeforeRouteLeave } from 'vue-router'
+import { onBeforeRouteLeave, useRoute } from 'vue-router'
 import { Check, ChevronDown, Pencil, Plus, Printer, Store, Trash2 } from '@lucide/vue'
 import EmptyState from '@/components/ui/EmptyState.vue'
 import Button from '@/components/ui/Button.vue'
@@ -455,21 +492,35 @@ import SearchSelect from '@/components/ui/SearchSelect.vue'
 import PersianDatePicker from '@/components/ui/PersianDatePicker.vue'
 import InvoicePaper from '@/components/InvoicePaper.vue'
 import { toast } from '@/lib/toast'
-import { date, number, normalizeNumberText, parseNumber, toPersianDigits } from '@/lib/format'
+import {
+  date,
+  money,
+  number,
+  normalizeNumberText,
+  parseNumber,
+  toPersianDigits,
+} from '@/lib/format'
 import MoneyInput from '@/components/ui/MoneyInput.vue'
 import NumberInput from '@/components/ui/NumberInput.vue'
-import { invoiceEditKey, validateInvoiceLines } from '@/lib/invoice'
-import { amountInWords, invoiceInRials, rial } from '@/lib/invoicePresentation'
+import {
+  invoiceEditKey,
+  validateInvoiceLines,
+  isInvoiceAmount,
+  MAX_INVOICE_AMOUNT,
+  roundToman,
+} from '@/lib/invoice'
+import { amountInTomansWords, invoiceInTomans, invoiceSaleLabel } from '@/lib/invoicePresentation'
 import { addPersianMonths, persianDateLabel, todayInTehran } from '@/lib/persianDate'
 import { productsApi } from '@/services/products'
 import { inventoryApi } from '@/services/inventory'
 import type { Buyer, Invoice, InvoiceItem, Product, StoreSettings } from '@/types'
+const route = useRoute()
 const notesFieldId = useId()
 const notesExpanded = ref(false)
 const saveHintId = useId()
 const buyerFormId = useId()
 const settingsFormId = useId()
-type DraftLine = InvoiceItem & { priceText: string }
+type DraftLine = Omit<InvoiceItem, 'unitPrice'> & { unitPrice: number; priceText: string }
 const products = ref<Product[]>([]),
   buyers = ref<Buyer[]>([]),
   invoices = ref<Invoice[]>([]),
@@ -490,7 +541,14 @@ const issueDate = ref(todayInTehran()),
   notes = ref(''),
   notesTouched = ref(false)
 const discountText = ref('۰')
-const settlement = ref<'CASH' | 'INSTALLMENT'>('CASH')
+const saleType = ref<'REGULAR' | 'CREDIT'>('REGULAR')
+const isCredit = computed(() => saleType.value === 'CREDIT')
+const paidText = ref('۰')
+const paidAmount = computed(() => (paidText.value.trim() ? parseNumber(paidText.value) : 0))
+const regularSettlement = ref<'CASH' | 'INSTALLMENT'>('CASH')
+const settlement = computed(() =>
+  isCredit.value ? ('INSTALLMENT' as const) : regularSettlement.value,
+)
 const loading = ref(true),
   saving = ref(false),
   loadError = ref('')
@@ -610,12 +668,19 @@ onUnmounted(() => {
 const selectedBuyer = computed(() =>
   buyers.value.find((buyer) => buyer.id === selectedBuyerId.value),
 )
+const isWalkInBuyer = (buyer: Buyer) =>
+  `${buyer.firstName}${buyer.lastName}`
+    .replace(/[\s\u200c]/g, '')
+    .replace(/ي/g, 'ی')
+    .replace(/ك/g, 'ک') === 'مشتریعبوری'
 const buyerOptions = computed(() =>
-  buyers.value.map((buyer) => ({
-    value: buyer.id,
-    label: buyer.firstName + ' ' + buyer.lastName,
-    description: [buyer.nationalId, buyer.phone].filter(Boolean).join(' · '),
-  })),
+  [...buyers.value]
+    .sort((a, b) => Number(isWalkInBuyer(b)) - Number(isWalkInBuyer(a)))
+    .map((buyer) => ({
+      value: buyer.id,
+      label: buyer.firstName + ' ' + buyer.lastName,
+      description: [buyer.nationalId, buyer.phone].filter(Boolean).join(' · '),
+    })),
 )
 const categoryOptions = computed(() => [
   { value: 0, label: 'همه دسته‌بندی‌ها' },
@@ -641,20 +706,30 @@ const productOptions = computed(() =>
         ' ' +
         product.unit +
         ' · ' +
-        rial(product.sellPrice * 10),
+        (isCredit.value ? 'بدون قیمت' : money(product.sellPrice)),
       disabled: stockOf(product.id) < 1,
     })),
 )
 const draftSubtotal = computed(() =>
-  draft.value.reduce((sum, line) => sum + Number(line.quantity) * line.unitPrice, 0),
+  isCredit.value
+    ? 0
+    : draft.value.reduce(
+        (sum, line) => sum + Number(line.quantity) * Math.round(line.unitPrice * 10),
+        0,
+      ) / 10,
 )
-const discount = computed(() => (discountText.value.trim() ? parseNumber(discountText.value) : 0))
-const draftTotal = computed(() => draftSubtotal.value - discount.value)
+const discount = computed(() =>
+  isCredit.value ? 0 : discountText.value.trim() ? parseNumber(discountText.value) : 0,
+)
+const draftTotal = computed(() => roundToman(draftSubtotal.value - discount.value))
 const invoicePayload = computed(() => ({
+  currency: 'TOMAN' as const,
   customerId: selectedBuyerId.value,
   issueDate: issueDate.value,
   discount: discount.value,
   settlement: settlement.value,
+  saleType: saleType.value,
+  paidAmount: paidAmount.value,
   notes: notes.value,
   items: draft.value.map(({ productId, quantity, unitPrice }) => ({
     productId,
@@ -668,7 +743,7 @@ const hasInvoiceChanges = computed(
 const draftInvoice = computed<Invoice>(() => ({
   id: editingInvoiceId.value || 0,
   number: editingInvoiceNumber.value || 'پس از ثبت',
-  currency: 'IRR',
+  currency: 'TOMAN',
   issueDate: issueDate.value,
   createdAt: new Date().toISOString(),
   buyerFirstName: selectedBuyer.value?.firstName || '',
@@ -681,6 +756,8 @@ const draftInvoice = computed<Invoice>(() => ({
   subtotal: draftSubtotal.value,
   discount: discount.value,
   settlement: settlement.value,
+  saleType: saleType.value,
+  paidAmount: paidAmount.value,
   items: draft.value,
 }))
 const stockOf = (id: number) =>
@@ -723,9 +800,9 @@ function addProduct(id: number) {
     name: product.name,
     unit: product.unit,
     quantity: 1,
-    unitPrice: product.sellPrice * 10,
-    priceText: number(product.sellPrice * 10),
-    total: product.sellPrice * 10,
+    unitPrice: product.sellPrice,
+    priceText: number(product.sellPrice),
+    total: product.sellPrice,
   })
   pendingProductFocus = id
 }
@@ -796,15 +873,25 @@ function clearFilters() {
   Object.assign(archiveFilters, { customerId: undefined, buyer: '', product: '', from: '', to: '' })
 }
 function validateDraft() {
-  const error = validateInvoiceLines(draft.value, stockOf)
+  const error = validateInvoiceLines(
+    draft.value.map((line) => ({ ...line, unitPrice: isCredit.value ? 0 : line.unitPrice })),
+    stockOf,
+  )
   if (error) return error
   if (!selectedBuyer.value) return 'خریدار فاکتور را انتخاب کنید.'
   if (
-    !Number.isInteger(discount.value) ||
+    !isInvoiceAmount(discount.value) ||
     discount.value < 0 ||
     discount.value > draftSubtotal.value
   )
     return 'تخفیف باید مبلغی بین صفر و جمع اقلام باشد.'
+  if (
+    !isInvoiceAmount(paidAmount.value) ||
+    paidAmount.value < 0 ||
+    paidAmount.value > MAX_INVOICE_AMOUNT ||
+    (!isCredit.value && paidAmount.value > draftTotal.value)
+  )
+    return 'مبلغ پرداختی معتبر نیست یا از مبلغ نهایی بیشتر است.'
   return ''
 }
 async function save() {
@@ -817,14 +904,17 @@ async function save() {
   }
   saving.value = true
   try {
-    const payload = invoicePayload.value
-    activeInvoice.value = editingInvoiceId.value
+    const payload = {
+      ...invoicePayload.value,
+      items: invoicePayload.value.items.map((line) =>
+        isCredit.value ? { productId: line.productId, quantity: line.quantity } : line,
+      ),
+    }
+    const savedInvoice = editingInvoiceId.value
       ? await inventoryApi.updateInvoice(editingInvoiceId.value, payload)
       : await inventoryApi.createInvoice(payload)
-    draft.value = []
-    originalItems.value = []
-    editingInvoiceId.value = undefined
-    previewDraft.value = false
+    resetDraft()
+    activeInvoice.value = savedInvoice
     toast.success('فاکتور ذخیره شد و موجودی به‌روز شد.')
     await load()
     await nextTick()
@@ -855,7 +945,9 @@ function resetDraft() {
   selectedCategoryId.value = 0
   issueDate.value = todayInTehran()
   discountText.value = '۰'
-  settlement.value = 'CASH'
+  saleType.value = 'REGULAR'
+  regularSettlement.value = 'CASH'
+  paidText.value = '۰'
   notes.value = settings.value?.defaultInvoiceNotes || ''
   notesTouched.value = false
   activeInvoice.value = null
@@ -878,17 +970,23 @@ function confirmDiscard() {
 async function editInvoice() {
   if (!activeInvoice.value) return
   if (draft.value.length && !(await confirmDiscard())) return
-  const invoice = invoiceInRials(activeInvoice.value)
+  const invoice = invoiceInTomans(activeInvoice.value)
   editingInvoiceId.value = invoice.id
   editingInvoiceNumber.value = invoice.number
   originalItems.value = invoice.items
-  draft.value = invoice.items.map((line) => ({ ...line, priceText: number(line.unitPrice) }))
+  draft.value = invoice.items.map((line) => ({
+    ...line,
+    unitPrice: line.unitPrice ?? 0,
+    priceText: number(line.unitPrice ?? 0),
+  }))
   selectedBuyerId.value = invoice.customerId ?? undefined
   selectedCategoryId.value =
     products.value.find((product) => product.id === invoice.items[0]?.productId)?.categoryId ?? 0
   issueDate.value = (invoice.issueDate || invoice.createdAt).slice(0, 10)
   discountText.value = number(invoice.discount || 0)
-  settlement.value = invoice.settlement || 'CASH'
+  saleType.value = invoice.saleType || 'REGULAR'
+  regularSettlement.value = invoice.saleType === 'CREDIT' ? 'CASH' : invoice.settlement || 'CASH'
+  paidText.value = number(invoice.paidAmount || 0)
   notes.value = invoice.notes || ''
   notesTouched.value = true
   originalEditKey.value = invoiceEditKey(invoicePayload.value)
@@ -970,7 +1068,18 @@ async function saveSettings() {
     settingsSaving.value = false
   }
 }
-onMounted(load)
+onMounted(async () => {
+  await load()
+  const editId = Number(route.query.edit)
+  if (Number.isInteger(editId) && editId > 0) {
+    try {
+      activeInvoice.value = await inventoryApi.invoice(editId)
+      await editInvoice()
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'دریافت فاکتور انجام نشد.')
+    }
+  }
+})
 </script>
 <style scoped>
 .invoice-page {
@@ -1301,6 +1410,13 @@ onMounted(load)
   font-variant-numeric: tabular-nums;
   overflow-wrap: anywhere;
 }
+.payment-field {
+  flex-wrap: wrap;
+  font-size: 12px;
+}
+.payment-field input {
+  max-width: 220px;
+}
 .discount-field {
   display: flex;
   align-items: center;
@@ -1368,6 +1484,12 @@ onMounted(load)
   padding: 0;
   margin: 0;
   border: 0;
+}
+.settlement legend {
+  padding: 0;
+  margin-bottom: 4px;
+  color: var(--muted-foreground);
+  font-size: 10px;
 }
 .settlement-options {
   display: flex;
@@ -1672,62 +1794,6 @@ onMounted(load)
   }
   .invoice-tabs button {
     flex: 1;
-  }
-}
-</style>
-<style>
-.invoice-preview-dialog {
-  height: min(calc(100dvh - 32px), 900px);
-}
-.invoice-preview-dialog .dialog-body {
-  display: flex;
-  flex: 1;
-  overflow: hidden;
-  padding: 8px;
-}
-.invoice-preview-dialog .invoice-sheets {
-  flex: 1;
-  min-width: 0;
-  min-height: 0;
-  overflow: auto;
-  overscroll-behavior: contain;
-  align-content: start;
-}
-.invoice-preview-dialog .form-actions {
-  flex-wrap: wrap;
-  gap: 8px;
-}
-.invoice-preview-dialog .form-actions .badge {
-  margin-inline-end: auto;
-}
-@media print {
-  .dialog-content.invoice-preview-dialog {
-    display: block !important;
-    position: static;
-    transform: none;
-    width: 198mm;
-    max-width: none !important;
-    height: auto;
-    max-height: none;
-    overflow: visible;
-    margin: 0;
-    padding: 0;
-    border: 0;
-    border-radius: 0;
-    box-shadow: none;
-    background: #fff;
-  }
-  .invoice-preview-dialog .dialog-heading,
-  .invoice-preview-dialog .dialog-footer {
-    display: none !important;
-  }
-  .invoice-preview-dialog .dialog-body,
-  .invoice-preview-dialog .invoice-sheets {
-    display: block;
-    height: auto;
-    max-height: none;
-    overflow: visible;
-    padding: 0;
   }
 }
 </style>

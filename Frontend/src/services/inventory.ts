@@ -6,6 +6,7 @@ export const inventoryApi = {
     api<InventoryMovement>('/transactions', { method: 'POST', body: JSON.stringify(data) }),
   invoices: (
     filters: {
+      openOnly?: boolean
       customerId?: number
       buyer?: string
       product?: string
@@ -25,6 +26,18 @@ export const inventoryApi = {
     api<Invoice>('/invoices', { method: 'POST', body: JSON.stringify(data) }),
   updateInvoice: (id: number, data: object) =>
     api<Invoice>(`/invoices/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+  updatePayment: (id: number, paymentAmount: number) =>
+    api<Invoice>(`/invoices/${id}/payment`, {
+      method: 'PATCH',
+      body: JSON.stringify({ paymentAmount, currency: 'TOMAN' }),
+    }),
+  finalizationPreview: (id: number) =>
+    api<{ token: string; invoice: Invoice }>(`/invoices/${id}/finalization`),
+  finalizeInvoice: (id: number, token: string, paymentAmount: number, discount: number) =>
+    api<Invoice>(`/invoices/${id}/finalize`, {
+      method: 'POST',
+      body: JSON.stringify({ token, paymentAmount, discount, currency: 'TOMAN' }),
+    }),
   settings: () => api<StoreSettings>('/store-settings'),
   saveSettings: (data: object) =>
     api<StoreSettings>('/store-settings', { method: 'PUT', body: JSON.stringify(data) }),

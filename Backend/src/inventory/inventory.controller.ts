@@ -15,6 +15,8 @@ import {
   CreateInvoiceDto,
   CreateMovementDto,
   InvoiceQueryDto,
+  InvoicePaymentDto,
+  FinalizeInvoiceDto,
   UpdateStoreSettingsDto,
 } from './inventory.dto.js';
 import { InventoryService } from './inventory.service.js';
@@ -60,6 +62,27 @@ export class InventoryController {
     @Body() data: CreateInvoiceDto,
   ) {
     return this.inventory.updateInvoice(id, data);
+  }
+  @Patch('invoices/:id/payment') updatePayment(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() data: InvoicePaymentDto,
+  ) {
+    return this.inventory.updateInvoicePayment(
+      id,
+      data.paymentAmount,
+      data.currency,
+    );
+  }
+  @Get('invoices/:id/finalization') finalizationPreview(
+    @Param('id', ParseIntPipe) id: number,
+  ) {
+    return this.inventory.invoiceFinalizationPreview(id);
+  }
+  @Post('invoices/:id/finalize') finalizeInvoice(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() data: FinalizeInvoiceDto,
+  ) {
+    return this.inventory.finalizeInvoice(id, data);
   }
   @Get('store-settings') settings() {
     return this.inventory.storeSettings();

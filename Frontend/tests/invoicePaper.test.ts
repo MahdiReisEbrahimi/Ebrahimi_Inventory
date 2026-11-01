@@ -10,6 +10,8 @@ import { invoicePages } from '../src/lib/invoicePresentation.ts'
 test('invoice preview and print share the table footer on the final page', async () => {
   const server = await createServer({
     configFile: false,
+    // SSR tests must not replace the running development server's optimized dependencies.
+    cacheDir: fileURLToPath(new URL('../node_modules/.vite-tests/invoice-paper', import.meta.url)),
     plugins: [vue()],
     server: { middlewareMode: true, watch: null },
     resolve: { alias: { '@': fileURLToPath(new URL('../src', import.meta.url)) } },
@@ -65,8 +67,7 @@ test('invoice preview and print share the table footer on the final page', async
       assert.match(footerRows[2]![1]!, /footer-notes/)
       assert.match(footerRows[3]![1]!, /footer-signature/)
       assert.match(printFooter, /شرایط فروش:/)
-      assert.match(printFooter, /☐ نقدی/)
-      assert.match(printFooter, /☑ غیرنقدی/)
+      assert.match(printFooter, /فروش عادی · اقساطی/)
       assert.match(printFooter, /مهر و امضا فروشنده/)
       assert.match(printFooter, /مهر و امضا خریدار/)
       assert.match(printFooter, /مبلغ پرداختی/)
@@ -118,7 +119,7 @@ test('invoice preview and print share the table footer on the final page', async
         assert.match(footer[0], /paper-pagination/)
         assert.doesNotMatch(footer[0], /شماره شبا/)
       }
-      assert.match(html, /نه میلیون و نهصد و شصت و هشت هزار ریال/)
+      assert.match(html, /صفر ریال/)
       const articles = html.split('<article').slice(1)
       assert.match(articles[0]!, /paper-parties/)
       assert.match(articles.at(-1)!, /paper-bottom/)
@@ -126,6 +127,66 @@ test('invoice preview and print share the table footer on the final page', async
       if (pages > 2) {
         assert.doesNotMatch(articles[1]!, /paper-parties/)
         assert.doesNotMatch(articles[1]!, /paper-bottom/)
+      }
+      if (count === 1) {
+        const tomanHtml = await renderToString(
+          h(Paper, {
+            invoice: {
+              ...invoice,
+              currency: 'TOMAN',
+              subtotal: 1000,
+              discount: 100,
+              total: 900,
+              paidAmount: 200,
+              items: [{ ...invoice.items[0], unitPrice: 500, quantity: 2, total: 1000 }],
+            },
+            settings: null,
+          }),
+        )
+        assert.match(tomanHtml, /۹٬۰۰۰ ریال/)
+        assert.match(tomanHtml, /۲٬۰۰۰ ریال/)
+        assert.match(tomanHtml, /۷٬۰۰۰ ریال/)
+        assert.doesNotMatch(tomanHtml, /تومان/)
+        const creditHtml = await renderToString(
+          h(Paper, {
+            invoice: {
+              ...invoice,
+              saleType: 'CREDIT',
+              total: 0,
+              subtotal: 0,
+              discount: 0,
+              paidAmount: 2500,
+              items: [{ ...invoice.items[0], unitPrice: null, total: null }],
+            },
+            settings: null,
+          }),
+        )
+        assert.match(creditHtml, /فروش نسیه · بدون قیمت/)
+        assert.doesNotMatch(creditHtml, /اقساطی|نقدی/)
+        assert.match(creditHtml, /بیعانه/)
+        assert.match(creditHtml, /۲٬۵۰۰ ریال/)
+        const itemTable = creditHtml.match(/<table class="paper-items"[^]*?<\/table>/)?.[0]
+        assert.ok(itemTable)
+        assert.doesNotMatch(itemTable, /ریال|فی|جمع/)
+        assert.equal((itemTable.match(/<th\b[^>]*>/g) || []).length, 4)
+        const partialHtml = await renderToString(
+          h(Paper, {
+            invoice: { ...invoice, paidAmount: 3000 },
+            settings: null,
+          }),
+        )
+        assert.match(partialHtml, /سه هزار ریال/)
+        assert.match(partialHtml, /کسر پرداختی \/ بیعانه/)
+        assert.match(partialHtml, /مانده قابل پرداخت/)
+        const overpaidHtml = await renderToString(
+          h(Paper, {
+            invoice: { ...invoice, total: 2000, paidAmount: 3000 },
+            settings: null,
+          }),
+        )
+        assert.match(overpaidHtml, /بستانکاری مشتری/)
+        assert.doesNotMatch(overpaidHtml, /مانده: −/)
+        assert.match(partialHtml, /مانده: ۹٬۹۶۵٬۰۰۰ ریال/)
       }
       const renderedWithoutDiscount = await renderToString(
         h(Paper, {
@@ -137,8 +198,7 @@ test('invoice preview and print share the table footer on the final page', async
         /<table class="[^"]*\bpaper-footer-table\b[^"]*"[^]*?<\/table>/,
       )?.[0]
       assert.ok(cashFooter, renderedWithoutDiscount.match(/<table[^>]*>/g)?.join('\n'))
-      assert.match(cashFooter, /☑ نقدی/)
-      assert.match(cashFooter, /☐ غیرنقدی/)
+      assert.match(cashFooter, /فروش عادی · نقدی/)
       assert.doesNotMatch(cashFooter, /شماره شبا/)
       assert.doesNotMatch(cashFooter, /تخفیف|جمع کل فاکتور/)
       assert.match(cashFooter, /rowspan="2"/)
@@ -148,7 +208,7 @@ test('invoice preview and print share the table footer on the final page', async
       assert.match(cashRows[2]![1]!, /footer-notes/)
       assert.equal((cashRows[2]![1]!.match(/<td\b/g) || []).length, 3)
       assert.equal((cashFooter.match(/class="footer-payment"/g) || []).length, 1)
-      assert.match(cashFooter, /نه میلیون و نهصد و شصت و هشت هزار ریال/)
+      assert.match(cashFooter, /صفر ریال/)
     }
   } finally {
     await server.close()

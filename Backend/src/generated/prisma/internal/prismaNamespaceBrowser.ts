@@ -178,6 +178,7 @@ export const InvoiceScalarFieldEnum = {
   subtotal: 'subtotal',
   discount: 'discount',
   paidAmount: 'paidAmount',
+  saleType: 'saleType',
   settlement: 'settlement',
   currency: 'currency',
   issueDate: 'issueDate',

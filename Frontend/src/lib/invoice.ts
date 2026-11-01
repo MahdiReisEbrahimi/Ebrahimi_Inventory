@@ -1,5 +1,7 @@
 type InvoiceLine = { productId: number; quantity: number; unitPrice: number }
 export interface InvoiceEdit {
+  saleType?: 'REGULAR' | 'CREDIT'
+  paidAmount?: number
   customerId?: number
   issueDate: string
   discount: number
@@ -10,6 +12,8 @@ export interface InvoiceEdit {
 
 export function invoiceEditKey(invoice: InvoiceEdit): string {
   return JSON.stringify({
+    saleType: invoice.saleType ?? 'REGULAR',
+    paidAmount: invoice.paidAmount ?? 0,
     customerId: invoice.customerId ?? null,
     issueDate: invoice.issueDate,
     discount: invoice.discount,
@@ -22,7 +26,13 @@ export function invoiceEditKey(invoice: InvoiceEdit): string {
     })),
   })
 }
-export const MAX_INVOICE_AMOUNT = 100_000_000_000
+export const MAX_INVOICE_AMOUNT = 10_000_000_000
+// One decimal toman preserves integer-rial amounts on historical invoices exactly.
+export const isInvoiceAmount = (value: number) =>
+  Number.isFinite(value) &&
+  value === Number(value.toFixed(1)) &&
+  Number.isSafeInteger(Math.round(value * 10))
+export const roundToman = (value: number) => Math.round(value * 10) / 10
 
 /** Validate the draft before a request. The API remains the authority on stock. */
 export function validateInvoiceLines(
@@ -44,12 +54,12 @@ export function validateInvoiceLines(
     const quantity = (quantities.get(line.productId) || 0) + line.quantity
     if (quantity > stockOf(line.productId)) return 'تعداد کالا از موجودی قابل فروش بیشتر است.'
     quantities.set(line.productId, quantity)
-    if (!Number.isInteger(line.unitPrice) || line.unitPrice < 0) {
-      return 'قیمت هر کالا باید عدد صحیح و غیرمنفی باشد.'
+    if (!isInvoiceAmount(line.unitPrice) || line.unitPrice < 0) {
+      return 'قیمت هر کالا باید مبلغ غیرمنفی با حداکثر یک رقم اعشار تومان باشد.'
     }
-    total += line.quantity * line.unitPrice
-    if (!Number.isSafeInteger(total) || total > MAX_INVOICE_AMOUNT) {
-      return 'مبلغ فاکتور نباید بیشتر از ۱۰۰ میلیارد ریال باشد.'
+    total += line.quantity * Math.round(line.unitPrice * 10)
+    if (!Number.isSafeInteger(total) || total > MAX_INVOICE_AMOUNT * 10) {
+      return 'مبلغ فاکتور نباید بیشتر از ۱۰ میلیارد تومان باشد.'
     }
   }
   return ''

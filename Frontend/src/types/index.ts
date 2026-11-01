@@ -51,10 +51,11 @@ export interface InvoiceItem {
   name: string
   unit: string
   quantity: number
-  unitPrice: number
-  total: number
+  unitPrice: number | null
+  total: number | null
 }
 export interface Invoice {
+  saleType?: 'REGULAR' | 'CREDIT'
   id: number
   number: string
   customerId?: number | null

@@ -4,6 +4,8 @@ import { invoiceEditKey, type InvoiceEdit } from '../src/lib/invoice.ts'
 
 test('invoice edits track saved fields and returning to original values clears changes', () => {
   const original: InvoiceEdit = {
+    saleType: 'REGULAR',
+    paidAmount: 0,
     customerId: 1,
     issueDate: '2026-10-28',
     discount: 0,
@@ -14,6 +16,8 @@ test('invoice edits track saved fields and returning to original values clears c
   const baseline = invoiceEditKey(original)
   for (const change of [
     { customerId: 2 },
+    { saleType: 'CREDIT' },
+    { paidAmount: 500 },
     { issueDate: '2026-10-27' },
     { discount: 1 },
     { settlement: 'INSTALLMENT' },

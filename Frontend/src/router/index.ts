@@ -47,6 +47,11 @@ const router = createRouter({
       meta: { title: 'فاکتورهای فروش' },
     },
     {
+      path: '/open-accounts',
+      component: () => import('@/views/OpenAccountsView.vue'),
+      meta: { title: 'حساب‌های باز' },
+    },
+    {
       path: '/settings',
       component: () => import('@/views/SettingsView.vue'),
       meta: { title: 'تنظیمات ظاهر' },

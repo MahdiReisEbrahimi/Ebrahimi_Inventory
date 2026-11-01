@@ -60,8 +60,8 @@
             <col />
             <col class="quantity-col" />
             <col class="unit-col" />
-            <col class="price-col" />
-            <col class="total-col" />
+            <col v-if="!isCredit" class="price-col" />
+            <col v-if="!isCredit" class="total-col" />
           </colgroup>
           <thead>
             <tr>
@@ -69,8 +69,8 @@
               <th>نام کالا</th>
               <th>تعداد</th>
               <th>واحد</th>
-              <th>فی <small class="paper-currency">(ریال)</small></th>
-              <th>جمع <small class="paper-currency">(ریال)</small></th>
+              <th v-if="!isCredit">فی <small class="paper-currency">(ریال)</small></th>
+              <th v-if="!isCredit">جمع <small class="paper-currency">(ریال)</small></th>
             </tr>
           </thead>
           <tbody>
@@ -79,12 +79,32 @@
               <td>{{ line.name }}</td>
               <td>{{ number(line.quantity) }}</td>
               <td>{{ line.unit }}</td>
-              <td>{{ number(line.unitPrice) }}</td>
-              <td>{{ number(line.quantity * line.unitPrice) }}</td>
+              <td v-if="!isCredit">{{ number(line.unitPrice ?? 0) }}</td>
+              <td v-if="!isCredit">{{ number(line.quantity * (line.unitPrice ?? 0)) }}</td>
             </tr>
           </tbody>
         </table>
         <div v-if="pageIndex === pages.length - 1" class="paper-bottom">
+          <table v-if="!isCredit" class="paper-balance" aria-label="محاسبه مانده فاکتور">
+            <tbody>
+              <tr>
+                <th>مبلغ نهایی پس از تخفیف</th>
+                <td>{{ rial(normalized.total) }}</td>
+                <th>کسر پرداختی / بیعانه</th>
+                <td>{{ rial(normalized.paidAmount || 0) }}</td>
+              </tr>
+              <tr>
+                <th colspan="3">
+                  {{
+                    normalized.total >= (normalized.paidAmount || 0)
+                      ? 'مانده قابل پرداخت'
+                      : 'بستانکاری مشتری'
+                  }}
+                </th>
+                <td>{{ rial(Math.abs(normalized.total - (normalized.paidAmount || 0))) }}</td>
+              </tr>
+            </tbody>
+          </table>
           <table
             class="paper-footer-table"
             :class="{ 'paper-footer-table--simple': !hasDiscount }"
@@ -100,16 +120,20 @@
                 <td colspan="2">
                   <div class="footer-sale-terms">
                     <b>شرایط فروش:</b>
-                    <span>{{ invoice.settlement === 'INSTALLMENT' ? '☐' : '☑' }} نقدی</span>
-                    <span>{{ invoice.settlement === 'INSTALLMENT' ? '☑' : '☐' }} غیرنقدی</span>
+                    <span>{{ invoiceSaleLabel(invoice) }}{{ isCredit ? ' · بدون قیمت' : '' }}</span>
+                    <span v-if="!isCredit"
+                      >مبلغ نهایی: {{ rial(normalized.total) }} · مانده:
+                      {{ rial(Math.max(0, normalized.total - (normalized.paidAmount || 0))) }}</span
+                    >
                   </div>
                 </td>
                 <td v-if="!hasDiscount" rowspan="2" class="footer-payment-cell">
                   <div class="footer-payment">
                     <div>
-                      <b>مبلغ پرداختی</b><span>{{ amountInWords(normalized.total) }}</span>
+                      <b>{{ isCredit ? 'بیعانه' : 'مبلغ پرداختی' }}</b
+                      ><span>{{ amountInWords(normalized.paidAmount || 0) }}</span>
                     </div>
-                    <strong>{{ rial(normalized.total) }}</strong>
+                    <strong>{{ rial(normalized.paidAmount || 0) }}</strong>
                   </div>
                 </td>
                 <td v-else>
@@ -142,9 +166,10 @@
                 <td rowspan="2" class="footer-payment-cell">
                   <div class="footer-payment">
                     <div>
-                      <b>مبلغ پرداختی</b><span>{{ amountInWords(normalized.total) }}</span>
+                      <b>{{ isCredit ? 'بیعانه' : 'مبلغ پرداختی' }}</b
+                      ><span>{{ amountInWords(normalized.paidAmount || 0) }}</span>
                     </div>
-                    <strong>{{ rial(normalized.total) }}</strong>
+                    <strong>{{ rial(normalized.paidAmount || 0) }}</strong>
                   </div>
                 </td>
               </tr>
@@ -173,8 +198,15 @@ import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import type { Invoice, StoreSettings } from '@/types'
 import { number, toPersianDigits } from '@/lib/format'
 import { persianNumericDateLabel } from '@/lib/persianDate'
-import { amountInWords, invoiceInRials, invoicePages, rial } from '@/lib/invoicePresentation'
+import {
+  amountInWords,
+  invoiceInRials,
+  invoicePages,
+  invoiceSaleLabel,
+  rial,
+} from '@/lib/invoicePresentation'
 const props = defineProps<{ invoice: Invoice; settings: StoreSettings | null; draft?: boolean }>()
+const isCredit = computed(() => props.invoice.saleType === 'CREDIT')
 const normalized = computed(() => invoiceInRials(props.invoice))
 const hasDiscount = computed(() => (normalized.value.discount ?? 0) > 0)
 const pageCounts = ref<number[]>()
@@ -506,6 +538,16 @@ td:nth-child(n + 5) {
 .paper-footer-table tr:last-child > .footer-signature:last-child {
   border-inline-end: var(--paper-border);
 }
+.paper-balance {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  font-size: 9px;
+  text-align: center;
+}
+.paper-balance td {
+  font-weight: 700;
+}
 .footer-sale-terms,
 .footer-iban,
 .footer-amount-row {
@@ -515,7 +557,7 @@ td:nth-child(n + 5) {
 }
 .footer-sale-terms {
   gap: 1.5mm;
-  white-space: nowrap;
+  flex-wrap: wrap;
 }
 .footer-iban {
   gap: 1mm;
@@ -598,6 +640,63 @@ td:nth-child(n + 5) {
   .paper-page-footer,
   .paper-parties {
     break-inside: avoid;
+  }
+}
+</style>
+
+<style>
+.invoice-preview-dialog {
+  height: min(calc(100dvh - 32px), 900px);
+}
+.invoice-preview-dialog .dialog-body {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+  padding: 8px;
+}
+.invoice-preview-dialog .invoice-sheets {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  align-content: start;
+}
+.invoice-preview-dialog .form-actions {
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.invoice-preview-dialog .form-actions .badge {
+  margin-inline-end: auto;
+}
+@media print {
+  .dialog-content.invoice-preview-dialog {
+    display: block !important;
+    position: static;
+    transform: none;
+    width: 198mm;
+    max-width: none !important;
+    height: auto;
+    max-height: none;
+    overflow: visible;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    background: #fff;
+  }
+  .invoice-preview-dialog .dialog-heading,
+  .invoice-preview-dialog .dialog-footer {
+    display: none !important;
+  }
+  .invoice-preview-dialog .dialog-body,
+  .invoice-preview-dialog .invoice-sheets {
+    display: block;
+    height: auto;
+    max-height: none;
+    overflow: visible;
+    padding: 0;
   }
 }
 </style>

@@ -239,7 +239,7 @@ const navigation = [
   { to: '/products', text: 'کالاها و قیمت‌ها', icon: Package },
   { to: '/categories', text: 'مدیریت دسته‌بندی‌ها', icon: Tags },
   { to: '/transactions', text: 'گردش موجودی', icon: ArrowLeftRight },
-  { to: '/invoices', text: 'فاکتورهای فروش', icon: Receipt },
+  { to: '/invoices', text: 'فاکتورها', icon: Receipt },
   { to: '/open-accounts', text: 'حساب‌های باز', icon: Receipt },
 ]
 const isActive = (path: string) => (path === '/' ? route.path === '/' : route.path.startsWith(path))

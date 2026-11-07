@@ -2,7 +2,11 @@ import type { Invoice } from '../types/index.ts'
 import { number } from './format.ts'
 
 /** Credit sales have no price; payment terms subdivide regular sales only. */
-export function invoiceSaleLabel(invoice: Pick<Invoice, 'saleType' | 'settlement'>): string {
+export function invoiceSaleLabel(
+  invoice: Pick<Invoice, 'saleType' | 'settlement' | 'kind'>,
+): string {
+  if (invoice.kind === 'PURCHASE') return 'فاکتور خرید'
+  if (invoice.kind === 'RETURN') return 'فاکتور مرجوعی فروش'
   if (invoice.saleType === 'CREDIT') return 'فروش نسیه'
   return invoice.settlement === 'INSTALLMENT' ? 'فروش عادی · اقساطی' : 'فروش عادی · نقدی'
 }
@@ -19,6 +23,13 @@ function invoiceInCurrency(invoice: Invoice, currency: 'IRR' | 'TOMAN'): Invoice
     total: convert(invoice.total),
     discount: convert(invoice.discount ?? 0),
     paidAmount: convert(invoice.paidAmount ?? 0),
+    ...(invoice.accountValueAmount == null
+      ? {}
+      : { accountValueAmount: convert(invoice.accountValueAmount) }),
+    ...(invoice.returnedAmount == null ? {} : { returnedAmount: convert(invoice.returnedAmount) }),
+    ...(invoice.returnGrossAmount == null
+      ? {}
+      : { returnGrossAmount: convert(invoice.returnGrossAmount) }),
     items: invoice.items.map((item) => ({
       ...item,
       unitPrice: item.unitPrice == null ? null : convert(item.unitPrice),

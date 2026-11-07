@@ -1,7 +1,7 @@
 <template>
   <div class="page-stack invoice-page">
     <Teleport to="#page-toolbar" defer>
-      <div class="segmented-control invoice-tabs" aria-label="بخش فاکتورهای فروش">
+      <div class="segmented-control invoice-tabs" aria-label="بخش فاکتورها">
         <button :aria-pressed="activeTab === 'new'" :disabled="saving" @click="switchTab('new')">
           فاکتور جدید
         </button>
@@ -27,15 +27,32 @@
     >
       <header class="editor-toolbar">
         <div class="editor-buyer">
+          <span v-if="isReturn">{{
+            returnSource
+              ? [returnSource.buyerFirstName, returnSource.buyerLastName].filter(Boolean).join(' ')
+              : 'ابتدا فاکتور مبنا را انتخاب کنید'
+          }}</span>
           <SearchSelect
+            v-else
             v-model="selectedBuyerId"
             :options="buyerOptions"
-            label="خریدار"
-            placeholder="انتخاب خریدار"
+            :label="documentKind === 'PURCHASE' ? 'فروشنده / تأمین‌کننده' : 'خریدار'"
+            :placeholder="documentKind === 'PURCHASE' ? 'انتخاب فروشنده' : 'انتخاب خریدار'"
             create-label="طرف حساب جدید"
             :disabled="saving"
             @create="openBuyer()"
           />
+          <Button
+            v-if="selectedBuyerId && !isReturn"
+            size="sm"
+            variant="ghost"
+            @click="
+              () => {
+                statementBuyerId = selectedBuyerId ?? null
+              }
+            "
+            >تاریخچه و معین طرف حساب</Button
+          >
         </div>
         <h1 class="editor-title">
           {{ editingInvoiceId ? 'ویرایش فاکتور ' + editingInvoiceNumber : 'فاکتور جدید' }}
@@ -54,6 +71,38 @@
           </button>
         </div>
       </header>
+      <div class="invoice-kind-controls">
+        <label class="form-field"
+          ><span>نوع فاکتور</span
+          ><select
+            :value="documentKind"
+            :disabled="saving || !!editingInvoiceId"
+            aria-label="نوع فاکتور"
+            @change="changeDocumentKind"
+          >
+            <option value="SALE">فروش</option>
+            <option value="PURCHASE">خرید</option>
+            <option value="RETURN">مرجوعی فروش</option>
+          </select></label
+        >
+        <div v-if="isReturn" class="return-source-select">
+          <SearchSelect
+            v-model="returnSourceId"
+            :options="returnSourceOptions"
+            label="فاکتور مبنای مرجوعی"
+            placeholder="انتخاب فاکتور فروش عادی یا نسیه…"
+            :disabled="saving || returnSourceLoading"
+          />
+          <small v-if="returnSourceLoading">در حال دریافت فاکتور مبنا…</small>
+          <small v-else
+            >قیمت‌ها از فاکتور مبنا خوانده می‌شوند؛ فقط تعداد مرجوعی را وارد کنید.</small
+          >
+        </div>
+        <small v-else-if="documentKind === 'SALE'"
+          >فروش بیش از موجودی مجاز است و موجودی انبار را منفی می‌کند.</small
+        >
+        <small v-else>قیمت پیشنهادی هر ردیف، قیمت خرید فعلی کالا است و قابل تغییر است.</small>
+      </div>
       <div
         ref="linesRegion"
         class="invoice-lines-scroll"
@@ -81,7 +130,7 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="(line, index) in draft" :key="line.productId">
+            <tr v-for="(line, index) in draft" :key="line.sourceItemId ?? line.productId">
               <td class="line-index">
                 <span>{{ number(index + 1) }}</span
                 ><button
@@ -100,9 +149,9 @@
                 <NumberInput
                   v-model="line.quantity"
                   persian-digits
-                  :data-product-id="line.productId"
+                  :data-product-id="line.sourceItemId ?? line.productId"
                   min="1"
-                  :max="stockOf(line.productId)"
+                  :max="isReturn ? returnLimit(line.sourceItemId!) : undefined"
                   step="1"
                   :disabled="saving"
                   :aria-label="'تعداد ' + line.name"
@@ -112,7 +161,7 @@
               <td v-if="!isCredit">
                 <MoneyInput
                   v-model="line.priceText"
-                  :disabled="saving"
+                  :disabled="saving || isReturn"
                   :aria-label="'فی ' + line.name + ' به تومان'"
                   @update:model-value="line.unitPrice = parseNumber($event)"
                 />
@@ -132,6 +181,7 @@
                     @close-auto-focus="focusAddedLine"
                   />
                   <SearchSelect
+                    v-if="!isReturn"
                     v-model="selectedCategoryId"
                     :options="categoryOptions"
                     label="دسته‌بندی کالا"
@@ -151,7 +201,7 @@
             <span>جمع {{ number(draft.length) }} قلم کالا</span>
             <b>{{ money(draftSubtotal) }}</b>
           </div>
-          <label class="discount-field">
+          <label v-if="!isReturn" class="discount-field">
             <span>تخفیف <small>تومان</small></span>
             <MoneyInput
               v-model="discountText"
@@ -168,8 +218,17 @@
             <small>{{ amountInTomansWords(draftTotal) }}</small>
           </div>
         </section>
-        <label class="discount-field payment-field">
-          <span>{{ isCredit ? 'بیعانه' : 'مبلغ پرداختی مشتری' }} <small>تومان</small></span>
+        <label v-if="!isReturn" class="discount-field payment-field">
+          <span
+            >{{
+              isCredit
+                ? 'بیعانه'
+                : documentKind === 'PURCHASE'
+                  ? 'مبلغ پرداختی به فروشنده'
+                  : 'مبلغ پرداختی مشتری'
+            }}
+            <small>تومان</small></span
+          >
           <MoneyInput v-model="paidText" :disabled="saving" aria-label="مبلغ پرداختی به تومان" />
           <Button
             v-if="!isCredit"
@@ -187,7 +246,7 @@
         </label>
         <div class="editor-footer">
           <div class="editor-options">
-            <fieldset class="settlement" :disabled="saving">
+            <fieldset v-if="documentKind === 'SALE'" class="settlement" :disabled="saving">
               <legend>نوع فروش</legend>
               <div class="settlement-options">
                 <label :class="{ selected: saleType === 'REGULAR' }">
@@ -200,7 +259,11 @@
                 </label>
               </div>
             </fieldset>
-            <fieldset v-if="!isCredit" class="settlement" :disabled="saving">
+            <fieldset
+              v-if="documentKind === 'SALE' && !isCredit"
+              class="settlement"
+              :disabled="saving"
+            >
               <legend>روش پرداخت فروش عادی</legend>
               <div class="settlement-options">
                 <label :class="{ selected: regularSettlement === 'CASH' }">
@@ -230,7 +293,7 @@
               :disabled="
                 saving ||
                 !draft.length ||
-                !selectedBuyer ||
+                !(isReturn ? returnSource : selectedBuyer) ||
                 !!loadError ||
                 (!!editingInvoiceId && !hasInvoiceChanges)
               "
@@ -336,6 +399,29 @@
               }}{{ money(invoiceInTomans(invoice).paidAmount || 0) }}
             </p>
             <div class="archive-actions">
+              <Button
+                v-if="!invoice.customerId"
+                variant="outline"
+                size="sm"
+                @click="
+                  () => {
+                    assignDocument = invoice
+                    assignBuyerId = undefined
+                  }
+                "
+                >اتصال به طرف حساب</Button
+              >
+              <Button
+                v-if="invoice.customerId"
+                variant="outline"
+                size="sm"
+                @click="
+                  () => {
+                    statementBuyerId = invoice.customerId ?? null
+                  }
+                "
+                >صورت‌حساب / تاریخچه</Button
+              >
               <Button variant="outline" size="sm" @click="openInvoice(invoice)">مشاهده</Button
               ><Button variant="ghost" size="sm" @click="openInvoice(invoice, true)"
                 ><Printer :size="15" />چاپ</Button
@@ -369,8 +455,14 @@
           activeInvoice ? 'فاکتور ثبت‌شده' : 'پیش‌نویس · ثبت نشده'
         }}</span>
         <Button variant="outline" @click="printCurrent"><Printer :size="17" />چاپ A5 افقی</Button>
-        <Button v-if="activeInvoice" variant="outline" @click="editInvoice"
+        <Button
+          v-if="activeInvoice && (!activeInvoice.kind || activeInvoice.kind === 'SALE')"
+          variant="outline"
+          @click="editInvoice"
           ><Pencil :size="16" />ویرایش</Button
+        >
+        <Button v-if="activeInvoice?.customerId" variant="outline" @click="openAccountFromPreview"
+          >صورت‌حساب طرف حساب</Button
         >
         <Button v-if="activeInvoice" @click="newDraft"><Plus :size="16" />فاکتور جدید</Button>
         <Button variant="ghost" @click="closePreview()">{{
@@ -479,6 +571,36 @@
       </form></AppDialog
     >
   </div>
+  <AppDialog
+    :open="!!assignDocument"
+    title="اتصال فاکتور قدیمی به طرف حساب"
+    width="520px"
+    @update:open="!$event && !assignSaving && (assignDocument = null)"
+  >
+    <p>
+      فاکتور {{ assignDocument?.number }} و مرجوعی‌های وابسته به حساب انتخاب‌شده متصل می‌شوند.
+      موجودی تغییر نمی‌کند.
+    </p>
+    <SearchSelect
+      v-model="assignBuyerId"
+      :options="buyerOptions"
+      label="طرف حساب"
+      placeholder="انتخاب طرف حساب"
+      :disabled="assignSaving"
+    />
+    <DialogActions
+      ><Button variant="outline" :disabled="assignSaving" @click="assignDocument = null"
+        >انصراف</Button
+      ><Button :disabled="!assignBuyerId || assignSaving" @click="assignParty">{{
+        assignSaving ? 'در حال اتصال…' : 'ثبت اتصال'
+      }}</Button></DialogActions
+    >
+  </AppDialog>
+  <PartyAccountDialog
+    :buyer-id="statementBuyerId"
+    @close="statementBuyerId = null"
+    @changed="loadInvoices"
+  />
 </template>
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, reactive, ref, useId, watch } from 'vue'
@@ -487,6 +609,7 @@ import { Check, ChevronDown, Pencil, Plus, Printer, Store, Trash2 } from '@lucid
 import EmptyState from '@/components/ui/EmptyState.vue'
 import Button from '@/components/ui/Button.vue'
 import DialogActions from '@/components/ui/DialogActions.vue'
+import PartyAccountDialog from '@/components/PartyAccountDialog.vue'
 import AppDialog from '@/components/ui/AppDialog.vue'
 import SearchSelect from '@/components/ui/SearchSelect.vue'
 import PersianDatePicker from '@/components/ui/PersianDatePicker.vue'
@@ -528,6 +651,30 @@ const products = ref<Product[]>([]),
 const settings = ref<StoreSettings | null>(null),
   activeInvoice = ref<Invoice | null>(null)
 const paperRenderer = ref<InstanceType<typeof InvoicePaper>>()
+const assignDocument = ref<Invoice | null>(null),
+  assignBuyerId = ref<number>(),
+  assignSaving = ref(false)
+async function assignParty() {
+  if (!assignDocument.value || !assignBuyerId.value || assignSaving.value) return
+  assignSaving.value = true
+  try {
+    await inventoryApi.assignParty(assignDocument.value.id, assignBuyerId.value)
+    assignDocument.value = null
+    toast.success('فاکتور به حساب طرف حساب متصل شد.')
+    await loadInvoices()
+  } catch (e) {
+    toast.error(e instanceof Error ? e.message : 'اتصال فاکتور انجام نشد.')
+  } finally {
+    assignSaving.value = false
+  }
+}
+const statementBuyerId = ref<number | null>(null)
+function openAccountFromPreview() {
+  const id = activeInvoice.value?.customerId
+  if (!id) return
+  closePreview()
+  statementBuyerId.value = id
+}
 const activeTab = ref<'new' | 'archive'>('new'),
   selectedBuyerId = ref<number>()
 const selectedCategoryId = ref<number>(0)
@@ -541,8 +688,31 @@ const issueDate = ref(todayInTehran()),
   notes = ref(''),
   notesTouched = ref(false)
 const discountText = ref('۰')
+const documentKind = ref<'SALE' | 'PURCHASE' | 'RETURN'>('SALE')
+const isReturn = computed(() => documentKind.value === 'RETURN')
+const returnSources = ref<Invoice[]>([])
+const returnSourceId = ref<number>()
+const returnSource = ref<Invoice | null>(null)
+const returnSourceLoading = ref(false)
+let returnRequest = 0
+const returnSourceOptions = computed(() =>
+  returnSources.value.map((invoice) => ({
+    value: invoice.id,
+    label: `فاکتور ${invoice.number} · ${[invoice.buyerFirstName, invoice.buyerLastName].filter(Boolean).join(' ')}`,
+    description: invoiceSaleLabel(invoice),
+  })),
+)
+const returnLimit = (id: number) =>
+  returnSource.value?.items.find((item) => item.id === id)?.returnableQuantity ?? 0
 const saleType = ref<'REGULAR' | 'CREDIT'>('REGULAR')
-const isCredit = computed(() => saleType.value === 'CREDIT')
+const isCredit = computed(() =>
+  isReturn.value
+    ? returnSource.value?.saleType === 'CREDIT'
+    : documentKind.value === 'SALE' && saleType.value === 'CREDIT',
+)
+watch(returnSourceId, () => {
+  void loadReturnSource()
+})
 const paidText = ref('۰')
 const paidAmount = computed(() => (paidText.value.trim() ? parseNumber(paidText.value) : 0))
 const regularSettlement = ref<'CASH' | 'INSTALLMENT'>('CASH')
@@ -691,24 +861,43 @@ const categoryOptions = computed(() => [
     .map((category) => ({ value: category.id, label: category.name })),
 ])
 const productOptions = computed(() =>
-  products.value
-    .filter(
-      (product) =>
-        (!selectedCategoryId.value || product.categoryId === selectedCategoryId.value) &&
-        !draft.value.some((line) => line.productId === product.id),
-    )
-    .map((product) => ({
-      value: product.id,
-      label: product.name,
-      description:
-        'موجودی ' +
-        number(stockOf(product.id)) +
-        ' ' +
-        product.unit +
-        ' · ' +
-        (isCredit.value ? 'بدون قیمت' : money(product.sellPrice)),
-      disabled: stockOf(product.id) < 1,
-    })),
+  isReturn.value
+    ? (returnSource.value?.items || [])
+        .filter(
+          (item) =>
+            (item.returnableQuantity || 0) > 0 &&
+            !draft.value.some((line) => line.sourceItemId === item.id),
+        )
+        .map((item) => ({
+          value: item.id,
+          label: item.name,
+          description:
+            'قابل مرجوعی: ' +
+            number(item.returnableQuantity || 0) +
+            ' ' +
+            item.unit +
+            ' · ' +
+            (item.unitPrice == null ? 'بدون قیمت' : money(item.unitPrice)),
+        }))
+    : products.value
+        .filter(
+          (product) =>
+            (!selectedCategoryId.value || product.categoryId === selectedCategoryId.value) &&
+            !draft.value.some((line) => line.productId === product.id),
+        )
+        .map((product) => ({
+          value: product.id,
+          label: product.name,
+          description:
+            'موجودی ' +
+            number(stockOf(product.id)) +
+            ' ' +
+            product.unit +
+            ' · ' +
+            (isCredit.value
+              ? 'بدون قیمت'
+              : money(documentKind.value === 'PURCHASE' ? product.buyPrice : product.sellPrice)),
+        })),
 )
 const draftSubtotal = computed(() =>
   isCredit.value
@@ -719,19 +908,26 @@ const draftSubtotal = computed(() =>
       ) / 10,
 )
 const discount = computed(() =>
-  isCredit.value ? 0 : discountText.value.trim() ? parseNumber(discountText.value) : 0,
+  isCredit.value || isReturn.value
+    ? 0
+    : discountText.value.trim()
+      ? parseNumber(discountText.value)
+      : 0,
 )
 const draftTotal = computed(() => roundToman(draftSubtotal.value - discount.value))
 const invoicePayload = computed(() => ({
   currency: 'TOMAN' as const,
+  kind: documentKind.value,
+  sourceInvoiceId: isReturn.value ? returnSourceId.value : undefined,
   customerId: selectedBuyerId.value,
   issueDate: issueDate.value,
   discount: discount.value,
   settlement: settlement.value,
-  saleType: saleType.value,
-  paidAmount: paidAmount.value,
+  saleType: isCredit.value ? ('CREDIT' as const) : ('REGULAR' as const),
+  paidAmount: isReturn.value ? 0 : paidAmount.value,
   notes: notes.value,
-  items: draft.value.map(({ productId, quantity, unitPrice }) => ({
+  items: draft.value.map(({ productId, quantity, unitPrice, sourceItemId }) => ({
+    sourceItemId,
     productId,
     quantity,
     unitPrice,
@@ -744,20 +940,27 @@ const draftInvoice = computed<Invoice>(() => ({
   id: editingInvoiceId.value || 0,
   number: editingInvoiceNumber.value || 'پس از ثبت',
   currency: 'TOMAN',
+  kind: documentKind.value,
+  sourceInvoiceId: isReturn.value ? returnSourceId.value : undefined,
   issueDate: issueDate.value,
   createdAt: new Date().toISOString(),
-  buyerFirstName: selectedBuyer.value?.firstName || '',
-  buyerLastName: selectedBuyer.value?.lastName || '',
-  buyerNationalId: selectedBuyer.value?.nationalId || null,
-  buyerAddress: selectedBuyer.value?.address || null,
-  buyerPhone: selectedBuyer.value?.phone,
+  buyerFirstName:
+    (isReturn.value ? returnSource.value?.buyerFirstName : selectedBuyer.value?.firstName) || '',
+  buyerLastName:
+    (isReturn.value ? returnSource.value?.buyerLastName : selectedBuyer.value?.lastName) || '',
+  buyerNationalId:
+    (isReturn.value ? returnSource.value?.buyerNationalId : selectedBuyer.value?.nationalId) ||
+    null,
+  buyerAddress:
+    (isReturn.value ? returnSource.value?.buyerAddress : selectedBuyer.value?.address) || null,
+  buyerPhone: isReturn.value ? returnSource.value?.buyerPhone : selectedBuyer.value?.phone,
   notes: notes.value,
   total: draftTotal.value,
   subtotal: draftSubtotal.value,
   discount: discount.value,
   settlement: settlement.value,
-  saleType: saleType.value,
-  paidAmount: paidAmount.value,
+  saleType: isCredit.value ? ('CREDIT' as const) : ('REGULAR' as const),
+  paidAmount: isReturn.value ? 0 : paidAmount.value,
   items: draft.value,
 }))
 const stockOf = (id: number) =>
@@ -788,21 +991,36 @@ function switchTab(tab: 'new' | 'archive') {
   previewDraft.value = false
 }
 function addProduct(id: number) {
+  if (isReturn.value) {
+    const item = returnSource.value?.items.find((item) => item.id === id)
+    if (!item || !item.returnableQuantity || draft.value.some((line) => line.sourceItemId === id))
+      return
+    draft.value.push({
+      ...item,
+      id: 0,
+      sourceItemId: item.id,
+      quantity: 1,
+      unitPrice: item.unitPrice ?? 0,
+      priceText: number(item.unitPrice ?? 0),
+    })
+    pendingProductFocus = id
+    return
+  }
   const product = products.value.find((item) => item.id === id)
   if (!product || (selectedCategoryId.value && product.categoryId !== selectedCategoryId.value))
     return
   const line = draft.value.find((item) => item.productId === id)
   if (line) return
-  if (stockOf(id) < 1) return toast.warning('موجودی این کالا کافی نیست.')
+
   draft.value.push({
     id: 0,
     productId: id,
     name: product.name,
     unit: product.unit,
     quantity: 1,
-    unitPrice: product.sellPrice,
-    priceText: number(product.sellPrice),
-    total: product.sellPrice,
+    unitPrice: documentKind.value === 'PURCHASE' ? product.buyPrice : product.sellPrice,
+    priceText: number(documentKind.value === 'PURCHASE' ? product.buyPrice : product.sellPrice),
+    total: documentKind.value === 'PURCHASE' ? product.buyPrice : product.sellPrice,
   })
   pendingProductFocus = id
 }
@@ -874,11 +1092,21 @@ function clearFilters() {
 }
 function validateDraft() {
   const error = validateInvoiceLines(
-    draft.value.map((line) => ({ ...line, unitPrice: isCredit.value ? 0 : line.unitPrice })),
-    stockOf,
+    draft.value.map((line) => ({
+      ...line,
+      productId: isReturn.value ? line.sourceItemId! : line.productId,
+      unitPrice: isCredit.value ? 0 : line.unitPrice,
+    })),
+    isReturn.value ? returnLimit : undefined,
   )
   if (error) return error
-  if (!selectedBuyer.value) return 'خریدار فاکتور را انتخاب کنید.'
+  if (
+    documentKind.value === 'PURCHASE' &&
+    draft.value.some((line) => !Number.isInteger(line.unitPrice) || line.unitPrice > 2147483647)
+  )
+    return 'قیمت خرید باید عدد صحیح تومان و در محدوده مجاز باشد.'
+  if (isReturn.value ? !returnSource.value : !selectedBuyer.value)
+    return isReturn.value ? 'فاکتور مبنا را انتخاب کنید.' : 'طرف حساب فاکتور را انتخاب کنید.'
   if (
     !isInvoiceAmount(discount.value) ||
     discount.value < 0 ||
@@ -889,7 +1117,7 @@ function validateDraft() {
     !isInvoiceAmount(paidAmount.value) ||
     paidAmount.value < 0 ||
     paidAmount.value > MAX_INVOICE_AMOUNT ||
-    (!isCredit.value && paidAmount.value > draftTotal.value)
+    (!editingInvoiceId.value && !isCredit.value && paidAmount.value > draftTotal.value)
   )
     return 'مبلغ پرداختی معتبر نیست یا از مبلغ نهایی بیشتر است.'
   return ''
@@ -907,7 +1135,11 @@ async function save() {
     const payload = {
       ...invoicePayload.value,
       items: invoicePayload.value.items.map((line) =>
-        isCredit.value ? { productId: line.productId, quantity: line.quantity } : line,
+        isReturn.value
+          ? { productId: line.productId, sourceItemId: line.sourceItemId, quantity: line.quantity }
+          : isCredit.value
+            ? { productId: line.productId, quantity: line.quantity }
+            : line,
       ),
     }
     const savedInvoice = editingInvoiceId.value
@@ -945,6 +1177,9 @@ function resetDraft() {
   selectedCategoryId.value = 0
   issueDate.value = todayInTehran()
   discountText.value = '۰'
+  documentKind.value = 'SALE'
+  returnSourceId.value = undefined
+  returnSource.value = null
   saleType.value = 'REGULAR'
   regularSettlement.value = 'CASH'
   paidText.value = '۰'
@@ -953,6 +1188,48 @@ function resetDraft() {
   activeInvoice.value = null
   previewDraft.value = false
   activeTab.value = 'new'
+}
+async function changeDocumentKind(event: Event) {
+  const select = event.target as HTMLSelectElement
+  const kind = select.value as 'SALE' | 'PURCHASE' | 'RETURN'
+  if (draft.value.length && !(await confirmDiscard())) {
+    select.value = documentKind.value
+    return
+  }
+  resetDraft()
+  documentKind.value = kind
+  if (kind === 'RETURN') await loadReturnSources()
+}
+async function loadReturnSources() {
+  try {
+    returnSources.value = await inventoryApi.invoices({ kind: 'SALE' })
+  } catch (error) {
+    toast.error(error instanceof Error ? error.message : 'دریافت فاکتورهای مبنا انجام نشد.')
+  }
+}
+async function loadReturnSource() {
+  const request = ++returnRequest
+  const id = returnSourceId.value
+  draft.value = []
+  returnSource.value = null
+  if (!id) {
+    returnSourceLoading.value = false
+    return
+  }
+  returnSourceLoading.value = true
+  try {
+    const invoice = invoiceInTomans(await inventoryApi.returnableInvoice(id))
+    if (request !== returnRequest) return
+    returnSource.value = invoice
+    selectedBuyerId.value = invoice.customerId ?? undefined
+    discountText.value = '۰'
+    paidText.value = '۰'
+  } catch (error) {
+    if (request === returnRequest)
+      toast.error(error instanceof Error ? error.message : 'دریافت فاکتور مبنا انجام نشد.')
+  } finally {
+    if (request === returnRequest) returnSourceLoading.value = false
+  }
 }
 async function newDraft() {
   if (draft.value.length && !(await confirmDiscard())) return
@@ -1070,6 +1347,13 @@ async function saveSettings() {
 }
 onMounted(async () => {
   await load()
+  if (route.query.kind === 'RETURN') {
+    documentKind.value = 'RETURN'
+    await loadReturnSources()
+    const sourceId = Number(route.query.sourceInvoiceId)
+    if (Number.isSafeInteger(sourceId) && sourceId > 0) returnSourceId.value = sourceId
+    return
+  }
   const editId = Number(route.query.edit)
   if (Number.isInteger(editId) && editId > 0) {
     try {
@@ -1102,6 +1386,26 @@ onMounted(async () => {
   min-height: 34px;
   padding: 6px 14px;
   font-size: 12px;
+}
+.invoice-kind-controls {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 8px 14px;
+  font-size: 12px;
+}
+.invoice-kind-controls .form-field {
+  min-width: 160px;
+}
+.return-source-select {
+  flex: 1;
+  min-width: 220px;
+  display: grid;
+  gap: 4px;
+}
+.invoice-kind-controls small {
+  color: var(--muted-foreground);
 }
 .invoice-editor {
   --background: #fafafa;
@@ -1673,6 +1977,7 @@ onMounted(async () => {
 }
 .archive-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
   margin-top: 16px;
 }

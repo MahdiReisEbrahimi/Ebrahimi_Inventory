@@ -6,6 +6,7 @@ export const inventoryApi = {
     api<InventoryMovement>('/transactions', { method: 'POST', body: JSON.stringify(data) }),
   invoices: (
     filters: {
+      kind?: 'SALE' | 'PURCHASE' | 'RETURN'
       openOnly?: boolean
       customerId?: number
       buyer?: string
@@ -21,11 +22,17 @@ export const inventoryApi = {
     )
     return api<Invoice[]>(`/invoices${query.size ? `?${query}` : ''}`)
   },
+  returnableInvoice: (id: number) => api<Invoice>(`/invoices/${id}/returnable`),
   invoice: (id: number) => api<Invoice>(`/invoices/${id}`),
   createInvoice: (data: object) =>
     api<Invoice>('/invoices', { method: 'POST', body: JSON.stringify(data) }),
   updateInvoice: (id: number, data: object) =>
     api<Invoice>(`/invoices/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+  assignParty: (id: number, customerId: number) =>
+    api<Invoice>(`/invoices/${id}/party`, {
+      method: 'PATCH',
+      body: JSON.stringify({ customerId }),
+    }),
   updatePayment: (id: number, paymentAmount: number) =>
     api<Invoice>(`/invoices/${id}/payment`, {
       method: 'PATCH',

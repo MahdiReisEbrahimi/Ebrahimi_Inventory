@@ -59,7 +59,8 @@ export const ModelName = {
   InventoryTransaction: 'InventoryTransaction',
   Invoice: 'Invoice',
   InvoiceItem: 'InvoiceItem',
-  StoreSettings: 'StoreSettings'
+  StoreSettings: 'StoreSettings',
+  PartyLedgerEntry: 'PartyLedgerEntry'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -165,6 +166,10 @@ export type InventoryTransactionScalarFieldEnum = (typeof InventoryTransactionSc
 
 
 export const InvoiceScalarFieldEnum = {
+  kind: 'kind',
+  accountChargeRial: 'accountChargeRial',
+  accountReturnedRial: 'accountReturnedRial',
+  sourceInvoiceId: 'sourceInvoiceId',
   id: 'id',
   number: 'number',
   buyerFirstName: 'buyerFirstName',
@@ -195,6 +200,7 @@ export type InvoiceScalarFieldEnum = (typeof InvoiceScalarFieldEnum)[keyof typeo
 
 
 export const InvoiceItemScalarFieldEnum = {
+  sourceItemId: 'sourceItemId',
   id: 'id',
   invoiceId: 'invoiceId',
   productId: 'productId',
@@ -221,6 +227,23 @@ export const StoreSettingsScalarFieldEnum = {
 } as const
 
 export type StoreSettingsScalarFieldEnum = (typeof StoreSettingsScalarFieldEnum)[keyof typeof StoreSettingsScalarFieldEnum]
+
+
+export const PartyLedgerEntryScalarFieldEnum = {
+  id: 'id',
+  buyerId: 'buyerId',
+  invoiceId: 'invoiceId',
+  action: 'action',
+  description: 'description',
+  amountRial: 'amountRial',
+  cashDirection: 'cashDirection',
+  requestKey: 'requestKey',
+  details: 'details',
+  historical: 'historical',
+  createdAt: 'createdAt'
+} as const
+
+export type PartyLedgerEntryScalarFieldEnum = (typeof PartyLedgerEntryScalarFieldEnum)[keyof typeof PartyLedgerEntryScalarFieldEnum]
 
 
 export const SortOrder = {

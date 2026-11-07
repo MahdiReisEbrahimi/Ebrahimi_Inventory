@@ -26,12 +26,16 @@ export class CreateMovementDto {
 }
 
 export class InvoiceLineDto {
+  @IsOptional() @IsInt() @Min(1) sourceItemId?: number;
   @IsInt() @Min(1) productId!: number;
   @IsInt() @Min(1) quantity!: number;
   @IsOptional() @IsNumber({ maxDecimalPlaces: 1 }) @Min(0) unitPrice?: number;
 }
 
 export class CreateInvoiceDto {
+  @IsOptional() @IsIn(['SALE', 'PURCHASE', 'RETURN']) kind?:
+    'SALE' | 'PURCHASE' | 'RETURN';
+  @IsOptional() @IsInt() @Min(1) sourceInvoiceId?: number;
   @IsOptional() @IsIn(['IRR', 'TOMAN']) currency?: 'IRR' | 'TOMAN';
   @IsOptional() @IsIn(['REGULAR', 'CREDIT']) saleType?: 'REGULAR' | 'CREDIT';
   @IsOptional() @IsDateString({ strict: true }) issueDate?: string;
@@ -73,6 +77,8 @@ export class InvoicePaymentDto {
 }
 
 export class InvoiceQueryDto {
+  @IsOptional() @IsIn(['SALE', 'PURCHASE', 'RETURN']) kind?:
+    'SALE' | 'PURCHASE' | 'RETURN';
   @IsOptional() @IsIn(['true', 'false']) openOnly?: string;
   @IsOptional() @Type(() => Number) @IsInt() @Min(1) customerId?: number;
   @IsOptional() @IsString() buyer?: string;
@@ -92,4 +98,8 @@ export class UpdateStoreSettingsDto {
   iban?: string;
   @IsOptional() @IsString() @MaxLength(120) ibanLabel?: string;
   @IsOptional() @IsString() @MaxLength(600) defaultInvoiceNotes?: string;
+}
+
+export class AssignInvoicePartyDto {
+  @IsInt() @Min(1) customerId!: number;
 }

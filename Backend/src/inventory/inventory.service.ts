@@ -4,6 +4,13 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import {
+  prepareParty,
+  syncParty,
+  allocatePartyCash,
+  recordCash,
+  rial,
+} from '../accounts/party-ledger.js';
 import { createHash } from 'node:crypto';
 import { Prisma } from '../generated/prisma/client.js';
 import { PrismaService } from '../prisma/prisma.service.js';
@@ -22,12 +29,16 @@ type InvoiceWithItems = Prisma.InvoiceGetPayload<{ include: { items: true } }>;
 
 // Invoice amounts use exact database decimals; API amounts carry their stored currency.
 function invoiceResponse<T extends InvoiceWithItems>(invoice: T) {
+  const { accountChargeRial, accountReturnedRial, ...publicInvoice } = invoice;
+  void accountChargeRial;
   return {
-    ...invoice,
+    ...publicInvoice,
     subtotal: invoice.subtotal.toNumber(),
     discount: invoice.discount.toNumber(),
     total: invoice.total.toNumber(),
     paidAmount: invoice.paidAmount.toNumber(),
+    returnedAmount:
+      Number(accountReturnedRial ?? 0) / (invoice.currency === 'IRR' ? 1 : 10),
     items: invoice.items.map((item) => ({
       ...item,
       unitPrice: item.unitPrice?.toNumber() ?? null,
@@ -56,6 +67,39 @@ export class InventoryService {
   }
 
   async createMovement(data: CreateMovementDto) {
+    if (data.type === 'RETURN') {
+      if (!data.invoiceId)
+        throw new BadRequestException('فاکتور مبنا برای مرجوعی الزامی است.');
+      const source = await this.returnableInvoice(data.invoiceId);
+      let remaining = data.quantity;
+      const items = source.items
+        .filter((item) => item.productId === data.productId)
+        .flatMap((item) => {
+          const quantity = Math.min(remaining, item.returnableQuantity);
+          remaining -= quantity;
+          return quantity > 0
+            ? [{ productId: item.productId, sourceItemId: item.id, quantity }]
+            : [];
+        });
+      if (
+        !Number.isInteger(data.quantity) ||
+        data.quantity <= 0 ||
+        remaining > 0
+      )
+        throw new BadRequestException(
+          'مقدار مرجوعی از تعداد فروش‌رفته بیشتر است.',
+        );
+      const invoice = await this.createReturnInvoice({
+        kind: 'RETURN',
+        sourceInvoiceId: data.invoiceId,
+        items,
+      });
+      const movement = await this.prisma.inventoryTransaction.findFirstOrThrow({
+        where: { invoiceId: invoice.id },
+        include: { product: true, invoice: { select: { number: true } } },
+      });
+      return { ...movement, unitPrice: movement.unitPrice?.toNumber() ?? null };
+    }
     if (data.type === 'ADJUSTMENT')
       throw new BadRequestException(
         'اصلاح موجودی از این فرم پشتیبانی نمی‌شود.',
@@ -65,36 +109,6 @@ export class InventoryService {
         where: { id: data.productId },
       });
       if (!product) throw new NotFoundException('محصول پیدا نشد.');
-      if (data.type === 'RETURN' && data.invoiceId) {
-        const invoice = await tx.invoice.findUnique({
-          where: { id: data.invoiceId },
-        });
-        if (!invoice) throw new NotFoundException('فاکتور پیدا نشد.');
-        // Serialize returns and edits on the same invoice before reading sold quantities.
-        await tx.invoice.update({
-          where: { id: invoice.id },
-          data: { number: invoice.number },
-        });
-        const sold = await tx.invoiceItem.aggregate({
-          where: { invoiceId: data.invoiceId, productId: product.id },
-          _sum: { quantity: true },
-        });
-        const returned = await tx.inventoryTransaction.aggregate({
-          where: {
-            invoiceId: data.invoiceId,
-            productId: product.id,
-            type: 'RETURN',
-          },
-          _sum: { quantity: true },
-        });
-        if (
-          !sold._sum.quantity ||
-          sold._sum.quantity - (returned._sum.quantity ?? 0) < data.quantity
-        )
-          throw new BadRequestException(
-            'مقدار مرجوعی از تعداد فروش‌رفته بیشتر است.',
-          );
-      }
       const updated = await tx.product.update({
         where: { id: product.id },
         data: {
@@ -167,18 +181,123 @@ export class InventoryService {
   async updateBuyer(id: number, data: BuyerDto) {
     await this.buyer(id);
     try {
-      return await this.prisma.buyer.update({
-        where: { id },
-        data: this.buyerData(data),
-      });
+      return await this.prisma.$transaction(
+        async (tx) => {
+          const before = await tx.buyer.findUniqueOrThrow({ where: { id } });
+          await prepareParty(tx, id);
+          const after = await tx.buyer.update({
+            where: { id },
+            data: this.buyerData(data),
+          });
+          await tx.partyLedgerEntry.create({
+            data: {
+              buyerId: id,
+              action: 'PARTY_UPDATED',
+              description: 'ویرایش مشخصات طرف حساب',
+              amountRial: 0,
+              details: {
+                before: JSON.parse(JSON.stringify(before)),
+                after: JSON.parse(JSON.stringify(after)),
+              },
+            },
+          });
+          return after;
+        },
+        { isolationLevel: 'Serializable' },
+      );
     } catch (error) {
       this.handleBuyerConflict(error);
     }
   }
   async deleteBuyer(id: number) {
-    await this.buyer(id);
-    await this.prisma.buyer.delete({ where: { id } });
-    return { deleted: true };
+    return this.prisma.$transaction(
+      async (tx) => {
+        if (!(await tx.buyer.findUnique({ where: { id } })))
+          throw new NotFoundException('طرف حساب پیدا نشد.');
+        if (
+          (await tx.invoice.count({ where: { customerId: id } })) ||
+          (await tx.partyLedgerEntry.count({ where: { buyerId: id } }))
+        )
+          throw new ConflictException(
+            'طرف حساب دارای سابقه مالی یا فاکتور است و قابل حذف نیست.',
+          );
+        await tx.buyer.delete({ where: { id } });
+        return { deleted: true };
+      },
+      { isolationLevel: 'Serializable' },
+    );
+  }
+
+  async assignInvoiceParty(id: number, customerId: number) {
+    try {
+      return await this.prisma.$transaction(
+        async (tx) => {
+          const invoice = await tx.invoice.findUnique({
+            where: { id },
+            include: { items: true },
+          });
+          if (!invoice) throw new NotFoundException('فاکتور پیدا نشد.');
+          const sourceId =
+            invoice.kind === 'RETURN' ? invoice.sourceInvoiceId : invoice.id;
+          if (!sourceId)
+            throw new BadRequestException('فاکتور مبنا مشخص نیست.');
+          const documents = await tx.invoice.findMany({
+            where: { OR: [{ id: sourceId }, { sourceInvoiceId: sourceId }] },
+            include: { items: true },
+          });
+          if (documents.some((doc) => doc.customerId != null))
+            throw new ConflictException(
+              'این فاکتور یا مرجوعی آن قبلاً به طرف حساب متصل است.',
+            );
+          await prepareParty(tx, customerId);
+          for (const doc of documents) {
+            await tx.invoice.update({
+              where: { id: doc.id },
+              data: { customerId },
+            });
+            await syncParty(
+              tx,
+              customerId,
+              doc.id,
+              'PARTY_ASSIGNED',
+              doc,
+              false,
+            );
+            if (doc.kind !== 'RETURN' && doc.paidAmount.gt(0))
+              await recordCash(
+                tx,
+                customerId,
+                rial(doc.paidAmount, doc.currency),
+                doc.kind === 'PURCHASE' ? 'OUT' : 'IN',
+                {
+                  invoiceId: doc.id,
+                  action: 'OPENING_PAYMENT',
+                  historical: true,
+                  description:
+                    'پرداخت قبلی فاکتور متصل‌شده؛ زمان دقیق پرداخت قدیمی موجود نیست',
+                },
+              );
+          }
+          await syncParty(tx, customerId);
+          return invoiceResponse(
+            await tx.invoice.findUniqueOrThrow({
+              where: { id },
+              include: { items: true },
+            }),
+          );
+        },
+        { isolationLevel: 'Serializable', timeout: 30000 },
+      );
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2034'
+      )
+        throw new ConflictException(
+          'حساب هم‌زمان تغییر کرده؛ دوباره دریافت کنید.',
+        );
+      throw error;
+    }
   }
 
   async createInvoice(data: CreateInvoiceDto) {
@@ -189,7 +308,234 @@ export class InventoryService {
     return this.writeInvoice(data, id);
   }
 
+  async returnableSnapshot(tx: Prisma.TransactionClient, id: number) {
+    const source = await tx.invoice.findUnique({
+      where: { id },
+      include: { items: { orderBy: { id: 'asc' } } },
+    });
+    if (!source) throw new NotFoundException('فاکتور مبنا پیدا نشد.');
+    if (source.kind !== 'SALE')
+      throw new BadRequestException(
+        'مرجوعی فقط برای فاکتور فروش عادی یا نسیه ثبت می‌شود.',
+      );
+    const legacy = await tx.inventoryTransaction.findMany({
+      where: { invoiceId: id, type: 'RETURN' },
+      select: { productId: true, quantity: true },
+    });
+    const returned = await tx.invoiceItem.findMany({
+      where: {
+        sourceItemId: { in: source.items.map((item) => item.id) },
+        invoice: { kind: 'RETURN' },
+      },
+      select: { sourceItemId: true, quantity: true },
+    });
+    const legacyByProduct = new Map<number, number>();
+    const byItem = new Map<number, number>();
+    for (const item of legacy)
+      legacyByProduct.set(
+        item.productId,
+        (legacyByProduct.get(item.productId) ?? 0) + item.quantity,
+      );
+    for (const item of returned)
+      byItem.set(
+        item.sourceItemId!,
+        (byItem.get(item.sourceItemId!) ?? 0) + item.quantity,
+      );
+    return {
+      ...source,
+      items: source.items.map((item) => {
+        const legacyUsed = Math.min(
+          item.quantity,
+          legacyByProduct.get(item.productId) ?? 0,
+        );
+        legacyByProduct.set(
+          item.productId,
+          (legacyByProduct.get(item.productId) ?? 0) - legacyUsed,
+        );
+        return {
+          ...item,
+          returnableQuantity: Math.max(
+            0,
+            item.quantity - legacyUsed - (byItem.get(item.id) ?? 0),
+          ),
+        };
+      }),
+    };
+  }
+
+  async returnableInvoice(id: number) {
+    return this.prisma.$transaction(
+      async (tx) => invoiceResponse(await this.returnableSnapshot(tx, id)),
+      { isolationLevel: 'RepeatableRead' },
+    );
+  }
+
+  async createReturnInvoice(
+    data: CreateInvoiceDto,
+    transaction?: Prisma.TransactionClient,
+  ) {
+    if (
+      !Number.isInteger(data.sourceInvoiceId) ||
+      !data.sourceInvoiceId ||
+      !data.items?.length
+    )
+      throw new BadRequestException(
+        'فاکتور مبنا و حداقل یک قلم مرجوعی را انتخاب کنید.',
+      );
+    if ((data.discount ?? 0) !== 0 || (data.paidAmount ?? 0) !== 0)
+      throw new BadRequestException(
+        'فاکتور مرجوعی قیمت فاکتور مبنا را دارد؛ تخفیف یا پرداخت جدید در آن ثبت نمی‌شود.',
+      );
+    const issueDate =
+      data.issueDate ??
+      new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'Asia/Tehran',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+      }).format(new Date());
+    if (
+      !/^\d{4}-\d{2}-\d{2}$/.test(issueDate) ||
+      !Number.isFinite(new Date(issueDate).getTime()) ||
+      new Date(issueDate).toISOString().slice(0, 10) !== issueDate
+    )
+      throw new BadRequestException('تاریخ صدور معتبر نیست.');
+    try {
+      const work = async (tx: Prisma.TransactionClient) => {
+        const source = await this.returnableSnapshot(tx, data.sourceInvoiceId!);
+        await prepareParty(tx, source.customerId);
+        await tx.invoice.update({
+          where: { id: source.id },
+          data: { number: source.number },
+        });
+        const seen = new Set<number>();
+        const items = data.items.map((line) => {
+          const item = source.items.find(
+            (item) => item.id === line.sourceItemId,
+          );
+          if (
+            !item ||
+            item.productId !== line.productId ||
+            !Number.isInteger(line.quantity) ||
+            line.quantity <= 0 ||
+            line.quantity > item.returnableQuantity ||
+            seen.has(item.id)
+          )
+            throw new BadRequestException(
+              'تعداد مرجوعی از مقدار تحویل‌شده و مرجوع‌نشده بیشتر است یا ردیف مبنا معتبر نیست.',
+            );
+          seen.add(item.id);
+          return {
+            productId: item.productId,
+            sourceItemId: item.id,
+            name: item.name,
+            unit: item.unit,
+            quantity: line.quantity,
+            unitPrice: item.unitPrice,
+            total: item.unitPrice?.mul(line.quantity) ?? null,
+          };
+        });
+        const subtotal = items.reduce(
+          (sum, item) => sum.add(item.total ?? 0),
+          new Prisma.Decimal(0),
+        );
+        if (
+          subtotal
+            .mul(source.currency === 'IRR' ? 1 : 10)
+            .gt(MAX_INVOICE_AMOUNT)
+        )
+          throw new BadRequestException(
+            'مبلغ فاکتور از محدوده مجاز بیشتر است.',
+          );
+        const invoice = await tx.invoice.create({
+          data: {
+            kind: 'RETURN',
+            sourceInvoiceId: source.id,
+            currency: source.currency,
+            saleType: source.saleType,
+            customerId: source.customerId,
+            buyerFirstName: source.buyerFirstName,
+            buyerLastName: source.buyerLastName,
+            buyerNationalId: source.buyerNationalId,
+            buyerPhone: source.buyerPhone,
+            buyerAddress: source.buyerAddress,
+            sellerName: source.sellerName,
+            sellerAddress: source.sellerAddress,
+            sellerPhone: source.sellerPhone,
+            sellerLogoUrl: source.sellerLogoUrl,
+            sellerIban: source.sellerIban,
+            sellerIbanLabel: source.sellerIbanLabel,
+            issueDate: new Date(issueDate + 'T00:00:00Z'),
+            notes: data.notes ?? '',
+            subtotal,
+            total: subtotal,
+            discount: 0,
+            paidAmount: 0,
+            items: { create: items },
+          },
+        });
+        const number = String(invoice.id).padStart(3, '0');
+        await tx.invoice.update({
+          where: { id: invoice.id },
+          data: { number },
+        });
+        for (const item of items) {
+          await tx.product.update({
+            where: { id: item.productId },
+            data: { stock: { increment: item.quantity } },
+          });
+          await tx.inventoryTransaction.create({
+            data: {
+              invoiceId: invoice.id,
+              productId: item.productId,
+              type: 'RETURN',
+              quantity: item.quantity,
+              unitPrice: item.unitPrice,
+              currency: source.currency,
+              description: `مرجوعی فاکتور ${source.number}`,
+            },
+          });
+        }
+        await syncParty(tx, source.customerId, invoice.id, 'RETURN_CREATED');
+        return invoiceResponse(
+          await tx.invoice.findUniqueOrThrow({
+            where: { id: invoice.id },
+            include: { items: true },
+          }),
+        );
+      };
+      return transaction
+        ? await work(transaction)
+        : await this.prisma.$transaction(work, {
+            isolationLevel: 'Serializable',
+            timeout: 15000,
+          });
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2034'
+      )
+        throw new ConflictException(
+          'اطلاعات فاکتور هم‌زمان تغییر کرده است؛ فاکتور مبنا را دوباره دریافت کنید.',
+        );
+      throw error;
+    }
+  }
+
   private async writeInvoice(data: CreateInvoiceDto, id?: number) {
+    const kind = data.kind ?? 'SALE';
+    if (!['SALE', 'PURCHASE', 'RETURN'].includes(kind))
+      throw new BadRequestException('نوع فاکتور معتبر نیست.');
+    if (kind === 'RETURN') {
+      if (id) throw new BadRequestException('فاکتور مرجوعی قابل ویرایش نیست.');
+      return this.createReturnInvoice(data);
+    }
+    if (data.sourceInvoiceId || data.items?.some((item) => item.sourceItemId))
+      throw new BadRequestException('فاکتور مبنا فقط برای مرجوعی است.');
+    if (kind === 'PURCHASE' && (data.saleType === 'CREDIT' || id))
+      throw new BadRequestException(
+        'خرید باید قیمت‌دار باشد و پس از ثبت قابل ویرایش نیست.',
+      );
     if (!Array.isArray(data.items) || data.items.length === 0)
       throw new BadRequestException('حداقل یک کالا به فاکتور اضافه کنید.');
     const inputCurrency = data.currency ?? 'IRR';
@@ -281,7 +627,7 @@ export class InventoryService {
       !Number.isInteger(paidAmount) ||
       paidAmount < 0 ||
       paidAmount > maxAmount ||
-      (!credit && paidAmount > total)
+      (!id && !credit && paidAmount > total)
     ) {
       throw new BadRequestException(
         'جمع، تخفیف یا مبلغ پرداختی فاکتور معتبر نیست.',
@@ -311,7 +657,17 @@ export class InventoryService {
               })
             : null;
           if (id && !previous) throw new NotFoundException('فاکتور پیدا نشد.');
+          if (previous?.customerId && data.customerId == null)
+            data = { ...data, customerId: previous.customerId };
+          if (previous?.customerId && previous.customerId !== data.customerId)
+            throw new BadRequestException(
+              'برای حفظ تاریخچه مالی، طرف حساب فاکتور ثبت‌شده قابل تغییر نیست.',
+            );
+          if (!previous) await prepareParty(tx, data.customerId);
+
           if (previous) {
+            if ((previous.kind ?? 'SALE') !== 'SALE' || kind !== 'SALE')
+              throw new BadRequestException('فقط فاکتور فروش قابل ویرایش است.');
             const factor =
               (previous.currency === 'IRR' ? 1 : 10) /
               (currency === 'IRR' ? 1 : 10);
@@ -345,13 +701,17 @@ export class InventoryService {
               });
             if (unchanged)
               throw new BadRequestException('تغییری در فاکتور ایجاد نشده است.');
+            await prepareParty(tx, data.customerId);
             await tx.invoice.update({
               where: { id: previous.id },
               data: { number: previous.number },
             });
             if (
               await tx.inventoryTransaction.count({
-                where: { invoiceId: id, type: 'RETURN' },
+                where: {
+                  type: 'RETURN',
+                  OR: [{ invoiceId: id }, { invoice: { sourceInvoiceId: id } }],
+                },
               })
             ) {
               throw new ConflictException(
@@ -408,6 +768,7 @@ export class InventoryService {
             buyerPhone: customer?.phone,
             notes: data.notes ?? store?.defaultInvoiceNotes ?? '',
             issueDate: new Date(`${dateText}T00:00:00.000Z`),
+            kind,
             saleType,
             subtotal,
             discount,
@@ -432,22 +793,53 @@ export class InventoryService {
             data: { number },
           });
           for (const item of items) {
+            if (kind === 'PURCHASE') {
+              const buyPrice = item.unitPrice! / (currency === 'IRR' ? 10 : 1);
+              if (
+                !Number.isInteger(buyPrice) ||
+                buyPrice < 0 ||
+                buyPrice > 2_147_483_647
+              )
+                throw new BadRequestException(
+                  'قیمت خرید باید عدد صحیح تومان و در محدوده مجاز باشد.',
+                );
+              const product = products.get(item.productId)!;
+              await tx.product.update({
+                where: { id: item.productId },
+                data: { buyPrice },
+              });
+              if (buyPrice !== product.buyPrice) {
+                await tx.priceHistory.create({
+                  data: {
+                    productId: item.productId,
+                    type: 'SINGLE',
+                    oldBuyPrice: product.buyPrice,
+                    newBuyPrice: buyPrice,
+                    oldSellPrice: product.sellPrice,
+                    newSellPrice: product.sellPrice,
+                  },
+                });
+                product.buyPrice = buyPrice;
+              }
+            }
             const changed = await tx.product.updateMany({
               where: {
                 id: item.productId,
                 isActive: true,
-                stock: { gte: item.quantity },
               },
-              data: { stock: { decrement: item.quantity } },
+              data:
+                kind === 'PURCHASE'
+                  ? { stock: { increment: item.quantity } }
+                  : { stock: { decrement: item.quantity } },
             });
             if (!changed.count)
               throw new BadRequestException(
-                `موجودی «${item.name}» برای این فروش کافی نیست.`,
+                `کالای «${item.name}» دیگر فعال یا قابل ثبت نیست.`,
               );
             await tx.inventoryTransaction.create({
               data: {
                 productId: item.productId,
-                type: 'SALE',
+                type: kind === 'PURCHASE' ? 'PURCHASE' : 'SALE',
                 quantity: item.quantity,
                 unitPrice: item.unitPrice,
                 currency,
@@ -456,6 +848,38 @@ export class InventoryService {
               },
             });
           }
+          await syncParty(
+            tx,
+            customer?.id,
+            invoice.id,
+            previous ? 'INVOICE_UPDATED' : 'INVOICE_CREATED',
+            previous,
+            false,
+          );
+          const cashDelta = rial(paidAmount, currency).sub(
+            previous?.customerId
+              ? rial(previous.paidAmount, previous.currency)
+              : 0,
+          );
+          if (customer && !cashDelta.isZero()) {
+            const incoming =
+              kind !== 'PURCHASE' ? cashDelta.gt(0) : cashDelta.lt(0);
+            await recordCash(
+              tx,
+              customer.id,
+              cashDelta.abs(),
+              incoming ? 'IN' : 'OUT',
+              {
+                invoiceId: invoice.id,
+                description: previous
+                  ? 'اصلاح مبلغ پرداختی هنگام ویرایش فاکتور'
+                  : kind === 'PURCHASE'
+                    ? 'پرداخت اولیه فاکتور خرید'
+                    : 'پرداخت اولیه / بیعانه فاکتور',
+              },
+            );
+          }
+          if (customer) await allocatePartyCash(tx, customer.id);
           return invoiceResponse(
             await tx.invoice.findUniqueOrThrow({
               where: { id: invoice.id },
@@ -493,27 +917,7 @@ export class InventoryService {
           }
         : {};
     const buyerFilters: Prisma.InvoiceWhereInput[] = [];
-    if (query.customerId) {
-      const selectedBuyer = await this.prisma.buyer.findUnique({
-        where: { id: query.customerId },
-      });
-      buyerFilters.push(
-        selectedBuyer
-          ? {
-              OR: [
-                { customerId: selectedBuyer.id },
-                {
-                  buyerFirstName: selectedBuyer.firstName,
-                  buyerLastName: selectedBuyer.lastName,
-                  ...(selectedBuyer.nationalId
-                    ? { buyerNationalId: selectedBuyer.nationalId }
-                    : {}),
-                },
-              ],
-            }
-          : { customerId: query.customerId },
-      );
-    }
+    if (query.customerId) buyerFilters.push({ customerId: query.customerId });
     if (buyerText)
       buyerFilters.push({
         OR: [
@@ -535,8 +939,10 @@ export class InventoryService {
       });
     const where: Prisma.InvoiceWhereInput = {
       ...date,
+      ...(query.kind ? { kind: query.kind } : {}),
       ...(query.openOnly === 'true'
         ? {
+            kind: 'SALE',
             OR: [
               { saleType: 'CREDIT' },
               {
@@ -565,7 +971,8 @@ export class InventoryService {
       where,
       include: { items: true, customer: true },
       orderBy: [{ issueDate: 'desc' }, { id: 'desc' }],
-      take: query.openOnly === 'true' ? undefined : 500,
+      take:
+        query.openOnly === 'true' || query.kind === 'SALE' ? undefined : 500,
     });
     return invoices.map(invoiceResponse);
   }
@@ -598,6 +1005,10 @@ export class InventoryService {
         async (tx) => {
           const invoice = await tx.invoice.findUnique({ where: { id } });
           if (!invoice) throw new NotFoundException('فاکتور پیدا نشد.');
+          if ((invoice.kind ?? 'SALE') !== 'SALE')
+            throw new BadRequestException(
+              'این عملیات فقط برای فاکتور فروش است.',
+            );
           const factor = invoice.currency === 'IRR' ? 1 : 10;
           if (paymentAmount % factor)
             throw new BadRequestException(
@@ -616,6 +1027,19 @@ export class InventoryService {
             throw new BadRequestException(
               'پرداخت جدید از مانده فاکتور بیشتر است.',
             );
+          if (invoice.customerId) {
+            await prepareParty(tx, invoice.customerId);
+            await recordCash(tx, invoice.customerId, paymentAmount, 'IN', {
+              invoiceId: id,
+            });
+            await syncParty(tx, invoice.customerId);
+            return invoiceResponse(
+              await tx.invoice.findUniqueOrThrow({
+                where: { id },
+                include: { items: true },
+              }),
+            );
+          }
           return invoiceResponse(
             await tx.invoice.update({
               where: { id },
@@ -639,12 +1063,14 @@ export class InventoryService {
   }
 
   // Read and finalize against the same quote; concurrent price/payment edits require a fresh preview.
-  private async finalizationQuote(tx: Prisma.TransactionClient, id: number) {
+  async finalizationQuote(tx: Prisma.TransactionClient, id: number) {
     const invoice = await tx.invoice.findUnique({
       where: { id },
       include: { items: { orderBy: { id: 'asc' } } },
     });
     if (!invoice) throw new NotFoundException('فاکتور پیدا نشد.');
+    if ((invoice.kind ?? 'SALE') !== 'SALE')
+      throw new BadRequestException('این عملیات فقط برای فاکتور فروش است.');
     const credit = invoice.saleType === 'CREDIT';
     const factor = invoice.currency === 'IRR' ? 1 : 10;
     const prices = credit
@@ -693,15 +1119,66 @@ export class InventoryService {
       throw new BadRequestException(
         'مبلغ فاکتور یا پرداختی از محدوده مجاز بیشتر است.',
       );
+    let returnedGross = new Prisma.Decimal(0);
+    let relatedReturns: unknown = [];
+    if (invoice.customerId) {
+      const returns = await tx.invoice.findMany({
+        where: { sourceInvoiceId: id, kind: 'RETURN' },
+        include: { items: true },
+      });
+      const legacy = await tx.inventoryTransaction.findMany({
+        where: { invoiceId: id, type: 'RETURN' },
+      });
+      relatedReturns = { returns, legacy };
+      for (const ret of returns)
+        for (const line of ret.items) {
+          const source = items.find((item) => item.id === line.sourceItemId);
+          returnedGross = returnedGross.add(
+            source?.unitPrice.mul(line.quantity) ?? 0,
+          );
+        }
+      const legacyQuantities = new Map<number, number>();
+      for (const movement of legacy)
+        legacyQuantities.set(
+          movement.productId,
+          (legacyQuantities.get(movement.productId) ?? 0) + movement.quantity,
+        );
+      for (const item of items) {
+        const quantity = Math.min(
+          item.quantity,
+          legacyQuantities.get(item.productId) ?? 0,
+        );
+        legacyQuantities.set(
+          item.productId,
+          (legacyQuantities.get(item.productId) ?? 0) - quantity,
+        );
+        returnedGross = returnedGross.add(item.unitPrice.mul(quantity));
+      }
+    }
+    const returnRatio =
+      subtotal > 0
+        ? Prisma.Decimal.min(1, returnedGross.div(subtotal)).toNumber()
+        : 0;
+    const returnedRial =
+      returnedGross.gt(0) && subtotal > 0
+        ? returnedGross
+            .mul(total)
+            .div(subtotal)
+            .toDecimalPlaces(0, Prisma.Decimal.ROUND_HALF_UP)
+        : new Prisma.Decimal(0);
     const token = createHash('sha256')
-      .update(JSON.stringify({ invoice, prices }))
+      .update(JSON.stringify({ invoice, prices, relatedReturns }))
       .digest('hex');
     return {
       token,
       wasCredit: credit,
+      originalInvoice: invoice,
       invoice: {
         ...invoice,
         saleType: 'REGULAR',
+        accountReturnedRial: returnedRial,
+        returnRatio,
+        returnGrossAmount: returnedGross.toNumber(),
         currency: 'IRR',
         subtotal: new Prisma.Decimal(subtotal),
         discount: new Prisma.Decimal(discount),
@@ -715,14 +1192,20 @@ export class InventoryService {
   async invoiceFinalizationPreview(id: number) {
     return this.prisma.$transaction(
       async (tx) => {
+        const target = await tx.invoice.findUnique({ where: { id } });
+        await prepareParty(tx, target?.customerId);
         const quote = await this.finalizationQuote(tx, id);
         return { token: quote.token, invoice: invoiceResponse(quote.invoice) };
       },
-      { isolationLevel: 'RepeatableRead' },
+      { isolationLevel: 'Serializable' },
     );
   }
 
-  async finalizeInvoice(id: number, data: FinalizeInvoiceDto) {
+  async finalizeInvoice(
+    id: number,
+    data: FinalizeInvoiceDto,
+    transaction?: Prisma.TransactionClient,
+  ) {
     const requestedCurrency = data.currency ?? 'IRR';
     if (requestedCurrency === 'TOMAN')
       data = {
@@ -744,89 +1227,130 @@ export class InventoryService {
     )
       throw new BadRequestException('پرداخت جدید معتبر نیست.');
     try {
-      return await this.prisma.$transaction(
-        async (tx) => {
-          const quote = await this.finalizationQuote(tx, id);
-          if (quote.token !== data.token)
-            throw new ConflictException(
-              'قیمت کالا یا اطلاعات فاکتور تغییر کرده است؛ پیش‌نمایش را دوباره دریافت کنید.',
-            );
-          const invoice = quote.invoice;
-          const discount = data.discount ?? invoice.discount.toNumber();
-          if (
-            !Number.isSafeInteger(discount) ||
-            discount < 0 ||
-            discount > invoice.subtotal.toNumber()
-          )
-            throw new BadRequestException(
-              'تخفیف باید بین صفر و جمع اقلام فاکتور باشد.',
-            );
-          const total = invoice.subtotal.toNumber() - discount;
-          const previousPaid = invoice.paidAmount.toNumber();
-          if (
-            data.paymentAmount > Math.max(0, total - previousPaid) ||
-            previousPaid + data.paymentAmount > MAX_INVOICE_AMOUNT
-          )
-            throw new BadRequestException(
-              'پرداخت جدید از مانده فاکتور بیشتر است.',
-            );
-          const paidAmount = previousPaid + data.paymentAmount;
-          const currency =
-            requestedCurrency === 'TOMAN' &&
-            [
-              invoice.subtotal.toNumber(),
-              discount,
+      const work = async (tx: Prisma.TransactionClient) => {
+        const quote = await this.finalizationQuote(tx, id);
+        if (quote.token !== data.token)
+          throw new ConflictException(
+            'قیمت کالا یا اطلاعات فاکتور تغییر کرده است؛ پیش‌نمایش را دوباره دریافت کنید.',
+          );
+        const invoice = quote.invoice;
+        const discount = data.discount ?? invoice.discount.toNumber();
+        if (
+          !Number.isSafeInteger(discount) ||
+          discount < 0 ||
+          discount > invoice.subtotal.toNumber()
+        )
+          throw new BadRequestException(
+            'تخفیف باید بین صفر و جمع اقلام فاکتور باشد.',
+          );
+        const total = invoice.subtotal.toNumber() - discount;
+        const previousPaid = invoice.paidAmount.toNumber();
+        const returned = invoice.subtotal.gt(0)
+          ? Prisma.Decimal.min(
               total,
-              paidAmount,
-              ...invoice.items.flatMap((item) => [
-                item.unitPrice.toNumber(),
-                item.total.toNumber(),
-              ]),
-            ].every((amount) => amount % 10 === 0)
-              ? 'TOMAN'
-              : 'IRR';
-          const factor = currency === 'TOMAN' ? 10 : 1;
-          // Keep sold quantities and snapshots intact, even for archived products or invoices with returns.
-          for (const item of invoice.items) {
-            await tx.invoiceItem.update({
-              where: { id: item.id },
-              data: {
-                unitPrice: item.unitPrice.div(factor),
-                total: item.total.div(factor),
+              new Prisma.Decimal(total)
+                .mul(invoice.returnGrossAmount)
+                .div(invoice.subtotal)
+                .toDecimalPlaces(0, Prisma.Decimal.ROUND_HALF_UP),
+            ).toNumber()
+          : 0;
+        if (
+          data.paymentAmount > Math.max(0, total - returned - previousPaid) ||
+          previousPaid + data.paymentAmount > MAX_INVOICE_AMOUNT
+        )
+          throw new BadRequestException(
+            'پرداخت جدید از مانده فاکتور بیشتر است.',
+          );
+        const paidAmount = previousPaid + data.paymentAmount;
+        const currency =
+          requestedCurrency === 'TOMAN' &&
+          [
+            invoice.subtotal.toNumber(),
+            discount,
+            total,
+            paidAmount,
+            ...invoice.items.flatMap((item) => [
+              item.unitPrice.toNumber(),
+              item.total.toNumber(),
+            ]),
+          ].every((amount) => amount % 10 === 0)
+            ? 'TOMAN'
+            : 'IRR';
+        const factor = currency === 'TOMAN' ? 10 : 1;
+        // Keep sold quantities and snapshots intact, even for archived products or invoices with returns.
+        for (const item of invoice.items) {
+          await tx.invoiceItem.update({
+            where: { id: item.id },
+            data: {
+              unitPrice: item.unitPrice.div(factor),
+              total: item.total.div(factor),
+            },
+          });
+          if (quote.wasCredit)
+            await tx.inventoryTransaction.updateMany({
+              where: {
+                invoiceId: id,
+                productId: item.productId,
+                type: 'SALE',
               },
+              data: { unitPrice: item.unitPrice.div(factor), currency },
             });
-            if (quote.wasCredit)
-              await tx.inventoryTransaction.updateMany({
-                where: {
-                  invoiceId: id,
-                  productId: item.productId,
-                  type: 'SALE',
-                },
-                data: { unitPrice: item.unitPrice.div(factor), currency },
-              });
-          }
-          return invoiceResponse(
+        }
+        const result = await tx.invoice.update({
+          where: { id },
+          data: {
+            saleType: 'REGULAR',
+            currency,
+            subtotal: invoice.subtotal.div(factor),
+            discount: discount / factor,
+            total: total / factor,
+            paidAmount: paidAmount / factor,
+            settlement: quote.wasCredit
+              ? paidAmount >= total
+                ? 'CASH'
+                : 'INSTALLMENT'
+              : invoice.settlement,
+          },
+          include: { items: true },
+        });
+        if (result.customerId) {
+          await syncParty(
+            tx,
+            result.customerId,
+            id,
+            'FINALIZED',
+            quote.originalInvoice,
+            false,
+          );
+          if (data.paymentAmount > 0)
+            await recordCash(tx, result.customerId, data.paymentAmount, 'IN', {
+              invoiceId: id,
+            });
+          await allocatePartyCash(tx, result.customerId);
+          const allocated = await tx.invoice.findUniqueOrThrow({
+            where: { id },
+            include: { items: true },
+          });
+          if (quote.wasCredit) {
+            const covered = rial(allocated.paidAmount, allocated.currency)
+              .add(allocated.accountReturnedRial)
+              .gte(rial(allocated.total, allocated.currency));
+            allocated.settlement = covered ? 'CASH' : 'INSTALLMENT';
             await tx.invoice.update({
               where: { id },
-              data: {
-                saleType: 'REGULAR',
-                currency,
-                subtotal: invoice.subtotal.div(factor),
-                discount: discount / factor,
-                total: total / factor,
-                paidAmount: paidAmount / factor,
-                settlement: quote.wasCredit
-                  ? paidAmount >= total
-                    ? 'CASH'
-                    : 'INSTALLMENT'
-                  : invoice.settlement,
-              },
-              include: { items: true },
-            }),
-          );
-        },
-        { isolationLevel: 'Serializable', timeout: 15000 },
-      );
+              data: { settlement: allocated.settlement },
+            });
+          }
+          return invoiceResponse(allocated);
+        }
+        return invoiceResponse(result);
+      };
+      return transaction
+        ? await work(transaction)
+        : await this.prisma.$transaction(work, {
+            isolationLevel: 'Serializable',
+            timeout: 15000,
+          });
     } catch (error) {
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&

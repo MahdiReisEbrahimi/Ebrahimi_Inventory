@@ -11,6 +11,7 @@ import {
   Query,
 } from '@nestjs/common';
 import {
+  AssignInvoicePartyDto,
   BuyerDto,
   CreateInvoiceDto,
   CreateMovementDto,
@@ -54,6 +55,11 @@ export class InventoryController {
   @Get('invoices/:id') invoice(@Param('id', ParseIntPipe) id: number) {
     return this.inventory.invoice(id);
   }
+  @Get('invoices/:id/returnable') returnableInvoice(
+    @Param('id', ParseIntPipe) id: number,
+  ) {
+    return this.inventory.returnableInvoice(id);
+  }
   @Post('invoices') createInvoice(@Body() data: CreateInvoiceDto) {
     return this.inventory.createInvoice(data);
   }
@@ -62,6 +68,12 @@ export class InventoryController {
     @Body() data: CreateInvoiceDto,
   ) {
     return this.inventory.updateInvoice(id, data);
+  }
+  @Patch('invoices/:id/party') assignParty(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() data: AssignInvoicePartyDto,
+  ) {
+    return this.inventory.assignInvoiceParty(id, data.customerId);
   }
   @Patch('invoices/:id/payment') updatePayment(
     @Param('id', ParseIntPipe) id: number,

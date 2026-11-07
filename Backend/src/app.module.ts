@@ -1,3 +1,5 @@
+import { AccountsController } from './accounts/accounts.controller.js';
+import { AccountsService } from './accounts/accounts.service.js';
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { AppController } from './app.controller.js';
@@ -18,7 +20,19 @@ import { InventoryService } from './inventory/inventory.service.js';
     }),
     PrismaModule,
   ],
-  controllers: [AppController, CategoriesController, ProductsController, InventoryController],
-  providers: [AppService, CategoriesService, ProductsService, InventoryService],
+  controllers: [
+    AccountsController,
+    AppController,
+    CategoriesController,
+    ProductsController,
+    InventoryController,
+  ],
+  providers: [
+    AccountsService,
+    AppService,
+    CategoriesService,
+    ProductsService,
+    InventoryService,
+  ],
 })
 export class AppModule {}

@@ -249,6 +249,7 @@ export type BuyerWhereInput = {
   createdAt?: Prisma.DateTimeFilter<"Buyer"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Buyer"> | Date | string
   invoices?: Prisma.InvoiceListRelationFilter
+  ledgerEntries?: Prisma.PartyLedgerEntryListRelationFilter
 }
 
 export type BuyerOrderByWithRelationInput = {
@@ -262,6 +263,7 @@ export type BuyerOrderByWithRelationInput = {
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   invoices?: Prisma.InvoiceOrderByRelationAggregateInput
+  ledgerEntries?: Prisma.PartyLedgerEntryOrderByRelationAggregateInput
 }
 
 export type BuyerWhereUniqueInput = Prisma.AtLeast<{
@@ -278,6 +280,7 @@ export type BuyerWhereUniqueInput = Prisma.AtLeast<{
   createdAt?: Prisma.DateTimeFilter<"Buyer"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Buyer"> | Date | string
   invoices?: Prisma.InvoiceListRelationFilter
+  ledgerEntries?: Prisma.PartyLedgerEntryListRelationFilter
 }, "id" | "nationalId">
 
 export type BuyerOrderByWithAggregationInput = {
@@ -322,6 +325,7 @@ export type BuyerCreateInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   invoices?: Prisma.InvoiceCreateNestedManyWithoutCustomerInput
+  ledgerEntries?: Prisma.PartyLedgerEntryCreateNestedManyWithoutBuyerInput
 }
 
 export type BuyerUncheckedCreateInput = {
@@ -335,6 +339,7 @@ export type BuyerUncheckedCreateInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutCustomerInput
+  ledgerEntries?: Prisma.PartyLedgerEntryUncheckedCreateNestedManyWithoutBuyerInput
 }
 
 export type BuyerUpdateInput = {
@@ -347,6 +352,7 @@ export type BuyerUpdateInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   invoices?: Prisma.InvoiceUpdateManyWithoutCustomerNestedInput
+  ledgerEntries?: Prisma.PartyLedgerEntryUpdateManyWithoutBuyerNestedInput
 }
 
 export type BuyerUncheckedUpdateInput = {
@@ -360,6 +366,7 @@ export type BuyerUncheckedUpdateInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutCustomerNestedInput
+  ledgerEntries?: Prisma.PartyLedgerEntryUncheckedUpdateManyWithoutBuyerNestedInput
 }
 
 export type BuyerCreateManyInput = {
@@ -446,6 +453,11 @@ export type BuyerNullableScalarRelationFilter = {
   isNot?: Prisma.BuyerWhereInput | null
 }
 
+export type BuyerScalarRelationFilter = {
+  is?: Prisma.BuyerWhereInput
+  isNot?: Prisma.BuyerWhereInput
+}
+
 export type BuyerCreateNestedOneWithoutInvoicesInput = {
   create?: Prisma.XOR<Prisma.BuyerCreateWithoutInvoicesInput, Prisma.BuyerUncheckedCreateWithoutInvoicesInput>
   connectOrCreate?: Prisma.BuyerCreateOrConnectWithoutInvoicesInput
@@ -462,6 +474,20 @@ export type BuyerUpdateOneWithoutInvoicesNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.BuyerUpdateToOneWithWhereWithoutInvoicesInput, Prisma.BuyerUpdateWithoutInvoicesInput>, Prisma.BuyerUncheckedUpdateWithoutInvoicesInput>
 }
 
+export type BuyerCreateNestedOneWithoutLedgerEntriesInput = {
+  create?: Prisma.XOR<Prisma.BuyerCreateWithoutLedgerEntriesInput, Prisma.BuyerUncheckedCreateWithoutLedgerEntriesInput>
+  connectOrCreate?: Prisma.BuyerCreateOrConnectWithoutLedgerEntriesInput
+  connect?: Prisma.BuyerWhereUniqueInput
+}
+
+export type BuyerUpdateOneRequiredWithoutLedgerEntriesNestedInput = {
+  create?: Prisma.XOR<Prisma.BuyerCreateWithoutLedgerEntriesInput, Prisma.BuyerUncheckedCreateWithoutLedgerEntriesInput>
+  connectOrCreate?: Prisma.BuyerCreateOrConnectWithoutLedgerEntriesInput
+  upsert?: Prisma.BuyerUpsertWithoutLedgerEntriesInput
+  connect?: Prisma.BuyerWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.BuyerUpdateToOneWithWhereWithoutLedgerEntriesInput, Prisma.BuyerUpdateWithoutLedgerEntriesInput>, Prisma.BuyerUncheckedUpdateWithoutLedgerEntriesInput>
+}
+
 export type BuyerCreateWithoutInvoicesInput = {
   firstName: string
   lastName: string
@@ -471,6 +497,7 @@ export type BuyerCreateWithoutInvoicesInput = {
   notes?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  ledgerEntries?: Prisma.PartyLedgerEntryCreateNestedManyWithoutBuyerInput
 }
 
 export type BuyerUncheckedCreateWithoutInvoicesInput = {
@@ -483,6 +510,7 @@ export type BuyerUncheckedCreateWithoutInvoicesInput = {
   notes?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  ledgerEntries?: Prisma.PartyLedgerEntryUncheckedCreateNestedManyWithoutBuyerInput
 }
 
 export type BuyerCreateOrConnectWithoutInvoicesInput = {
@@ -510,6 +538,7 @@ export type BuyerUpdateWithoutInvoicesInput = {
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  ledgerEntries?: Prisma.PartyLedgerEntryUpdateManyWithoutBuyerNestedInput
 }
 
 export type BuyerUncheckedUpdateWithoutInvoicesInput = {
@@ -522,6 +551,73 @@ export type BuyerUncheckedUpdateWithoutInvoicesInput = {
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  ledgerEntries?: Prisma.PartyLedgerEntryUncheckedUpdateManyWithoutBuyerNestedInput
+}
+
+export type BuyerCreateWithoutLedgerEntriesInput = {
+  firstName: string
+  lastName: string
+  nationalId?: string | null
+  phone?: string | null
+  address?: string | null
+  notes?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  invoices?: Prisma.InvoiceCreateNestedManyWithoutCustomerInput
+}
+
+export type BuyerUncheckedCreateWithoutLedgerEntriesInput = {
+  id?: number
+  firstName: string
+  lastName: string
+  nationalId?: string | null
+  phone?: string | null
+  address?: string | null
+  notes?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutCustomerInput
+}
+
+export type BuyerCreateOrConnectWithoutLedgerEntriesInput = {
+  where: Prisma.BuyerWhereUniqueInput
+  create: Prisma.XOR<Prisma.BuyerCreateWithoutLedgerEntriesInput, Prisma.BuyerUncheckedCreateWithoutLedgerEntriesInput>
+}
+
+export type BuyerUpsertWithoutLedgerEntriesInput = {
+  update: Prisma.XOR<Prisma.BuyerUpdateWithoutLedgerEntriesInput, Prisma.BuyerUncheckedUpdateWithoutLedgerEntriesInput>
+  create: Prisma.XOR<Prisma.BuyerCreateWithoutLedgerEntriesInput, Prisma.BuyerUncheckedCreateWithoutLedgerEntriesInput>
+  where?: Prisma.BuyerWhereInput
+}
+
+export type BuyerUpdateToOneWithWhereWithoutLedgerEntriesInput = {
+  where?: Prisma.BuyerWhereInput
+  data: Prisma.XOR<Prisma.BuyerUpdateWithoutLedgerEntriesInput, Prisma.BuyerUncheckedUpdateWithoutLedgerEntriesInput>
+}
+
+export type BuyerUpdateWithoutLedgerEntriesInput = {
+  firstName?: Prisma.StringFieldUpdateOperationsInput | string
+  lastName?: Prisma.StringFieldUpdateOperationsInput | string
+  nationalId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  invoices?: Prisma.InvoiceUpdateManyWithoutCustomerNestedInput
+}
+
+export type BuyerUncheckedUpdateWithoutLedgerEntriesInput = {
+  id?: Prisma.IntFieldUpdateOperationsInput | number
+  firstName?: Prisma.StringFieldUpdateOperationsInput | string
+  lastName?: Prisma.StringFieldUpdateOperationsInput | string
+  nationalId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutCustomerNestedInput
 }
 
 
@@ -531,10 +627,12 @@ export type BuyerUncheckedUpdateWithoutInvoicesInput = {
 
 export type BuyerCountOutputType = {
   invoices: number
+  ledgerEntries: number
 }
 
 export type BuyerCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   invoices?: boolean | BuyerCountOutputTypeCountInvoicesArgs
+  ledgerEntries?: boolean | BuyerCountOutputTypeCountLedgerEntriesArgs
 }
 
 /**
@@ -554,6 +652,13 @@ export type BuyerCountOutputTypeCountInvoicesArgs<ExtArgs extends runtime.Types.
   where?: Prisma.InvoiceWhereInput
 }
 
+/**
+ * BuyerCountOutputType without action
+ */
+export type BuyerCountOutputTypeCountLedgerEntriesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.PartyLedgerEntryWhereInput
+}
+
 
 export type BuyerSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
@@ -566,6 +671,7 @@ export type BuyerSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = 
   createdAt?: boolean
   updatedAt?: boolean
   invoices?: boolean | Prisma.Buyer$invoicesArgs<ExtArgs>
+  ledgerEntries?: boolean | Prisma.Buyer$ledgerEntriesArgs<ExtArgs>
   _count?: boolean | Prisma.BuyerCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["buyer"]>
 
@@ -608,6 +714,7 @@ export type BuyerSelectScalar = {
 export type BuyerOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "firstName" | "lastName" | "nationalId" | "phone" | "address" | "notes" | "createdAt" | "updatedAt", ExtArgs["result"]["buyer"]>
 export type BuyerInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   invoices?: boolean | Prisma.Buyer$invoicesArgs<ExtArgs>
+  ledgerEntries?: boolean | Prisma.Buyer$ledgerEntriesArgs<ExtArgs>
   _count?: boolean | Prisma.BuyerCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type BuyerIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {}
@@ -617,6 +724,7 @@ export type $BuyerPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs 
   name: "Buyer"
   objects: {
     invoices: Prisma.$InvoicePayload<ExtArgs>[]
+    ledgerEntries: Prisma.$PartyLedgerEntryPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: number
@@ -1023,6 +1131,7 @@ readonly fields: BuyerFieldRefs;
 export interface Prisma__BuyerClient<T, Null = never, ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
   readonly [Symbol.toStringTag]: "PrismaPromise"
   invoices<T extends Prisma.Buyer$invoicesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Buyer$invoicesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$InvoicePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  ledgerEntries<T extends Prisma.Buyer$ledgerEntriesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Buyer$ledgerEntriesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$PartyLedgerEntryPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -1475,6 +1584,30 @@ export type Buyer$invoicesArgs<ExtArgs extends runtime.Types.Extensions.Internal
   take?: number
   skip?: number
   distinct?: Prisma.InvoiceScalarFieldEnum | Prisma.InvoiceScalarFieldEnum[]
+}
+
+/**
+ * Buyer.ledgerEntries
+ */
+export type Buyer$ledgerEntriesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the PartyLedgerEntry
+   */
+  select?: Prisma.PartyLedgerEntrySelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the PartyLedgerEntry
+   */
+  omit?: Prisma.PartyLedgerEntryOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.PartyLedgerEntryInclude<ExtArgs> | null
+  where?: Prisma.PartyLedgerEntryWhereInput
+  orderBy?: Prisma.PartyLedgerEntryOrderByWithRelationInput | Prisma.PartyLedgerEntryOrderByWithRelationInput[]
+  cursor?: Prisma.PartyLedgerEntryWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.PartyLedgerEntryScalarFieldEnum | Prisma.PartyLedgerEntryScalarFieldEnum[]
 }
 
 /**

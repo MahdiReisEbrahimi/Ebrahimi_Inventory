@@ -74,8 +74,8 @@ const props = defineProps<{ product: Product; type: 'PURCHASE' | 'RETURN' }>()
 const emit = defineEmits<{ close: [saved: boolean] }>()
 const form = reactive({ quantity: 1 })
 const pricesUnchanged = ref(false)
-const buyPriceText = ref('')
-const sellPriceText = ref('')
+const buyPriceText = ref(number(props.product.buyPrice))
+const sellPriceText = ref(number(props.product.sellPrice))
 const saving = ref(false)
 
 async function receive() {

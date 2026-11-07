@@ -165,7 +165,7 @@
 </template>
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import {
   ChevronLeft,
   ChevronRight,
@@ -197,6 +197,7 @@ import { number } from '@/lib/format'
 import { toast } from '@/lib/toast'
 import type { Product, Category } from '@/types'
 const route = useRoute()
+const router = useRouter()
 const items = ref<Product[]>([]),
   categories = ref<Category[]>([])
 const loading = ref(true),
@@ -288,8 +289,12 @@ function handleAction({ actionName, row }: { actionName: string; row: Product })
   if (actionName === 'view') detailsOpen.value = true
   if (actionName === 'edit') formOpen.value = true
   if (actionName === 'delete') deleteOpen.value = true
-  if (actionName === 'purchase' || actionName === 'return') {
-    stockType.value = actionName === 'purchase' ? 'PURCHASE' : 'RETURN'
+  if (actionName === 'return') {
+    void router.push({ path: '/invoices', query: { kind: 'RETURN' } })
+    return
+  }
+  if (actionName === 'purchase') {
+    stockType.value = 'PURCHASE'
     stockOpen.value = true
   }
 }

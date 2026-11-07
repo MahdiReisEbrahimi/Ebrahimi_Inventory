@@ -44,7 +44,7 @@ const router = createRouter({
     {
       path: '/invoices',
       component: () => import('@/views/InvoicesView.vue'),
-      meta: { title: 'فاکتورهای فروش' },
+      meta: { title: 'فاکتورها' },
     },
     {
       path: '/open-accounts',

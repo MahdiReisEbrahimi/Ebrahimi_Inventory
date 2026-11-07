@@ -147,6 +147,34 @@ test('invoice preview and print share the table footer on the final page', async
         assert.match(tomanHtml, /۲٬۰۰۰ ریال/)
         assert.match(tomanHtml, /۷٬۰۰۰ ریال/)
         assert.doesNotMatch(tomanHtml, /تومان/)
+        const purchaseHtml = await renderToString(
+          h(Paper, {
+            invoice: {
+              ...invoice,
+              kind: 'PURCHASE',
+              sellerName: 'فروشگاه خریدار',
+              buyerFirstName: 'تأمین‌کننده',
+              buyerLastName: 'نمونه',
+            },
+            settings: null,
+          }),
+        )
+        assert.match(purchaseHtml, /فاکتور خرید کالا/)
+        const purchaseParties = [
+          ...purchaseHtml.matchAll(/<table class="paper-parties"[^]*?<\/table>/g),
+        ][0]![0]
+        const purchaseRows = [...purchaseParties.matchAll(/<tr\b[^>]*>([^]*?)<\/tr>/g)]
+        assert.match(purchaseRows[0]![1]!, /تأمین‌کننده/)
+        assert.match(purchaseRows[1]![1]!, /فروشگاه خریدار/)
+        const returnHtml = await renderToString(
+          h(Paper, {
+            invoice: { ...invoice, kind: 'RETURN', sourceInvoiceId: 113, discount: 0 },
+            settings: null,
+          }),
+        )
+        assert.match(returnHtml, /فاکتور مرجوعی فروش/)
+        assert.match(returnHtml, /مربوط به فاکتور ۱۱۳/)
+        assert.doesNotMatch(returnHtml, /مانده قابل پرداخت/)
         const creditHtml = await renderToString(
           h(Paper, {
             invoice: {

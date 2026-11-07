@@ -8,11 +8,15 @@
           <input
             v-model="search"
             type="search"
-            placeholder="جست‌وجوی طرف حساب یا شماره فاکتور…"
+            placeholder="جست‌وجوی نام یا تلفن طرف حساب…"
             aria-label="جست‌وجوی حساب‌های باز"
           />
         </label>
-        <span v-if="!loading && !error" class="muted">{{ number(filtered.length) }} حساب باز</span>
+        <label
+          ><input v-model="showAll" type="checkbox" @change="load" /> نمایش حساب‌های
+          تسویه‌شده</label
+        >
+        <span v-if="!loading && !error" class="muted">{{ number(filtered.length) }} طرف حساب</span>
         <Button
           variant="ghost"
           size="icon"
@@ -23,7 +27,12 @@
         /></Button>
       </div>
       <p class="accounts-notice muted">
-        فاکتورهای نسیه و فروش‌های عادی دارای مانده بدهی در این صفحه نمایش داده می‌شوند.
+        هر کارت، حساب تجمیعی یک طرف حساب است؛ همه فاکتورها، پرداخت‌ها و مرجوعی‌ها در همین حساب
+        محاسبه می‌شوند.
+      </p>
+      <p v-if="unassignedCount" class="notice">
+        {{ number(unassignedCount) }} فاکتور قدیمی به طرف حساب ثبت‌شده متصل نیستند و در حساب‌های
+        تجمیعی محاسبه نمی‌شوند؛ طرف حساب این فاکتورها را در بایگانی مشخص کنید.
       </p>
     </section>
     <div v-if="loading" class="panel table-loading no-print" role="status">
@@ -39,392 +48,133 @@
       <Button variant="outline" @click="load">تلاش دوباره</Button>
     </EmptyState>
     <div v-else-if="filtered.length" class="accounts-grid no-print">
-      <article v-for="invoice in filtered" :key="invoice.id" class="panel account-card">
+      <article v-for="account in filtered" :key="account.buyer.id" class="panel account-card">
         <div class="account-card__heading">
           <span class="account-mark"><UserRound :size="24" /></span>
           <div>
-            <h2>
-              {{
-                [invoice.buyerFirstName, invoice.buyerLastName].filter(Boolean).join(' ') ||
-                'طرف حساب بدون نام'
-              }}
-            </h2>
+            <h2>{{ account.buyer.firstName }} {{ account.buyer.lastName }}</h2>
             <p class="account-reference">
-              فاکتور {{ invoice.number }} · {{ invoiceSaleLabel(invoice) }}
+              {{ account.role === 'SUPPLIER' ? 'تأمین‌کننده' : 'مشتری' }} ·
+              {{ number(account.invoiceCount) }} فاکتور
             </p>
           </div>
         </div>
         <dl class="account-amounts">
           <div>
-            <dt>مبلغ نهایی</dt>
-            <dd>{{ invoice.saleType === 'CREDIT' ? 'قیمت‌گذاری نشده' : money(invoice.total) }}</dd>
+            <dt>مبلغ خالص فاکتورها</dt>
+            <dd>{{ money(account.total) }}</dd>
           </div>
           <div>
-            <dt>{{ invoice.saleType === 'CREDIT' ? 'پرداختی / بیعانه' : 'پرداختی' }}</dt>
-            <dd>{{ money(invoice.paidAmount || 0) }}</dd>
+            <dt>خالص پرداختی</dt>
+            <dd>{{ money(account.paid) }}</dd>
+          </div>
+          <div>
+            <dt>
+              {{
+                account.balance > 0
+                  ? 'بدهکار به فروشگاه'
+                  : account.balance < 0
+                    ? 'بستانکار از فروشگاه'
+                    : 'تسویه'
+              }}
+            </dt>
+            <dd>{{ money(Math.abs(account.balance)) }}</dd>
           </div>
         </dl>
+        <p v-if="account.pendingCount" class="muted">
+          {{ number(account.pendingCount) }} فاکتور نسیه قیمت‌گذاری نشده؛ مبلغ آن در مانده لحاظ نشده
+          است.
+        </p>
         <div class="account-card__actions">
-          <Button
-            size="sm"
-            variant="outline"
-            :disabled="saving || !!finalizationLoading"
-            @click="activeInvoice = invoice"
-            ><Eye :size="16" />مشاهده</Button
+          <Button size="sm" variant="outline" @click="openAccount(account)"
+            ><Eye :size="16" />مشاهده و تاریخچه / معین</Button
           >
-          <Button
-            size="sm"
-            variant="outline"
-            :disabled="saving || !!finalizationLoading"
-            @click="openPayment(invoice)"
+          <Button size="sm" variant="outline" @click="openAccount(account, 'PAYMENT')"
             ><HandCoins :size="16" />ثبت پرداخت</Button
           >
           <Button
+            v-if="account.role === 'CUSTOMER'"
             size="sm"
-            class="account-card__finalize"
-            :disabled="saving || !!finalizationLoading"
-            @click="openFinalization(invoice)"
+            variant="outline"
+            @click="openAccount(account, 'RETURN')"
+            >مرجوعی صورت‌حساب</Button
           >
-            <FileCheck :size="16" />{{
-              finalizationLoading === invoice.id ? 'در حال محاسبه…' : 'نهایی‌کردن فاکتور'
-            }}
-          </Button>
+          <Button size="sm" @click="openAccount(account, 'FINALIZE')">نهایی‌کردن صورت‌حساب</Button>
         </div>
       </article>
     </div>
     <EmptyState
       v-else
       class="panel no-print"
-      title="حساب بازی پیدا نشد"
-      :description="
-        search.trim()
-          ? 'عبارت جست‌وجو را تغییر دهید.'
-          : 'فاکتور نسیه یا فروش عادی تسویه‌نشده‌ای وجود ندارد.'
-      "
+      title="حسابی پیدا نشد"
+      description="عبارت جست‌وجو یا نمایش حساب‌های تسویه‌شده را تغییر دهید."
     />
-    <AppDialog
-      :open="!!paymentInvoice"
-      title="ثبت پرداخت جدید"
-      width="480px"
-      @update:open="!$event && !saving && (paymentInvoice = null)"
-    >
-      <form :id="paymentFormId" @submit.prevent="savePayment">
-        <p>
-          فاکتور {{ paymentInvoice?.number }} · {{ paymentInvoice?.buyerFirstName }}
-          {{ paymentInvoice?.buyerLastName }}
-        </p>
-        <label class="form-field"
-          ><span>{{
-            paymentInvoice?.saleType === 'CREDIT'
-              ? 'بیعانه جدید (تومان)'
-              : 'مبلغ پرداخت جدید (تومان)'
-          }}</span>
-          <MoneyInput v-model="paidText" :disabled="saving" />
-        </label>
-        <p class="muted">فقط مبلغ این پرداخت را وارد کنید؛ به مجموع پرداختی مشتری اضافه می‌شود.</p>
-        <DialogActions>
-          <Button
-            v-if="paymentInvoice?.saleType !== 'CREDIT'"
-            variant="outline"
-            :disabled="saving"
-            @click="
-              paidText = number(
-                Math.max(0, (paymentInvoice?.total || 0) - (paymentInvoice?.paidAmount || 0)),
-              )
-            "
-            >تسویه کامل</Button
-          >
-          <Button :form="paymentFormId" type="submit" :disabled="saving">{{
-            saving ? 'در حال ثبت…' : 'ذخیره پرداخت'
-          }}</Button>
-        </DialogActions>
-      </form>
-    </AppDialog>
-    <AppDialog
-      :open="!!finalization"
-      title="نهایی‌کردن فاکتور و بررسی مانده حساب"
-      width="720px"
-      @update:open="!$event && !saving && (finalization = null)"
-    >
-      <form v-if="finalization" :id="finalizationFormId" @submit.prevent="finalize">
-        <p>
-          فاکتور {{ finalization.invoice.number }} · {{ finalization.invoice.buyerFirstName }}
-          {{ finalization.invoice.buyerLastName }}
-        </p>
-        <p v-if="finalizationWasCredit" class="muted">
-          اقلام زیر با قیمت فروش فعلی کالاها محاسبه شده‌اند. پس از ثبت، فاکتور به فروش عادی تبدیل
-          می‌شود.
-        </p>
-        <div class="table-scroll">
-          <table class="data-table">
-            <thead>
-              <tr>
-                <th>کالا</th>
-                <th>تعداد</th>
-                <th>فی (تومان)</th>
-                <th>جمع (تومان)</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="item in finalization.invoice.items" :key="item.id">
-                <td>{{ item.name }}</td>
-                <td>{{ number(item.quantity) }}</td>
-                <td>{{ number(item.unitPrice || 0) }}</td>
-                <td>{{ number(item.total || 0) }}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-        <dl class="finalization-summary">
-          <div>
-            <dt>جمع اقلام</dt>
-            <dd>{{ money(finalization.invoice.subtotal || 0) }}</dd>
-          </div>
-          <div>
-            <dt><label :for="finalDiscountId">اعمال تخفیف (تومان)</label></dt>
-            <dd>
-              <MoneyInput
-                :id="finalDiscountId"
-                v-model="finalDiscountText"
-                :disabled="saving"
-                aria-label="اعمال تخفیف به تومان"
-              />
-            </dd>
-          </div>
-          <div>
-            <dt>مبلغ نهایی فاکتور</dt>
-            <dd>{{ money(finalTotal) }}</dd>
-          </div>
-          <div>
-            <dt>کسر پرداختی‌ها / بیعانه قبلی</dt>
-            <dd>{{ money(finalization.invoice.paidAmount || 0) }}</dd>
-          </div>
-        </dl>
-        <label class="form-field"
-          ><span>پرداخت جدید هنگام نهایی‌کردن (تومان)</span
-          ><MoneyInput v-model="finalPaymentText" :disabled="saving"
-        /></label>
-        <Button
-          variant="ghost"
-          :disabled="saving"
-          @click="
-            finalPaymentText = number(
-              Math.max(0, finalTotal - (finalization.invoice.paidAmount || 0)),
-            )
-          "
-          >پرداخت تمام مانده</Button
-        >
-        <p>
-          <strong>مانده پس از ثبت: {{ money(Math.max(0, finalBalance)) }}</strong>
-        </p>
-        <p v-if="finalBalance < 0">بستانکاری مشتری: {{ money(-finalBalance) }}</p>
-        <p class="muted">
-          {{
-            finalBalance <= 0
-              ? 'حساب بسته و از حساب‌های باز خارج می‌شود.'
-              : 'فاکتور عادی با مانده بدهی در حساب‌های باز باقی می‌ماند.'
-          }}
-        </p>
-        <DialogActions>
-          <Button variant="outline" :disabled="saving" @click="finalization = null">انصراف</Button>
-          <Button
-            variant="outline"
-            :disabled="saving || !!finalizationLoading"
-            @click="refreshFinalization"
-            >به‌روزرسانی محاسبه</Button
-          >
-          <Button
-            :form="finalizationFormId"
-            type="submit"
-            :disabled="saving || !!finalizationLoading"
-            >{{ saving ? 'در حال ثبت…' : 'ثبت و نمایش فاکتور نهایی' }}</Button
-          >
-        </DialogActions>
-      </form>
-    </AppDialog>
-    <AppDialog
-      :open="!!activeInvoice"
-      title="پیش‌نمایش فاکتور"
-      width="210mm"
-      content-class="invoice-preview-dialog"
-      @update:open="!$event && (activeInvoice = null)"
-    >
-      <InvoicePaper v-if="activeInvoice" ref="paper" :invoice="activeInvoice" :settings="null" />
-      <DialogActions
-        ><Button variant="outline" @click="printInvoice">چاپ</Button
-        ><Button @click="activeInvoice = null">بازگشت</Button></DialogActions
-      >
-    </AppDialog>
+    <PartyAccountDialog
+      :buyer-id="selectedBuyer"
+      :payment="paymentOnOpen"
+      :action="actionOnOpen"
+      @close="selectedBuyer = null"
+      @changed="load"
+    />
   </div>
 </template>
 <script setup lang="ts">
-import { computed, onMounted, ref, useId } from 'vue'
-import { Eye, HandCoins, FileCheck, RefreshCw, Search, UserRound } from '@lucide/vue'
+import { computed, onMounted, ref } from 'vue'
+import { useRoute } from 'vue-router'
+import { Eye, HandCoins, RefreshCw, Search, UserRound } from '@lucide/vue'
 import PageHeader from '@/components/ui/PageHeader.vue'
 import Button from '@/components/ui/Button.vue'
-import AppDialog from '@/components/ui/AppDialog.vue'
-import DialogActions from '@/components/ui/DialogActions.vue'
 import EmptyState from '@/components/ui/EmptyState.vue'
-import MoneyInput from '@/components/ui/MoneyInput.vue'
-import InvoicePaper from '@/components/InvoicePaper.vue'
-import { inventoryApi } from '@/services/inventory'
-import { invoiceInTomans, invoiceSaleLabel } from '@/lib/invoicePresentation'
-import { money, number, normalizeNumberText, parseNumber } from '@/lib/format'
-import { isInvoiceAmount, MAX_INVOICE_AMOUNT, roundToman } from '@/lib/invoice'
-import { toast } from '@/lib/toast'
-import type { Invoice } from '@/types'
-const finalizationFormId = useId()
-const finalization = ref<{ token: string; invoice: Invoice } | null>(null)
-const finalizationWasCredit = ref(false)
-const finalizationLoading = ref<number>()
-const finalDiscountId = useId()
-const finalDiscountText = ref('۰')
-const finalDiscount = computed(() =>
-  finalDiscountText.value.trim() ? parseNumber(finalDiscountText.value) : 0,
-)
-const finalTotal = computed(() =>
-  roundToman((finalization.value?.invoice.subtotal || 0) - finalDiscount.value),
-)
-const finalPaymentText = ref('۰')
-const finalPayment = computed(() =>
-  finalPaymentText.value.trim() ? parseNumber(finalPaymentText.value) : 0,
-)
-const finalBalance = computed(() =>
-  finalization.value
-    ? roundToman(
-        finalTotal.value - (finalization.value.invoice.paidAmount || 0) - finalPayment.value,
-      )
-    : 0,
-)
-const paymentFormId = useId()
-const invoices = ref<Invoice[]>([])
+import PartyAccountDialog from '@/components/PartyAccountDialog.vue'
+import { accountsApi } from '@/services/accounts'
+import { money, number, normalizeNumberText } from '@/lib/format'
+import type { PartyAccount } from '@/types'
+const route = useRoute()
+const selectedBuyer = ref<number | null>(null),
+  paymentOnOpen = ref(false),
+  actionOnOpen = ref<'RETURN' | 'FINALIZE' | null>(null)
+const showAll = ref(false),
+  unassignedCount = ref(0),
+  accounts = ref<PartyAccount[]>([])
 const loading = ref(true),
-  saving = ref(false),
   error = ref(''),
-  search = ref(''),
-  paidText = ref('۰')
-const paymentInvoice = ref<Invoice | null>(null),
-  activeInvoice = ref<Invoice | null>(null)
-const paper = ref<InstanceType<typeof InvoicePaper>>()
+  search = ref('')
 const filtered = computed(() => {
   const query = normalizeNumberText(search.value.trim()).toLocaleLowerCase('fa')
-  return invoices.value.filter((invoice) =>
+  return accounts.value.filter((account) =>
     normalizeNumberText(
-      `${invoice.number} ${invoice.buyerFirstName || ''} ${invoice.buyerLastName || ''}`,
+      `${account.buyer.firstName} ${account.buyer.lastName} ${account.buyer.phone || ''}`,
     )
       .toLocaleLowerCase('fa')
       .includes(query),
   )
 })
+function openAccount(account: PartyAccount, action?: 'PAYMENT' | 'RETURN' | 'FINALIZE') {
+  paymentOnOpen.value = action === 'PAYMENT'
+  actionOnOpen.value = action === 'RETURN' || action === 'FINALIZE' ? action : null
+  selectedBuyer.value = account.buyer.id
+}
 async function load() {
   loading.value = true
   error.value = ''
   try {
-    invoices.value = (await inventoryApi.invoices({ openOnly: true })).map(invoiceInTomans)
+    const result = await accountsApi.list(showAll.value)
+    accounts.value = result.accounts
+    unassignedCount.value = result.unassignedCount
   } catch (e) {
-    error.value = e instanceof Error ? e.message : 'دریافت حساب‌های باز انجام نشد.'
+    error.value = e instanceof Error ? e.message : 'دریافت حساب‌ها انجام نشد.'
   } finally {
     loading.value = false
   }
 }
-function openPayment(invoice: Invoice) {
-  paymentInvoice.value = invoice
-  paidText.value = '۰'
-}
-async function savePayment() {
-  if (!paymentInvoice.value || saving.value) return
-  const amount = paidText.value.trim() ? parseNumber(paidText.value) : 0
-  if (
-    !isInvoiceAmount(amount) ||
-    amount <= 0 ||
-    amount > MAX_INVOICE_AMOUNT ||
-    (paymentInvoice.value.saleType !== 'CREDIT' &&
-      amount > roundToman(paymentInvoice.value.total - (paymentInvoice.value.paidAmount || 0)))
-  ) {
-    toast.error('پرداخت جدید باید بیشتر از صفر و حداکثر برابر مانده فاکتور باشد.')
-    return
+onMounted(async () => {
+  await load()
+  const id = Number(route.query.buyerId)
+  if (Number.isInteger(id) && id > 0) {
+    actionOnOpen.value = route.query.finalizeId ? 'FINALIZE' : null
+    selectedBuyer.value = id
   }
-  saving.value = true
-  try {
-    await inventoryApi.updatePayment(paymentInvoice.value.id, amount)
-    paymentInvoice.value = null
-    toast.success('مبلغ پرداختی ثبت شد.')
-    await load()
-  } catch (e) {
-    toast.error(e instanceof Error ? e.message : 'ثبت پرداخت انجام نشد.')
-  } finally {
-    saving.value = false
-  }
-}
-async function openFinalization(invoice: Invoice) {
-  if (saving.value || finalizationLoading.value) return
-  finalizationLoading.value = invoice.id
-  try {
-    const preview = await inventoryApi.finalizationPreview(invoice.id)
-    finalizationWasCredit.value = invoice.saleType === 'CREDIT'
-    finalPaymentText.value = '۰'
-    finalDiscountText.value = number(invoiceInTomans(preview.invoice).discount || 0)
-    finalization.value = { ...preview, invoice: invoiceInTomans(preview.invoice) }
-  } catch (e) {
-    toast.error(e instanceof Error ? e.message : 'محاسبه فاکتور ممکن نشد.')
-  } finally {
-    finalizationLoading.value = undefined
-  }
-}
-async function refreshFinalization() {
-  if (!finalization.value) return
-  await openFinalization({
-    ...finalization.value.invoice,
-    saleType: finalizationWasCredit.value ? 'CREDIT' : 'REGULAR',
-  })
-}
-async function finalize() {
-  if (!finalization.value || saving.value || finalizationLoading.value) return
-  const invoice = finalization.value.invoice
-  if (
-    !isInvoiceAmount(finalDiscount.value) ||
-    finalDiscount.value < 0 ||
-    finalDiscount.value > (invoice.subtotal || 0)
-  ) {
-    toast.error('تخفیف باید بین صفر و جمع اقلام فاکتور باشد.')
-    return
-  }
-  const remaining = Math.max(0, roundToman(finalTotal.value - (invoice.paidAmount || 0)))
-  if (
-    !isInvoiceAmount(finalPayment.value) ||
-    finalPayment.value < 0 ||
-    finalPayment.value > remaining
-  ) {
-    toast.error('پرداخت جدید باید بین صفر و مانده فاکتور باشد.')
-    return
-  }
-  saving.value = true
-  try {
-    const result = await inventoryApi.finalizeInvoice(
-      invoice.id,
-      finalization.value.token,
-      finalPayment.value,
-      finalDiscount.value,
-    )
-    finalization.value = null
-    activeInvoice.value = result
-    toast.success(
-      (result.paidAmount || 0) >= result.total
-        ? 'فاکتور نهایی شد و حساب بسته شد.'
-        : 'فاکتور نهایی شد؛ مانده بدهی در حساب‌های باز باقی ماند.',
-    )
-    await load()
-  } catch (e) {
-    toast.error(e instanceof Error ? e.message : 'نهایی‌کردن فاکتور انجام نشد.')
-  } finally {
-    saving.value = false
-  }
-}
-async function printInvoice() {
-  await paper.value?.prepareForPrint()
-  window.print()
-}
-onMounted(load)
+})
 </script>
 <style scoped>
 .accounts-page {
@@ -515,26 +265,10 @@ onMounted(load)
 .account-card__actions :deep(.button) {
   min-width: 0;
 }
-.account-card__finalize {
-  grid-column: 1 / -1;
-}
 .accounts-notice {
   margin: 0;
   padding: 12px 20px;
   font-size: 12px;
-}
-.finalization-summary {
-  display: grid;
-  gap: 8px;
-  margin-block: 16px;
-}
-.finalization-summary > div {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-}
-.finalization-summary dd {
-  margin: 0;
 }
 .muted {
   color: var(--muted-foreground);

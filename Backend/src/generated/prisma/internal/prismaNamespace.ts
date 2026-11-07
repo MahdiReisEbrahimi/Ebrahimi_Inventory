@@ -405,7 +405,8 @@ export const ModelName = {
   InventoryTransaction: 'InventoryTransaction',
   Invoice: 'Invoice',
   InvoiceItem: 'InvoiceItem',
-  StoreSettings: 'StoreSettings'
+  StoreSettings: 'StoreSettings',
+  PartyLedgerEntry: 'PartyLedgerEntry'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -421,7 +422,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "category" | "product" | "buyer" | "priceHistory" | "auditLog" | "inventoryTransaction" | "invoice" | "invoiceItem" | "storeSettings"
+    modelProps: "category" | "product" | "buyer" | "priceHistory" | "auditLog" | "inventoryTransaction" | "invoice" | "invoiceItem" | "storeSettings" | "partyLedgerEntry"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -1091,6 +1092,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    PartyLedgerEntry: {
+      payload: Prisma.$PartyLedgerEntryPayload<ExtArgs>
+      fields: Prisma.PartyLedgerEntryFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.PartyLedgerEntryFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PartyLedgerEntryPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.PartyLedgerEntryFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PartyLedgerEntryPayload>
+        }
+        findFirst: {
+          args: Prisma.PartyLedgerEntryFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PartyLedgerEntryPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.PartyLedgerEntryFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PartyLedgerEntryPayload>
+        }
+        findMany: {
+          args: Prisma.PartyLedgerEntryFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PartyLedgerEntryPayload>[]
+        }
+        create: {
+          args: Prisma.PartyLedgerEntryCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PartyLedgerEntryPayload>
+        }
+        createMany: {
+          args: Prisma.PartyLedgerEntryCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.PartyLedgerEntryCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PartyLedgerEntryPayload>[]
+        }
+        delete: {
+          args: Prisma.PartyLedgerEntryDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PartyLedgerEntryPayload>
+        }
+        update: {
+          args: Prisma.PartyLedgerEntryUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PartyLedgerEntryPayload>
+        }
+        deleteMany: {
+          args: Prisma.PartyLedgerEntryDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.PartyLedgerEntryUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.PartyLedgerEntryUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PartyLedgerEntryPayload>[]
+        }
+        upsert: {
+          args: Prisma.PartyLedgerEntryUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PartyLedgerEntryPayload>
+        }
+        aggregate: {
+          args: Prisma.PartyLedgerEntryAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregatePartyLedgerEntry>
+        }
+        groupBy: {
+          args: Prisma.PartyLedgerEntryGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.PartyLedgerEntryGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.PartyLedgerEntryCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.PartyLedgerEntryCountAggregateOutputType> | number
+        }
+      }
+    }
   }
 } & {
   other: {
@@ -1217,6 +1292,10 @@ export type InventoryTransactionScalarFieldEnum = (typeof InventoryTransactionSc
 
 
 export const InvoiceScalarFieldEnum = {
+  kind: 'kind',
+  accountChargeRial: 'accountChargeRial',
+  accountReturnedRial: 'accountReturnedRial',
+  sourceInvoiceId: 'sourceInvoiceId',
   id: 'id',
   number: 'number',
   buyerFirstName: 'buyerFirstName',
@@ -1247,6 +1326,7 @@ export type InvoiceScalarFieldEnum = (typeof InvoiceScalarFieldEnum)[keyof typeo
 
 
 export const InvoiceItemScalarFieldEnum = {
+  sourceItemId: 'sourceItemId',
   id: 'id',
   invoiceId: 'invoiceId',
   productId: 'productId',
@@ -1273,6 +1353,23 @@ export const StoreSettingsScalarFieldEnum = {
 } as const
 
 export type StoreSettingsScalarFieldEnum = (typeof StoreSettingsScalarFieldEnum)[keyof typeof StoreSettingsScalarFieldEnum]
+
+
+export const PartyLedgerEntryScalarFieldEnum = {
+  id: 'id',
+  buyerId: 'buyerId',
+  invoiceId: 'invoiceId',
+  action: 'action',
+  description: 'description',
+  amountRial: 'amountRial',
+  cashDirection: 'cashDirection',
+  requestKey: 'requestKey',
+  details: 'details',
+  historical: 'historical',
+  createdAt: 'createdAt'
+} as const
+
+export type PartyLedgerEntryScalarFieldEnum = (typeof PartyLedgerEntryScalarFieldEnum)[keyof typeof PartyLedgerEntryScalarFieldEnum]
 
 
 export const SortOrder = {
@@ -1600,6 +1697,7 @@ export type GlobalOmitConfig = {
   invoice?: Prisma.InvoiceOmit
   invoiceItem?: Prisma.InvoiceItemOmit
   storeSettings?: Prisma.StoreSettingsOmit
+  partyLedgerEntry?: Prisma.PartyLedgerEntryOmit
 }
 
 /* Types for Logging */

@@ -13,12 +13,22 @@
           </div>
           <div class="paper-brand">
             <h2>{{ seller.name }}</h2>
-            <span>فاکتور فروش کالا</span>
+            <span>{{
+              invoice.documentTitle ||
+              (invoice.kind === 'PURCHASE'
+                ? 'فاکتور خرید کالا'
+                : invoice.kind === 'RETURN'
+                  ? 'فاکتور مرجوعی فروش'
+                  : 'فاکتور فروش کالا')
+            }}</span>
+            <small v-if="invoice.kind === 'RETURN' && invoice.sourceInvoiceId"
+              >مربوط به فاکتور {{ number(invoice.sourceInvoiceId) }}</small
+            >
           </div>
           <div class="paper-reference">
             <span v-if="draft" class="paper-draft">پیش‌نویس · ثبت نشده</span>
             <template v-else>
-              <span>شماره فاکتور:</span>
+              <span>{{ invoice.documentTitle ? 'شماره صورت‌حساب:' : 'شماره فاکتور:' }}</span>
               <bdi dir="ltr">{{ toPersianDigits(invoice.number) }}</bdi>
             </template>
             <span>تاریخ:</span>
@@ -85,7 +95,11 @@
           </tbody>
         </table>
         <div v-if="pageIndex === pages.length - 1" class="paper-bottom">
-          <table v-if="!isCredit" class="paper-balance" aria-label="محاسبه مانده فاکتور">
+          <table
+            v-if="!isCredit && invoice.kind !== 'RETURN'"
+            class="paper-balance"
+            aria-label="محاسبه مانده فاکتور"
+          >
             <tbody>
               <tr>
                 <th>مبلغ نهایی پس از تخفیف</th>
@@ -93,15 +107,30 @@
                 <th>کسر پرداختی / بیعانه</th>
                 <td>{{ rial(normalized.paidAmount || 0) }}</td>
               </tr>
+              <tr v-if="normalized.returnedAmount">
+                <th colspan="3">کسر مرجوعی پس از تخفیف</th>
+                <td>{{ rial(normalized.returnedAmount) }}</td>
+              </tr>
               <tr>
                 <th colspan="3">
                   {{
-                    normalized.total >= (normalized.paidAmount || 0)
+                    normalized.total - (normalized.returnedAmount || 0) >=
+                    (normalized.paidAmount || 0)
                       ? 'مانده قابل پرداخت'
                       : 'بستانکاری مشتری'
                   }}
                 </th>
-                <td>{{ rial(Math.abs(normalized.total - (normalized.paidAmount || 0))) }}</td>
+                <td>
+                  {{
+                    rial(
+                      Math.abs(
+                        normalized.total -
+                          (normalized.returnedAmount || 0) -
+                          (normalized.paidAmount || 0),
+                      ),
+                    )
+                  }}
+                </td>
               </tr>
             </tbody>
           </table>
@@ -121,19 +150,46 @@
                   <div class="footer-sale-terms">
                     <b>شرایط فروش:</b>
                     <span>{{ invoiceSaleLabel(invoice) }}{{ isCredit ? ' · بدون قیمت' : '' }}</span>
-                    <span v-if="!isCredit"
+                    <span v-if="!isCredit && invoice.kind !== 'RETURN'"
                       >مبلغ نهایی: {{ rial(normalized.total) }} · مانده:
-                      {{ rial(Math.max(0, normalized.total - (normalized.paidAmount || 0))) }}</span
+                      {{
+                        rial(
+                          Math.max(
+                            0,
+                            normalized.total -
+                              (normalized.returnedAmount || 0) -
+                              (normalized.paidAmount || 0),
+                          ),
+                        )
+                      }}</span
                     >
                   </div>
                 </td>
                 <td v-if="!hasDiscount" rowspan="2" class="footer-payment-cell">
                   <div class="footer-payment">
                     <div>
-                      <b>{{ isCredit ? 'بیعانه' : 'مبلغ پرداختی' }}</b
-                      ><span>{{ amountInWords(normalized.paidAmount || 0) }}</span>
+                      <b>{{
+                        invoice.kind === 'RETURN'
+                          ? 'مبلغ اقلام مرجوعی'
+                          : isCredit
+                            ? 'بیعانه'
+                            : 'مبلغ پرداختی'
+                      }}</b
+                      ><span>{{
+                        invoice.kind === 'RETURN'
+                          ? isCredit
+                            ? 'قیمت‌گذاری نشده'
+                            : amountInWords(normalized.total)
+                          : amountInWords(normalized.paidAmount || 0)
+                      }}</span>
                     </div>
-                    <strong>{{ rial(normalized.paidAmount || 0) }}</strong>
+                    <strong>{{
+                      invoice.kind === 'RETURN'
+                        ? isCredit
+                          ? 'بدون قیمت'
+                          : rial(normalized.total)
+                        : rial(normalized.paidAmount || 0)
+                    }}</strong>
                   </div>
                 </td>
                 <td v-else>
@@ -145,7 +201,7 @@
               </tr>
               <tr>
                 <td colspan="2">
-                  <div v-if="seller.iban" class="footer-iban">
+                  <div v-if="seller.iban && invoice.kind !== 'PURCHASE'" class="footer-iban">
                     <b>شماره شبا:</b>
                     <bdi dir="ltr">{{ toPersianDigits(seller.iban) }}</bdi>
                     <span v-if="seller.ibanLabel" class="footer-iban-label">{{
@@ -166,10 +222,28 @@
                 <td rowspan="2" class="footer-payment-cell">
                   <div class="footer-payment">
                     <div>
-                      <b>{{ isCredit ? 'بیعانه' : 'مبلغ پرداختی' }}</b
-                      ><span>{{ amountInWords(normalized.paidAmount || 0) }}</span>
+                      <b>{{
+                        invoice.kind === 'RETURN'
+                          ? 'مبلغ اقلام مرجوعی'
+                          : isCredit
+                            ? 'بیعانه'
+                            : 'مبلغ پرداختی'
+                      }}</b
+                      ><span>{{
+                        invoice.kind === 'RETURN'
+                          ? isCredit
+                            ? 'قیمت‌گذاری نشده'
+                            : amountInWords(normalized.total)
+                          : amountInWords(normalized.paidAmount || 0)
+                      }}</span>
                     </div>
-                    <strong>{{ rial(normalized.paidAmount || 0) }}</strong>
+                    <strong>{{
+                      invoice.kind === 'RETURN'
+                        ? isCredit
+                          ? 'بدون قیمت'
+                          : rial(normalized.total)
+                        : rial(normalized.paidAmount || 0)
+                    }}</strong>
                   </div>
                 </td>
               </tr>
@@ -327,23 +401,31 @@ const seller = computed(() => ({
       ? props.settings?.ibanLabel
       : ''),
 }))
-const parties = computed(() => [
-  {
-    label: 'فروشنده',
-    name: props.invoice.sellerName ?? props.settings?.name ?? '',
-    address: seller.value.address ?? '',
-    phone: seller.value.phone ?? '',
-    // Seller identification is not collected by the current store settings model.
-    nationalId: '',
-  },
-  {
-    label: 'خریدار',
-    name: [props.invoice.buyerFirstName, props.invoice.buyerLastName].filter(Boolean).join(' '),
-    address: props.invoice.buyerAddress ?? '',
-    phone: props.invoice.buyerPhone ?? '',
-    nationalId: props.invoice.buyerNationalId ?? '',
-  },
-])
+const parties = computed(() => {
+  const entries = [
+    {
+      label: 'فروشنده',
+      name: props.invoice.sellerName ?? props.settings?.name ?? '',
+      address: seller.value.address ?? '',
+      phone: seller.value.phone ?? '',
+      // Seller identification is not collected by the current store settings model.
+      nationalId: '',
+    },
+    {
+      label: 'خریدار',
+      name: [props.invoice.buyerFirstName, props.invoice.buyerLastName].filter(Boolean).join(' '),
+      address: props.invoice.buyerAddress ?? '',
+      phone: props.invoice.buyerPhone ?? '',
+      nationalId: props.invoice.buyerNationalId ?? '',
+    },
+  ]
+  return props.invoice.kind === 'PURCHASE'
+    ? [
+        { ...entries[1]!, label: 'فروشنده' },
+        { ...entries[0]!, label: 'خریدار' },
+      ]
+    : entries
+})
 </script>
 <style scoped>
 .invoice-sheets {

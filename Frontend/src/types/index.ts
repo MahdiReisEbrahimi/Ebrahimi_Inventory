@@ -46,6 +46,8 @@ export interface InventoryMovement {
   invoice?: { number: string } | null
 }
 export interface InvoiceItem {
+  sourceItemId?: number | null
+  returnableQuantity?: number
   id: number
   productId: number
   name: string
@@ -55,6 +57,9 @@ export interface InvoiceItem {
   total: number | null
 }
 export interface Invoice {
+  documentTitle?: string
+  kind?: 'SALE' | 'PURCHASE' | 'RETURN'
+  sourceInvoiceId?: number | null
   saleType?: 'REGULAR' | 'CREDIT'
   id: number
   number: string
@@ -69,6 +74,10 @@ export interface Invoice {
   subtotal?: number
   discount?: number
   paidAmount?: number
+  accountValueAmount?: number
+  returnedAmount?: number
+  returnRatio?: number
+  returnGrossAmount?: number
   settlement?: 'CASH' | 'INSTALLMENT'
   currency?: 'IRR' | 'TOMAN'
   issueDate?: string
@@ -101,4 +110,65 @@ export interface Buyer {
   notes: string | null
   createdAt: string
   updatedAt: string
+}
+
+export interface PartyAccount {
+  buyer: Buyer
+  role: 'CUSTOMER' | 'SUPPLIER'
+  balance: number
+  total: number
+  paid: number
+  incoming: number
+  outgoing: number
+  pendingCount: number
+  invoiceCount: number
+  isOpen: boolean
+  invoices?: Invoice[]
+  entries?: PartyLedgerEntry[]
+}
+export interface PartyLedgerEntry {
+  id: number
+  invoiceId: number | null
+  invoiceNumber?: string
+  action: string
+  description: string
+  amount: number
+  debit: number
+  credit: number
+  balance: number
+  historical: boolean
+  createdAt: string
+  details?: {
+    before?: Invoice & Partial<Buyer>
+    after?: Invoice & Partial<Buyer>
+    statement?: Invoice
+  } | null
+}
+
+export interface AccountReturnProduct {
+  productId: number
+  name: string
+  unit: string
+  quantity: number
+  lots: {
+    sourceInvoiceId: number
+    sourceItemId: number
+    quantity: number
+    unitPrice: number | null
+    createdAt: string
+  }[]
+}
+export interface AccountFinalizationPreview {
+  token: string
+  buyer: Buyer
+  role: 'CUSTOMER' | 'SUPPLIER'
+  invoices: Invoice[]
+  subtotal: number
+  discount: number
+  previousDiscount: number
+  returnedAmount: number
+  total: number
+  paid: number
+  balance: number
+  pendingCount: number
 }

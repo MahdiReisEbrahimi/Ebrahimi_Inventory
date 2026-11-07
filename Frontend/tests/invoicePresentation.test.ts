@@ -182,3 +182,23 @@ test('app amounts stay in tomans and only the invoice paper converts to rials', 
   assert.equal(editable.paidAmount, 200.3)
   assert.deepEqual(invoiceInRials(editable), legacy)
 })
+
+test('party allocations and discounted returns keep exact rial values in the paper conversion', () => {
+  const invoice = {
+    currency: 'TOMAN',
+    subtotal: 100,
+    discount: 10,
+    total: 90,
+    paidAmount: 63,
+    returnedAmount: 27,
+    accountValueAmount: 27,
+    returnGrossAmount: 30.1,
+    items: [],
+  } as unknown as Invoice
+  const paper = invoiceInRials(invoice)
+  assert.equal(paper.returnedAmount, 270)
+  assert.equal(paper.accountValueAmount, 270)
+  assert.equal(paper.returnGrossAmount, 301)
+  assert.equal(paper.total - (paper.paidAmount || 0) - (paper.returnedAmount || 0), 0)
+  assert.deepEqual(invoiceInTomans(paper), invoice)
+})

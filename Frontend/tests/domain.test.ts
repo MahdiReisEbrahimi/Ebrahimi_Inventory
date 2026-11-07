@@ -29,7 +29,7 @@ test('invoice accepts valid quantities, available stock, and explicit zero price
   assert.equal(validateInvoiceLines([{ ...line, quantity: 5 }], stock), '')
 })
 
-test('invoice rejects empty drafts, missing products, fractions, and overselling', () => {
+test('returns reject missing products, fractional quantities and amounts above the delivered limit', () => {
   assert.notEqual(validateInvoiceLines([], stock), '')
   for (const quantity of [0, -1, 1.5, 6, Number.NaN]) {
     assert.notEqual(validateInvoiceLines([{ ...line, quantity }], stock), '')
@@ -41,7 +41,7 @@ test('invoice rejects empty drafts, missing products, fractions, and overselling
   assert.notEqual(validateInvoiceLines([{ ...line, productId: -1 }], stock), '')
 })
 
-test('duplicate rows cannot jointly exceed available stock', () => {
+test('duplicate return rows cannot jointly exceed the delivered quantity', () => {
   assert.notEqual(validateInvoiceLines([line, { ...line, quantity: 4 }], stock), '')
   assert.equal(validateInvoiceLines([line, { ...line, quantity: 3 }], stock), '')
 })
@@ -272,4 +272,12 @@ test('malformed or invalid stored UI preferences fall back safely', () => {
       saved,
     )
   }
+})
+
+test('sales allow quantities exceeding stock while returns enforce delivered quantities', () => {
+  assert.equal(validateInvoiceLines([{ ...line, quantity: 100 }]), '')
+  assert.notEqual(
+    validateInvoiceLines([{ ...line, quantity: 100 }], () => 5),
+    '',
+  )
 })

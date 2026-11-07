@@ -3,6 +3,7 @@ import { config } from 'dotenv';
 import { randomUUID } from 'node:crypto';
 import { beforeAll, afterAll, describe, expect, it } from 'vitest';
 import { PrismaService } from '../src/prisma/prisma.service.js';
+import { AccountsService } from '../src/accounts/accounts.service.js';
 import { InventoryService } from '../src/inventory/inventory.service.js';
 import { ProductsService } from '../src/products/products.service.js';
 
@@ -16,6 +17,15 @@ describe.skipIf(process.env.RUN_INVOICE_DB_TESTS !== '1')(
     let productId: number;
     let secondProductId: number;
     let buyerId: number;
+    const buyerIds: number[] = [];
+    async function freshBuyer() {
+      buyerId = (
+        await prisma.buyer.create({
+          data: { firstName: 'تست', lastName: `${tag}-${buyerIds.length}` },
+        })
+      ).id;
+      buyerIds.push(buyerId);
+    }
     let invoiceId: number;
     const tag = `invoice-test-${randomUUID()}`;
 
@@ -52,6 +62,7 @@ describe.skipIf(process.env.RUN_INVOICE_DB_TESTS !== '1')(
       buyerId = (
         await prisma.buyer.create({ data: { firstName: 'تست', lastName: tag } })
       ).id;
+      buyerIds.push(buyerId);
     });
 
     afterAll(async () => {
@@ -59,15 +70,20 @@ describe.skipIf(process.env.RUN_INVOICE_DB_TESTS !== '1')(
       if (buyerId) {
         const ids = (
           await prisma.invoice.findMany({
-            where: { customerId: buyerId },
+            where: { customerId: { in: buyerIds } },
             select: { id: true },
           })
         ).map((invoice) => invoice.id);
         await prisma.inventoryTransaction.deleteMany({
           where: { invoiceId: { in: ids } },
         });
-        await prisma.invoice.deleteMany({ where: { customerId: buyerId } });
-        await prisma.buyer.delete({ where: { id: buyerId } });
+        await prisma.invoice.deleteMany({
+          where: { customerId: { in: buyerIds }, kind: 'RETURN' },
+        });
+        await prisma.invoice.deleteMany({
+          where: { customerId: { in: buyerIds } },
+        });
+        await prisma.buyer.deleteMany({ where: { id: { in: buyerIds } } });
       }
       for (const id of [productId, secondProductId].filter(Boolean)) {
         await prisma.inventoryTransaction.deleteMany({
@@ -132,13 +148,16 @@ describe.skipIf(process.env.RUN_INVOICE_DB_TESTS !== '1')(
       expect(invoice.items).toHaveLength(1);
     });
 
-    it('rolls back the invoice, lines and stock when an edit oversells', async () => {
+    it('rolls back the invoice, lines and stock when an edit contains an unknown product', async () => {
       await expect(
         service.updateInvoice(invoiceId, {
           customerId: buyerId,
-          items: [{ productId, quantity: 99, unitPrice: 1000 }],
+          items: [
+            { productId, quantity: 99, unitPrice: 1000 },
+            { productId: 2147483647, quantity: 1, unitPrice: 1000 },
+          ],
         }),
-      ).rejects.toThrow('کافی نیست');
+      ).rejects.toThrow('پیدا نشد');
       expect(
         (await prisma.product.findUniqueOrThrow({ where: { id: productId } }))
           .stock,
@@ -256,13 +275,19 @@ describe.skipIf(process.env.RUN_INVOICE_DB_TESTS !== '1')(
           .stock,
       ).toBe(18);
     });
-    it('registers a return using only quantity without an invoice or price change', async () => {
+    it('requires a source invoice for returns and preserves purchase prices', async () => {
+      await expect(
+        service.createMovement({ type: 'RETURN', productId, quantity: 2 }),
+      ).rejects.toThrow('فاکتور مبنا');
       const movement = await service.createMovement({
         type: 'RETURN',
         productId,
         quantity: 2,
+        invoiceId,
       });
-      expect(movement.invoiceId).toBeNull();
+      expect((await service.invoice(movement.invoiceId!)).sourceInvoiceId).toBe(
+        invoiceId,
+      );
       expect(
         (await prisma.product.findUniqueOrThrow({ where: { id: productId } }))
           .stock,
@@ -359,6 +384,8 @@ describe.skipIf(process.env.RUN_INVOICE_DB_TESTS !== '1')(
     });
 
     it('persists and edits invoices at the 100 billion rial boundary', async () => {
+      // Each financial scenario has its own party now that payments are shared.
+      await freshBuyer();
       const largeProduct = await prisma.product.create({
         data: {
           name: `${tag}-large-invoice`,
@@ -444,6 +471,8 @@ describe.skipIf(process.env.RUN_INVOICE_DB_TESTS !== '1')(
     });
 
     it('keeps credit invoices open with null prices, then closes a priced invoice after payment', async () => {
+      // Each financial scenario has its own party now that payments are shared.
+      await freshBuyer();
       const before = await prisma.product.findUniqueOrThrow({
         where: { id: secondProductId },
       });
@@ -512,6 +541,8 @@ describe.skipIf(process.env.RUN_INVOICE_DB_TESTS !== '1')(
     });
 
     it('finalizes at current prices without moving stock, rejects stale quotes, and retains unpaid balances', async () => {
+      // Each financial scenario has its own party now that payments are shared.
+      await freshBuyer();
       const before = await prisma.product.findUniqueOrThrow({
         where: { id: secondProductId },
       });
@@ -606,6 +637,7 @@ describe.skipIf(process.env.RUN_INVOICE_DB_TESTS !== '1')(
         where: { id: secondProductId },
       });
       for (const surplus of [0, 50]) {
+        await freshBuyer();
         const invoice = await service.createInvoice({
           customerId: buyerId,
           saleType: 'CREDIT',
@@ -619,7 +651,10 @@ describe.skipIf(process.env.RUN_INVOICE_DB_TESTS !== '1')(
         });
         expect(result.saleType).toBe('REGULAR');
         expect(result.settlement).toBe('CASH');
-        expect(result.paidAmount - result.total).toBe(surplus);
+        expect(result.paidAmount).toBe(result.total);
+        expect(
+          (await new AccountsService(prisma).detail(buyerId)).balance,
+        ).toBe(surplus ? -surplus / 10 : 0);
         expect(
           (
             await service.invoices({ openOnly: 'true', customerId: buyerId })
@@ -629,6 +664,8 @@ describe.skipIf(process.env.RUN_INVOICE_DB_TESTS !== '1')(
     });
 
     it('finalizes legacy toman invoices in rials and keeps their recorded discount and prices', async () => {
+      // Each financial scenario has its own party now that payments are shared.
+      await freshBuyer();
       const created = await service.createInvoice({
         customerId: buyerId,
         discount: 100,
@@ -675,6 +712,8 @@ describe.skipIf(process.env.RUN_INVOICE_DB_TESTS !== '1')(
     });
 
     it('allows discounts only at credit finalization and prefills persisted discounts for later changes', async () => {
+      // Each financial scenario has its own party now that payments are shared.
+      await freshBuyer();
       const product = await prisma.product.findUniqueOrThrow({
         where: { id: secondProductId },
       });
@@ -743,6 +782,8 @@ describe.skipIf(process.env.RUN_INVOICE_DB_TESTS !== '1')(
     });
 
     it('uses tomans for new invoices, payments and final discounts without multiplying stored values', async () => {
+      // Each financial scenario has its own party now that payments are shared.
+      await freshBuyer();
       await service.createMovement({
         type: 'PURCHASE',
         productId: secondProductId,
@@ -810,6 +851,8 @@ describe.skipIf(process.env.RUN_INVOICE_DB_TESTS !== '1')(
     });
 
     it('preserves odd legacy rial amounts when edited or paid through toman inputs', async () => {
+      // Each financial scenario has its own party now that payments are shared.
+      await freshBuyer();
       const created = await service.createInvoice({
         currency: 'IRR',
         customerId: buyerId,

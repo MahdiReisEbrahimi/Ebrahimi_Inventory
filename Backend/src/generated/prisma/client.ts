@@ -86,3 +86,8 @@ export type InvoiceItem = Prisma.InvoiceItemModel
  * 
  */
 export type StoreSettings = Prisma.StoreSettingsModel
+/**
+ * Model PartyLedgerEntry
+ * 
+ */
+export type PartyLedgerEntry = Prisma.PartyLedgerEntryModel

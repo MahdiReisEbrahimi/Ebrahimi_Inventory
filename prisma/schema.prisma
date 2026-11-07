@@ -54,6 +54,7 @@ model Buyer {
   address    String?
   notes      String?
   invoices   Invoice[]
+  ledgerEntries PartyLedgerEntry[]
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
 
@@ -118,6 +119,13 @@ model InventoryTransaction {
 }
 
 model Invoice {
+  kind            String                   @default("SALE")
+  accountChargeRial Decimal? @db.Decimal(18, 0)
+  accountReturnedRial Decimal @default(0) @db.Decimal(18, 0)
+  ledgerEntries PartyLedgerEntry[]
+  sourceInvoiceId Int?
+  sourceInvoice   Invoice?                 @relation("InvoiceReturns", fields: [sourceInvoiceId], references: [id], onDelete: Restrict)
+  returns         Invoice[]                @relation("InvoiceReturns")
   id             Int                      @id @default(autoincrement())
   number         String                   @unique @default(uuid())
   buyerFirstName String?
@@ -148,9 +156,13 @@ model Invoice {
 
   @@index([customerId, createdAt])
   @@index([saleType])
+  @@index([kind, sourceInvoiceId])
 }
 
 model InvoiceItem {
+  sourceItemId Int?
+  sourceItem   InvoiceItem? @relation("ReturnedItems", fields: [sourceItemId], references: [id], onDelete: Restrict)
+  returnedItems InvoiceItem[] @relation("ReturnedItems")
   id        Int      @id @default(autoincrement())
   invoiceId Int
   invoice   Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
@@ -161,6 +173,8 @@ model InvoiceItem {
   quantity  Int
   unitPrice Decimal? @db.Decimal(12, 0)
   total     Decimal? @db.Decimal(12, 0)
+
+  @@index([sourceItemId])
 }
 
 model StoreSettings {
@@ -173,4 +187,24 @@ model StoreSettings {
   ibanLabel String   @default("")
   defaultInvoiceNotes String @default("")
   updatedAt DateTime @updatedAt
+}
+
+// Append-only party ledger. Positive balance means the party owes the store.
+model PartyLedgerEntry {
+  id Int @id @default(autoincrement())
+  buyerId Int
+  buyer Buyer @relation(fields: [buyerId], references: [id], onDelete: Cascade)
+  invoiceId Int?
+  invoice Invoice? @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  action String
+  description String
+  amountRial Decimal @db.Decimal(18, 0)
+  cashDirection String?
+  requestKey String? @unique
+  details Json?
+  historical Boolean @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([buyerId, createdAt, id])
+  @@index([invoiceId, createdAt, id])
 }

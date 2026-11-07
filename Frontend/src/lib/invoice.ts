@@ -34,10 +34,10 @@ export const isInvoiceAmount = (value: number) =>
   Number.isSafeInteger(Math.round(value * 10))
 export const roundToman = (value: number) => Math.round(value * 10) / 10
 
-/** Validate the draft before a request. The API remains the authority on stock. */
+/** Sales may make stock negative. Only returns pass a delivered-quantity limit. */
 export function validateInvoiceLines(
   lines: InvoiceLine[],
-  stockOf: (id: number) => number,
+  stockOf?: (id: number) => number,
 ): string {
   if (!lines.length) return 'حداقل یک کالا به فاکتور اضافه کنید.'
   const quantities = new Map<number, number>()
@@ -52,7 +52,8 @@ export function validateInvoiceLines(
       return 'کالا و تعداد صحیح و بیشتر از صفر را برای هر ردیف وارد کنید.'
     }
     const quantity = (quantities.get(line.productId) || 0) + line.quantity
-    if (quantity > stockOf(line.productId)) return 'تعداد کالا از موجودی قابل فروش بیشتر است.'
+    if (stockOf && quantity > stockOf(line.productId))
+      return 'تعداد مرجوعی از تعداد تحویل‌شده و مرجوع‌نشده بیشتر است.'
     quantities.set(line.productId, quantity)
     if (!isInvoiceAmount(line.unitPrice) || line.unitPrice < 0) {
       return 'قیمت هر کالا باید مبلغ غیرمنفی با حداکثر یک رقم اعشار تومان باشد.'
